@@ -591,6 +591,62 @@ if [ -f "wasmtime/JIT/w_opts/hostFns/main.go" ]; then
     go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_jit_wopts_HostFns wasmtime/JIT/w_opts/hostFns/main.go
 fi
 
+# Build wasmtime AOT no_opts implementations
+echo -e "\n${GREEN}Building wasmtime AOT no_opts implementations...${NC}"
+
+if [ -f "wasmtime/AOT/no_opts/fibonacci/main.go" ]; then
+    echo "Building wasmtime/AOT/no_opts/fibonacci..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_noopts_Fibonacci wasmtime/AOT/no_opts/fibonacci/main.go
+fi
+
+if [ -f "wasmtime/AOT/no_opts/fibonacciTail/main.go" ]; then
+    echo "Building wasmtime/AOT/no_opts/fibonacciTail..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_noopts_TailFibonacci wasmtime/AOT/no_opts/fibonacciTail/main.go
+fi
+
+if [ -f "wasmtime/AOT/no_opts/lightweight/main.go" ]; then
+    echo "Building wasmtime/AOT/no_opts/lightweight..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_noopts_Lightweight wasmtime/AOT/no_opts/lightweight/main.go
+fi
+
+if [ -f "wasmtime/AOT/no_opts/primeNums/main.go" ]; then
+    echo "Building wasmtime/AOT/no_opts/primeNums..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_noopts_PrimeNumbers wasmtime/AOT/no_opts/primeNums/main.go
+fi
+
+if [ -f "wasmtime/AOT/no_opts/hostFns/main.go" ]; then
+    echo "Building wasmtime/AOT/no_opts/hostFns..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_noopts_HostFns wasmtime/AOT/no_opts/hostFns/main.go
+fi
+
+# Build wasmtime AOT w_opts implementations
+echo -e "\n${GREEN}Building wasmtime AOT w_opts implementations...${NC}"
+
+if [ -f "wasmtime/AOT/w_opts/fibonacci/main.go" ]; then
+    echo "Building wasmtime/AOT/w_opts/fibonacci..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_wopts_Fibonacci wasmtime/AOT/w_opts/fibonacci/main.go
+fi
+
+if [ -f "wasmtime/AOT/w_opts/fibonacciTail/main.go" ]; then
+    echo "Building wasmtime/AOT/w_opts/fibonacciTail..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_wopts_TailFibonacci wasmtime/AOT/w_opts/fibonacciTail/main.go
+fi
+
+if [ -f "wasmtime/AOT/w_opts/lightweight/main.go" ]; then
+    echo "Building wasmtime/AOT/w_opts/lightweight..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_wopts_Lightweight wasmtime/AOT/w_opts/lightweight/main.go
+fi
+
+if [ -f "wasmtime/AOT/w_opts/primeNums/main.go" ]; then
+    echo "Building wasmtime/AOT/w_opts/primeNums..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_wopts_PrimeNumbers wasmtime/AOT/w_opts/primeNums/main.go
+fi
+
+if [ -f "wasmtime/AOT/w_opts/hostFns/main.go" ]; then
+    echo "Building wasmtime/AOT/w_opts/hostFns..."
+    go build "${BUILD_FLAGS[@]}" -o "${OUTPUT_BUILD_DIR}"/wasmtime_aot_wopts_HostFns wasmtime/AOT/w_opts/hostFns/main.go
+fi
+
 # Build wazero AOT no_opts implementations
 echo -e "\n${GREEN}Building wazero AOT no_opts implementations...${NC}"
 

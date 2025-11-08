@@ -31,22 +31,25 @@ SCENARIOS=(
     "Fibonacci"
     "Lightweight"
     "TailFibonacci"
+    "HostFns"
 )
 
 # Runtime configurations
 # Format: "RuntimeName:BinaryPrefix"
 RUNTIMES=(
     "Native:native"
-    #"Wasmedge_Interpreter_NoOpts:wasmedge_interpreter_noopts"
-    #"Wasmedge_Interpreter_WithOpts:wasmedge_interpreter_wopts"
+    "Wasmedge_Interpreter_NoOpts:wasmedge_interpreter_noopts"
+    "Wasmedge_Interpreter_WithOpts:wasmedge_interpreter_wopts"
     "Wasmedge_AOT_NoOpts:wasmedge_aot_noopts"
     "Wasmedge_AOT_WithOpts:wasmedge_aot_wopts"
     "Wasmtime_JIT_NoOpts:wasmtime_jit_noopts"
     "Wasmtime_JIT_WithOpts:wasmtime_jit_wopts"
+    "Wasmtime_AOT_NoOpts:wasmtime_aot_noopts"
+    "Wasmtime_AOT_WithOpts:wasmtime_aot_wopts"
     "Wazero_AOT_NoOpts:wazero_aot_noopts"
     "Wazero_AOT_WithOpts:wazero_aot_wopts"
-    #"Wazero_Interpreter_NoOpts:wazero_interpreter_noopts"
-    #"Wazero_Interpreter_WithOpts:wazero_interpreter_wopts"
+    "Wazero_Interpreter_NoOpts:wazero_interpreter_noopts"
+    "Wazero_Interpreter_WithOpts:wazero_interpreter_wopts"
 )
 
 print_header() {
@@ -193,11 +196,17 @@ mkdir -p "$RESULTS_DIR"
 
 if [[ "$DO_TIME_BENCH" == true ]]; then
   export SKIP_TIME_BENCH_INTERACTIVE=1
+  export SCENARIOS_ENV="${SCENARIOS[*]}"
+  export RUNTIMES_ENV="${RUNTIMES[*]}"
+
   /bin/bash ./time_bench.sh --warmup "$WARMUP_RUNS" --runs "$BENCH_RUNS" --output-dir "$RESULTS_DIR"
 fi
 
 if [[ "$DO_MEM_BENCH" == true ]]; then
   export SKIP_MEM_BENCH_INTERACTIVE=1
+  export SCENARIOS_ENV="${SCENARIOS[*]}"
+  export RUNTIMES_ENV="${RUNTIMES[*]}"
+
   /bin/bash ./mem_bench.sh --warmup "$WARMUP_RUNS" --runs "$BENCH_RUNS" --output-dir "$RESULTS_DIR"
 fi
 

@@ -20,28 +20,37 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Test scenarios (workloads)
-SCENARIOS=(
+DEFAULT_SCENARIOS=(
     "PrimeNumbers"
     "Fibonacci"
     "Lightweight"
     "TailFibonacci"
+    "HostFns"
 )
 
 # Runtime configurations
 # Format: "RuntimeName:BinaryPrefix"
-RUNTIMES=(
+DEFAULT_RUNTIMES=(
     "Native:native"
-    #"Wasmedge_Interpreter_NoOpts:wasmedge_interpreter_noopts"
-    #"Wasmedge_Interpreter_WithOpts:wasmedge_interpreter_wopts"
+    "Wasmedge_Interpreter_NoOpts:wasmedge_interpreter_noopts"
+    "Wasmedge_Interpreter_WithOpts:wasmedge_interpreter_wopts"
     "Wasmedge_AOT_NoOpts:wasmedge_aot_noopts"
     "Wasmedge_AOT_WithOpts:wasmedge_aot_wopts"
     "Wasmtime_JIT_NoOpts:wasmtime_jit_noopts"
     "Wasmtime_JIT_WithOpts:wasmtime_jit_wopts"
+    "Wasmtime_AOT_NoOpts:wasmtime_aot_noopts"
+    "Wasmtime_AOT_WithOpts:wasmtime_aot_wopts"
     "Wazero_AOT_NoOpts:wazero_aot_noopts"
     "Wazero_AOT_WithOpts:wazero_aot_wopts"
-    #"Wazero_Interpreter_NoOpts:wazero_interpreter_noopts"
-    #"Wazero_Interpreter_WithOpts:wazero_interpreter_wopts"
+    "Wazero_Interpreter_NoOpts:wazero_interpreter_noopts"
+    "Wazero_Interpreter_WithOpts:wazero_interpreter_wopts"
 )
+
+: "${SCENARIOS_ENV:="${DEFAULT_SCENARIOS[*]}"}"
+: "${RUNTIMES_ENV:="${DEFAULT_RUNTIMES[*]}"}"
+
+IFS=' ' read -ra SCENARIOS <<< "$SCENARIOS_ENV"
+IFS=' ' read -ra RUNTIMES <<< "$RUNTIMES_ENV"
 
 declare -A MEMORY_DATA
 declare -A MEMORY_DATA_STDDEV
@@ -63,7 +72,6 @@ print_subsection() {
 # Function to check if binary exists
 check_binary() {
     if [ ! -f "$1" ]; then
-        echo -e "${RED}ERROR: Binary not found: $1${NC}"
         return 1
     fi
     return 0
@@ -293,14 +301,16 @@ EOF
             IFS=':' read -r runtime_name _ <<< "$runtime_config"
 
             if [[ "$runtime_name" == "Native" ]]; then
-                local total_mem="${MEMORY_DATA[${runtime_name}:${scenario}]}"
-                local total_stddev="${MEMORY_DATA_STDDEV[${runtime_name}:${scenario}]}"
-                if [ -n "$total_mem" ] && [ "$total_mem" != "0" ]; then
-                    echo "## $runtime_name" >> "$combined_file"
-                    echo "Total Memory: $total_mem KB (±${total_stddev} KB)" >> "$combined_file"
-                    echo "Overhead Memory: N/A" >> "$combined_file"
-                    echo "NET Memory: $total_mem KB (±${total_stddev} KB)" >> "$combined_file"
-                    echo "" >> "$combined_file"
+                if [[ "$scenario" != "HostFns" ]]; then
+                  local total_mem="${MEMORY_DATA[${runtime_name}:${scenario}]}"
+                  local total_stddev="${MEMORY_DATA_STDDEV[${runtime_name}:${scenario}]}"
+                  if [ -n "$total_mem" ] && [ "$total_mem" != "0" ]; then
+                      echo "## $runtime_name" >> "$combined_file"
+                      echo "Total Memory: $total_mem KB (±${total_stddev} KB)" >> "$combined_file"
+                      echo "Overhead Memory: N/A" >> "$combined_file"
+                      echo "NET Memory: $total_mem KB (±${total_stddev} KB)" >> "$combined_file"
+                      echo "" >> "$combined_file"
+                  fi
                 fi
             else
                 local total_mem="${MEMORY_DATA[${runtime_name}:${scenario}]}"
@@ -396,11 +406,6 @@ parse_flags() {
 # Main execution
 main() {
     parse_flags "$@"
-
-    echo "$WARMUP_RUNS"
-    echo "$BENCH_RUNS"
-    echo "$RESULTS_DIR"
-
 
     if [[ -z "${SKIP_MEM_BENCH_INTERACTIVE:-}" ]]; then
       print_header "WASM vs Native Benchmark Suite"
