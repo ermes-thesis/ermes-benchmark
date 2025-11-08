@@ -1,0 +1,70 @@
+# Memory Benchmark Results: Fibonacci
+# Generated: Sun Nov  2 19:11:14 CET 2025
+# Format: Runtime | Max RSS (KB) | User Time (s) | System Time (s)
+
+## Native
+MaxRSS: 3292 KB
+UserTime: 0.47 s
+SystemTime: 0.00 s
+Elapsed: 0:00.51
+
+## Wasmedge_Interpreter_NoOpts
+MaxRSS: 69316 KB
+UserTime: 16.87 s
+SystemTime: 0.04 s
+Elapsed: 0:16.48
+
+## Wasmedge_Interpreter_WithOpts
+MaxRSS: 65824 KB
+UserTime: 17.03 s
+SystemTime: 0.06 s
+Elapsed: 0:17.57
+
+## Wasmedge_AOT_NoOpts
+MaxRSS: 61872 KB
+UserTime: 0.31 s
+SystemTime: 0.02 s
+Elapsed: 0:00.40
+
+## Wasmedge_AOT_WithOpts
+MaxRSS: 60156 KB
+UserTime: 0.27 s
+SystemTime: 0.00 s
+Elapsed: 0:00.34
+
+## Wasmtime_JIT_NoOpts
+MaxRSS: 60064 KB
+UserTime: 0.32 s
+SystemTime: 0.01 s
+Elapsed: 0:00.50
+
+## Wasmtime_JIT_WithOpts
+MaxRSS: 59528 KB
+UserTime: 0.32 s
+SystemTime: 0.02 s
+Elapsed: 0:00.51
+
+## Wazero_AOT_NoOpts
+MaxRSS: 86840 KB
+UserTime: 0.55 s
+SystemTime: 0.02 s
+Elapsed: 0:00.69
+
+## Wazero_AOT_WithOpts
+MaxRSS: 69188 KB
+UserTime: 0.50 s
+SystemTime: 0.05 s
+Elapsed: 0:00.65
+
+## Wazero_Interpreter_NoOpts
+MaxRSS: 88508 KB
+UserTime: 20.44 s
+SystemTime: 0.19 s
+Elapsed: 0:19.81
+
+## Wazero_Interpreter_WithOpts
+MaxRSS: 74808 KB
+UserTime: 21.26 s
+SystemTime: 0.24 s
+Elapsed: 0:20.64
+

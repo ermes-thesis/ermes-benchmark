@@ -1,0 +1,541 @@
+# Combined Memory Benchmark Results - All Scenarios
+# Generated: Tue Nov  4 15:29:14 CET 2025
+# Format: Runtime | Max RSS (KB) | User Time (s) | System Time (s)
+
+================================================================================
+
+################################################################################
+# SCENARIO: PrimeNumbers
+################################################################################
+
+## Native
+MaxRSS: 3284 KB
+UserTime: 0.46 s
+SystemTime: 0.00 s
+Elapsed: 0:00.46
+
+## Wasmedge_Interpreter_NoOpts
+MaxRSS: 68980 KB
+UserTime: 20.01 s
+SystemTime: 0.08 s
+Elapsed: 0:19.21
+
+## Wasmedge_Interpreter_WithOpts
+MaxRSS: 63384 KB
+UserTime: 10.54 s
+SystemTime: 0.07 s
+Elapsed: 0:11.60
+
+## Wasmedge_AOT_NoOpts
+MaxRSS: 59588 KB
+UserTime: 0.26 s
+SystemTime: 0.02 s
+Elapsed: 0:00.35
+
+## Wasmedge_AOT_WithOpts
+MaxRSS: 59912 KB
+UserTime: 0.26 s
+SystemTime: 0.02 s
+Elapsed: 0:00.32
+
+## Wasmtime_JIT_NoOpts
+MaxRSS: 60864 KB
+UserTime: 0.43 s
+SystemTime: 0.04 s
+Elapsed: 0:00.59
+
+## Wasmtime_JIT_WithOpts
+MaxRSS: 59224 KB
+UserTime: 0.44 s
+SystemTime: 0.02 s
+Elapsed: 0:00.56
+
+## Wazero_AOT_NoOpts
+MaxRSS: 89400 KB
+UserTime: 0.67 s
+SystemTime: 0.05 s
+Elapsed: 0:00.79
+
+## Wazero_AOT_WithOpts
+MaxRSS: 68224 KB
+UserTime: 0.51 s
+SystemTime: 0.06 s
+Elapsed: 0:00.65
+
+## Wazero_Interpreter_NoOpts
+MaxRSS: 72668 KB
+UserTime: 22.08 s
+SystemTime: 0.06 s
+Elapsed: 0:21.15
+
+## Wazero_Interpreter_WithOpts
+MaxRSS: 62152 KB
+UserTime: 12.71 s
+SystemTime: 0.01 s
+Elapsed: 0:13.65
+
+
+
+################################################################################
+# SCENARIO: Fibonacci
+################################################################################
+
+## Native
+MaxRSS: 3288 KB
+UserTime: 0.49 s
+SystemTime: 0.00 s
+Elapsed: 0:00.49
+
+## Wasmedge_Interpreter_NoOpts
+MaxRSS: 69516 KB
+UserTime: 17.75 s
+SystemTime: 0.07 s
+Elapsed: 0:18.83
+
+## Wasmedge_Interpreter_WithOpts
+MaxRSS: 63860 KB
+UserTime: 17.32 s
+SystemTime: 0.01 s
+Elapsed: 0:16.29
+
+## Wasmedge_AOT_NoOpts
+MaxRSS: 61916 KB
+UserTime: 0.29 s
+SystemTime: 0.01 s
+Elapsed: 0:00.35
+
+## Wasmedge_AOT_WithOpts
+MaxRSS: 57852 KB
+UserTime: 0.26 s
+SystemTime: 0.02 s
+Elapsed: 0:00.33
+
+## Wasmtime_JIT_NoOpts
+MaxRSS: 63544 KB
+UserTime: 0.31 s
+SystemTime: 0.03 s
+Elapsed: 0:00.48
+
+## Wasmtime_JIT_WithOpts
+MaxRSS: 57632 KB
+UserTime: 0.30 s
+SystemTime: 0.05 s
+Elapsed: 0:00.52
+
+## Wazero_AOT_NoOpts
+MaxRSS: 89320 KB
+UserTime: 0.54 s
+SystemTime: 0.05 s
+Elapsed: 0:00.64
+
+## Wazero_AOT_WithOpts
+MaxRSS: 70480 KB
+UserTime: 0.53 s
+SystemTime: 0.03 s
+Elapsed: 0:00.64
+
+## Wazero_Interpreter_NoOpts
+MaxRSS: 90484 KB
+UserTime: 20.70 s
+SystemTime: 0.30 s
+Elapsed: 0:21.27
+
+## Wazero_Interpreter_WithOpts
+MaxRSS: 72928 KB
+UserTime: 22.18 s
+SystemTime: 0.22 s
+Elapsed: 0:22.31
+
+
+
+################################################################################
+# SCENARIO: Lightweight
+################################################################################
+
+## Native
+MaxRSS: 3292 KB
+UserTime: 0.00 s
+SystemTime: 0.00 s
+Elapsed: 0:00.01
+
+## Wasmedge_Interpreter_NoOpts
+MaxRSS: 71184 KB
+UserTime: 0.07 s
+SystemTime: 0.01 s
+Elapsed: 0:00.21
+
+## Wasmedge_Interpreter_WithOpts
+MaxRSS: 63428 KB
+UserTime: 0.01 s
+SystemTime: 0.02 s
+Elapsed: 0:00.09
+
+## Wasmedge_AOT_NoOpts
+MaxRSS: 59592 KB
+UserTime: 0.01 s
+SystemTime: 0.01 s
+Elapsed: 0:00.08
+
+## Wasmedge_AOT_WithOpts
+MaxRSS: 60312 KB
+UserTime: 0.00 s
+SystemTime: 0.02 s
+Elapsed: 0:00.08
+
+## Wasmtime_JIT_NoOpts
+MaxRSS: 62604 KB
+UserTime: 0.01 s
+SystemTime: 0.02 s
+Elapsed: 0:00.21
+
+## Wasmtime_JIT_WithOpts
+MaxRSS: 59348 KB
+UserTime: 0.00 s
+SystemTime: 0.03 s
+Elapsed: 0:00.21
+
+## Wazero_AOT_NoOpts
+MaxRSS: 84784 KB
+UserTime: 0.26 s
+SystemTime: 0.03 s
+Elapsed: 0:00.35
+
+## Wazero_AOT_WithOpts
+MaxRSS: 72192 KB
+UserTime: 0.14 s
+SystemTime: 0.00 s
+Elapsed: 0:00.22
+
+## Wazero_Interpreter_NoOpts
+MaxRSS: 70924 KB
+UserTime: 0.09 s
+SystemTime: 0.01 s
+Elapsed: 0:00.20
+
+## Wazero_Interpreter_WithOpts
+MaxRSS: 61156 KB
+UserTime: 0.01 s
+SystemTime: 0.02 s
+Elapsed: 0:00.13
+
+
+
+################################################################################
+# SCENARIO: TailFibonacci
+################################################################################
+
+## Native
+MaxRSS: 7392 KB
+UserTime: 0.00 s
+SystemTime: 0.00 s
+Elapsed: 0:00.02
+
+## Wasmedge_Interpreter_NoOpts
+MaxRSS: 70124 KB
+UserTime: 0.06 s
+SystemTime: 0.02 s
+Elapsed: 0:00.13
+
+## Wasmedge_Interpreter_WithOpts
+MaxRSS: 63760 KB
+UserTime: 0.01 s
+SystemTime: 0.02 s
+Elapsed: 0:00.09
+
+## Wasmedge_AOT_NoOpts
+MaxRSS: 62832 KB
+UserTime: 0.00 s
+SystemTime: 0.03 s
+Elapsed: 0:00.08
+
+## Wasmedge_AOT_WithOpts
+MaxRSS: 58320 KB
+UserTime: 0.00 s
+SystemTime: 0.02 s
+Elapsed: 0:00.07
+
+## Wasmtime_JIT_NoOpts
+MaxRSS: 60516 KB
+UserTime: 0.03 s
+SystemTime: 0.01 s
+Elapsed: 0:00.18
+
+## Wasmtime_JIT_WithOpts
+MaxRSS: 59256 KB
+UserTime: 0.01 s
+SystemTime: 0.03 s
+Elapsed: 0:00.19
+
+## Wazero_AOT_NoOpts
+MaxRSS: 85292 KB
+UserTime: 0.22 s
+SystemTime: 0.05 s
+Elapsed: 0:00.38
+
+## Wazero_AOT_WithOpts
+MaxRSS: 72464 KB
+UserTime: 0.11 s
+SystemTime: 0.03 s
+Elapsed: 0:00.21
+
+## Wazero_Interpreter_NoOpts
+MaxRSS: 74952 KB
+UserTime: 0.11 s
+SystemTime: 0.00 s
+Elapsed: 0:00.17
+
+## Wazero_Interpreter_WithOpts
+MaxRSS: 61824 KB
+UserTime: 0.00 s
+SystemTime: 0.02 s
+Elapsed: 0:00.12
+
+
+
+
+################################################################################
+# NET MEMORY CONSUMPTION (Total - Overhead)
+################################################################################
+# This section shows the pure memory usage after subtracting WASM runtime overhead.
+# Formula: NET Memory = Total Memory - Overhead Memory
+
+################################################################################
+# SCENARIO: PrimeNumbers - NET MEMORY
+################################################################################
+
+## Native
+Total Memory: 3284 KB
+Overhead Memory: N/A
+NET Memory: N/A (Native has negligible overhead)
+
+## Wasmedge_Interpreter_NoOpts
+Total Memory: 68980 KB
+Overhead Memory: 54960 KB
+NET Memory: 14020 KB
+
+## Wasmedge_Interpreter_WithOpts
+Total Memory: 63384 KB
+Overhead Memory: 54008 KB
+NET Memory: 9376 KB
+
+## Wasmedge_AOT_NoOpts
+Total Memory: 59588 KB
+Overhead Memory: 54980 KB
+NET Memory: 4608 KB
+
+## Wasmedge_AOT_WithOpts
+Total Memory: 59912 KB
+Overhead Memory: 55336 KB
+NET Memory: 4576 KB
+
+## Wasmtime_JIT_NoOpts
+Total Memory: 60864 KB
+Overhead Memory: 49808 KB
+NET Memory: 11056 KB
+
+## Wasmtime_JIT_WithOpts
+Total Memory: 59224 KB
+Overhead Memory: 53908 KB
+NET Memory: 5316 KB
+
+## Wazero_AOT_NoOpts
+Total Memory: 89400 KB
+Overhead Memory: 52172 KB
+NET Memory: 37228 KB
+
+## Wazero_AOT_WithOpts
+Total Memory: 68224 KB
+Overhead Memory: 50132 KB
+NET Memory: 18092 KB
+
+## Wazero_Interpreter_NoOpts
+Total Memory: 72668 KB
+Overhead Memory: 49596 KB
+NET Memory: 23072 KB
+
+## Wazero_Interpreter_WithOpts
+Total Memory: 62152 KB
+Overhead Memory: 51732 KB
+NET Memory: 10420 KB
+
+
+################################################################################
+# SCENARIO: Fibonacci - NET MEMORY
+################################################################################
+
+## Native
+Total Memory: 3288 KB
+Overhead Memory: N/A
+NET Memory: N/A (Native has negligible overhead)
+
+## Wasmedge_Interpreter_NoOpts
+Total Memory: 69516 KB
+Overhead Memory: 54888 KB
+NET Memory: 14628 KB
+
+## Wasmedge_Interpreter_WithOpts
+Total Memory: 63860 KB
+Overhead Memory: 54956 KB
+NET Memory: 8904 KB
+
+## Wasmedge_AOT_NoOpts
+Total Memory: 61916 KB
+Overhead Memory: 55032 KB
+NET Memory: 6884 KB
+
+## Wasmedge_AOT_WithOpts
+Total Memory: 57852 KB
+Overhead Memory: 55244 KB
+NET Memory: 2608 KB
+
+## Wasmtime_JIT_NoOpts
+Total Memory: 63544 KB
+Overhead Memory: 52528 KB
+NET Memory: 11016 KB
+
+## Wasmtime_JIT_WithOpts
+Total Memory: 57632 KB
+Overhead Memory: 49808 KB
+NET Memory: 7824 KB
+
+## Wazero_AOT_NoOpts
+Total Memory: 89320 KB
+Overhead Memory: 49924 KB
+NET Memory: 39396 KB
+
+## Wazero_AOT_WithOpts
+Total Memory: 70480 KB
+Overhead Memory: 52424 KB
+NET Memory: 18056 KB
+
+## Wazero_Interpreter_NoOpts
+Total Memory: 90484 KB
+Overhead Memory: 50236 KB
+NET Memory: 40248 KB
+
+## Wazero_Interpreter_WithOpts
+Total Memory: 72928 KB
+Overhead Memory: 49576 KB
+NET Memory: 23352 KB
+
+
+################################################################################
+# SCENARIO: Lightweight - NET MEMORY
+################################################################################
+
+## Native
+Total Memory: 3292 KB
+Overhead Memory: N/A
+NET Memory: N/A (Native has negligible overhead)
+
+## Wasmedge_Interpreter_NoOpts
+Total Memory: 71184 KB
+Overhead Memory: 57312 KB
+NET Memory: 13872 KB
+
+## Wasmedge_Interpreter_WithOpts
+Total Memory: 63428 KB
+Overhead Memory: 53128 KB
+NET Memory: 10300 KB
+
+## Wasmedge_AOT_NoOpts
+Total Memory: 59592 KB
+Overhead Memory: 57560 KB
+NET Memory: 2032 KB
+
+## Wasmedge_AOT_WithOpts
+Total Memory: 60312 KB
+Overhead Memory: 56100 KB
+NET Memory: 4212 KB
+
+## Wasmtime_JIT_NoOpts
+Total Memory: 62604 KB
+Overhead Memory: 51740 KB
+NET Memory: 10864 KB
+
+## Wasmtime_JIT_WithOpts
+Total Memory: 59348 KB
+Overhead Memory: 51788 KB
+NET Memory: 7560 KB
+
+## Wazero_AOT_NoOpts
+Total Memory: 84784 KB
+Overhead Memory: 52256 KB
+NET Memory: 32528 KB
+
+## Wazero_AOT_WithOpts
+Total Memory: 72192 KB
+Overhead Memory: 50140 KB
+NET Memory: 22052 KB
+
+## Wazero_Interpreter_NoOpts
+Total Memory: 70924 KB
+Overhead Memory: 49532 KB
+NET Memory: 21392 KB
+
+## Wazero_Interpreter_WithOpts
+Total Memory: 61156 KB
+Overhead Memory: 52300 KB
+NET Memory: 8856 KB
+
+
+################################################################################
+# SCENARIO: TailFibonacci - NET MEMORY
+################################################################################
+
+## Native
+Total Memory: 7392 KB
+Overhead Memory: N/A
+NET Memory: N/A (Native has negligible overhead)
+
+## Wasmedge_Interpreter_NoOpts
+Total Memory: 70124 KB
+Overhead Memory: 57616 KB
+NET Memory: 12508 KB
+
+## Wasmedge_Interpreter_WithOpts
+Total Memory: 63760 KB
+Overhead Memory: 55040 KB
+NET Memory: 8720 KB
+
+## Wasmedge_AOT_NoOpts
+Total Memory: 62832 KB
+Overhead Memory: 56980 KB
+NET Memory: 5852 KB
+
+## Wasmedge_AOT_WithOpts
+Total Memory: 58320 KB
+Overhead Memory: 55040 KB
+NET Memory: 3280 KB
+
+## Wasmtime_JIT_NoOpts
+Total Memory: 60516 KB
+Overhead Memory: 53804 KB
+NET Memory: 6712 KB
+
+## Wasmtime_JIT_WithOpts
+Total Memory: 59256 KB
+Overhead Memory: 52136 KB
+NET Memory: 7120 KB
+
+## Wazero_AOT_NoOpts
+Total Memory: 85292 KB
+Overhead Memory: 52084 KB
+NET Memory: 33208 KB
+
+## Wazero_AOT_WithOpts
+Total Memory: 72464 KB
+Overhead Memory: 48276 KB
+NET Memory: 24188 KB
+
+## Wazero_Interpreter_NoOpts
+Total Memory: 74952 KB
+Overhead Memory: 51760 KB
+NET Memory: 23192 KB
+
+## Wazero_Interpreter_WithOpts
+Total Memory: 61824 KB
+Overhead Memory: 51768 KB
+NET Memory: 10056 KB
+
+

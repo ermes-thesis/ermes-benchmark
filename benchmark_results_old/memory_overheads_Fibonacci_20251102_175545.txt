@@ -1,0 +1,64 @@
+# Overhead Memory Benchmark Results: Fibonacci
+# Generated: Sun Nov  2 19:13:05 CET 2025
+# Format: Runtime | Max RSS (KB) | User Time (s) | System Time (s)
+
+## Wasmedge_Interpreter_NoOpts OVERHEAD
+MaxRSS: 52720 KB
+UserTime: 0.02 s
+SystemTime: 0.00 s
+Elapsed: 0:00.08
+
+## Wasmedge_Interpreter_WithOpts OVERHEAD
+MaxRSS: 57292 KB
+UserTime: 0.01 s
+SystemTime: 0.01 s
+Elapsed: 0:00.09
+
+## Wasmedge_AOT_NoOpts OVERHEAD
+MaxRSS: 55564 KB
+UserTime: 0.00 s
+SystemTime: 0.02 s
+Elapsed: 0:00.07
+
+## Wasmedge_AOT_WithOpts OVERHEAD
+MaxRSS: 57056 KB
+UserTime: 0.01 s
+SystemTime: 0.02 s
+Elapsed: 0:00.08
+
+## Wasmtime_JIT_NoOpts OVERHEAD
+MaxRSS: 49852 KB
+UserTime: 0.01 s
+SystemTime: 0.02 s
+Elapsed: 0:00.14
+
+## Wasmtime_JIT_WithOpts OVERHEAD
+MaxRSS: 52112 KB
+UserTime: 0.00 s
+SystemTime: 0.02 s
+Elapsed: 0:00.14
+
+## Wazero_AOT_NoOpts OVERHEAD
+MaxRSS: 52120 KB
+UserTime: 0.02 s
+SystemTime: 0.01 s
+Elapsed: 0:00.10
+
+## Wazero_AOT_WithOpts OVERHEAD
+MaxRSS: 50256 KB
+UserTime: 0.00 s
+SystemTime: 0.02 s
+Elapsed: 0:00.10
+
+## Wazero_Interpreter_NoOpts OVERHEAD
+MaxRSS: 51784 KB
+UserTime: 0.00 s
+SystemTime: 0.03 s
+Elapsed: 0:00.10
+
+## Wazero_Interpreter_WithOpts OVERHEAD
+MaxRSS: 52056 KB
+UserTime: 0.00 s
+SystemTime: 0.03 s
+Elapsed: 0:00.16
+
