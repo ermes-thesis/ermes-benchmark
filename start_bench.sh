@@ -68,8 +68,8 @@ while [[ $# -gt 0 ]]; do
             DO_TIME_BENCH=true
             shift
             ;;
-        -sb|--skip-build)
-            SKIP_BINARY_BUILD=true
+        -b|--build)
+            SKIP_BINARY_BUILD=false
             shift
             ;;
         -w|--warmup)
@@ -122,7 +122,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  -dm, --disable-mem-bench    Disable memory benchmarking of the binaries (default: Memory benchmarking enabled)"
             echo "  -dt, --disable-time-bench   Disable time benchmarking of the binaries (default: Time benchmarking enabled)"
-            echo "  -sb, --skip-build           Skip binaries building step (default: Binaries build skipped)"
+            echo "  -b, --build                 Build the binaries needed for benchmark (default: Binaries build skipped)"
             echo "  -w,  --warmup               Specify how many warmup runs perform (default: 15)"
             echo "  -r,  --runs                 Specify how many benchmark runs perform (default: 20)"
             echo "  -od, --output-dir           Directory where to place benchmark results (default: 'benchmark_results/{Timestamp}'"
@@ -131,10 +131,10 @@ while [[ $# -gt 0 ]]; do
             echo "  -h, --help                  Show this help message"
             echo ""
             echo "Examples:"
-            echo "  $0                          # Build with optimizations disabled"
+            echo "  $0                          # Perform benchmarking with default settings and without re-building binaries"
             echo "  $0 --disable-mem-bench      # Skip memory benchmarking"
             echo "  $0 --disable-time-bench     # Skip time benchmarking"
-            echo "  $0 --skip-build             # Perform benchmarking without re-building the binaries"
+            echo "  $0 --build                  # Perform benchmarking re-building the binaries"
             echo "  $0 --warmup 5 --runs 10     # Perform benchmarking with 5 warmup runs and 10 benchmark runs"
             exit 0
             ;;
@@ -163,11 +163,23 @@ echo "  Warmup runs: $WARMUP_RUNS"
 echo "  Benchmark runs: $BENCH_RUNS (used for timing and memory)"
 echo "  Results directory: $RESULTS_DIR"
 echo "  Timestamp: $TIMESTAMP"
+echo "  Do memory benchmark: $DO_MEM_BENCH"
+echo "  Do time benchmark: $DO_TIME_BENCH"
+echo "  Skip binaries build: $SKIP_BINARY_BUILD"
+echo "  Build without optimizations (ignored if build is skipped): $DISABLE_OPTS"
+echo "  Output binaries folder: $OUTPUT_BUILD_DIR"
 echo ""
-echo "Scenarios to test: ${SCENARIOS[*]}"
-echo "Runtime configurations: ${#RUNTIMES[@]}"
+echo "Scenarios to test:"
+for scenario in "${SCENARIOS[@]}"; do
+  echo "  - $scenario"
+done
 echo ""
+echo "Runtime configurations (${#RUNTIMES[@]}):"
+for runtime in "${RUNTIMES[@]}"; do
+  echo "  - $runtime"
+done
 echo "Memory measurements will be averaged over $BENCH_RUNS runs per configuration"
+echo ""
 
 # Check if hyperfine is installed
 if ! command -v hyperfine &> /dev/null; then
