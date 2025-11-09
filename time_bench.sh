@@ -413,8 +413,16 @@ main() {
       echo "  Results directory: $RESULTS_DIR"
       echo "  Timestamp: $TIMESTAMP"
       echo ""
-      echo "Scenarios to test: ${SCENARIOS[*]}"
-      echo "Runtime configurations: ${#RUNTIMES[@]}"
+      echo "Scenarios to test:"
+      for scenario in "${SCENARIOS[@]}"; do
+        echo "  - $scenario"
+      done
+      echo ""
+      echo "Runtime configurations (${#RUNTIMES[@]}):"
+      for runtime in "${RUNTIMES[@]}"; do
+        echo "  - $runtime"
+      done
+      echo ""
 
       # Check if hyperfine is installed
       if ! command -v hyperfine &> /dev/null; then

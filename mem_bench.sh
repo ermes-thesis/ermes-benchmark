@@ -416,10 +416,18 @@ main() {
       echo "  Results directory: $RESULTS_DIR"
       echo "  Timestamp: $TIMESTAMP"
       echo ""
-      echo "Scenarios to test: ${SCENARIOS[*]}"
-      echo "Runtime configurations: ${#RUNTIMES[@]}"
+      echo "Scenarios to test:"
+      for scenario in "${SCENARIOS[@]}"; do
+        echo "  - $scenario"
+      done
+      echo ""
+      echo "Runtime configurations (${#RUNTIMES[@]}):"
+      for runtime in "${RUNTIMES[@]}"; do
+        echo "  - $runtime"
+      done
       echo ""
       echo "Memory measurements will be averaged over $BENCH_RUNS runs per configuration"
+      echo ""
 
       # Check if GNU time is available
       if ! /usr/bin/time --version &> /dev/null 2>&1; then
