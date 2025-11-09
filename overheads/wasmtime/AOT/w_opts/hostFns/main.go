@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmtimeExecutorPool(10, log)
+	pool := wasm.NewWasmtimeExecutorPool(10, false, log)
 
 	fns := map[string]any{
 		"hostGet": func(collIdPtr, collIdLength, recordNamePtr, recordNameLength, groupsPtr, groupsLength, userIdPtr, userIdLength int32, caller *wasmtime.Caller) int32 {

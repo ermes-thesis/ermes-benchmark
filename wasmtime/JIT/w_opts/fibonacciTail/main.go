@@ -26,7 +26,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmtimeExecutorPool(10, log)
+	pool := wasm.NewWasmtimeExecutorPool(10, false, log)
 	defer pool.Close()
 
 	executor := pool.Acquire()

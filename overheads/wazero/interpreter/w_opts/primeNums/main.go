@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWazeroExecutorPool(10, true, context.Background(), log)
+	pool := wasm.NewWazeroExecutorPool(10, true, false, context.Background(), log)
 	defer pool.Close()
 
 	executor := pool.Acquire()

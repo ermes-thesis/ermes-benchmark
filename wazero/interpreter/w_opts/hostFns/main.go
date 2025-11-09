@@ -28,7 +28,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWazeroExecutorPool(10, true, context.Background(), log)
+	pool := wasm.NewWazeroExecutorPool(10, true, false, context.Background(), log)
 
 	fns := map[string]any{
 		"hostGet": func(ctx context.Context, m api.Module, collIdPtr, collIdLength, recordNamePtr, recordNameLength, groupsPtr, groupsLength, userIdPtr, userIdLength int32) int32 {
