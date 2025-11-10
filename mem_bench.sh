@@ -116,6 +116,8 @@ IFS=' ' read -ra TEST_CONFIGS <<< "$TEST_CONFIGS_ENV"
 
 declare -A MEMORY_DATA
 declare -A MEMORY_DATA_STDDEV
+declare -A MEMORY_OVERHEAD_DATA
+declare -A MEMORY_OVERHEAD_DATA_STDDEV
 
 # Function to print section headers
 print_header() {
@@ -155,7 +157,7 @@ calculate_stats() {
 }
 
 # Function to run native binary benchmark
-run_native_benchmark() {
+run_native_memory_benchmark() {
     local config_name=$1
     local native_binary=$2
     local function_input=$3
@@ -222,7 +224,119 @@ run_native_benchmark() {
 }
 
 # Function to run memory benchmark for a single WASM configuration
-run_wasm_benchmark() {
+run_overhead_memory_benchmark() {
+    local config_name=$1
+    local wasm_file=$2
+    local runtime=$3
+    local is_interpreter=$4
+    local register_hostfn=$5
+    local function_input=$6
+    local output_file=$7
+
+    print_subsection "$config_name OVERHEADS (running $BENCH_RUNS times)"
+
+    local max_rss_values=()
+
+    # Run the binary multiple times
+    for ((run=1; run<=BENCH_RUNS; run++)); do
+        echo -ne "  Run $run/$BENCH_RUNS...\r"
+
+        # Run with /usr/bin/time and capture MaxRSS
+        # Redirect stdout to /dev/null to avoid capturing test output
+        # Only stderr from time command is captured
+        local time_output=$( { /usr/bin/time -f "%M" \
+            "$TEST_COMPILED_PATH" \
+            -test.run ^TestProva$ \
+            "$wasm_file" \
+            "$runtime" \
+            "$is_interpreter" \
+            "$register_hostfn" \
+            "$function_input" \
+            "false" \
+            > /dev/null; } 2>&1 )
+
+        # Extract only the numeric value (MaxRSS in KB)
+        time_output=$(echo "$time_output" | grep -oE '[0-9]+' | tail -n 1)
+
+        max_rss_values+=("$time_output")
+    done
+
+    echo -e "  Completed $BENCH_RUNS runs          "
+
+    # Calculate statistics
+    local stats=$(calculate_stats "${max_rss_values[@]}")
+    read -r mean_rss stddev_rss <<< "$stats"
+
+    # Display results
+    echo "$config_name"
+    echo "  Configuration:"
+    echo "    WASM File: $wasm_file"
+    echo "    Runtime: $runtime"
+    echo "    Interpreter: $is_interpreter"
+    echo "    Host Functions: $register_hostfn"
+    echo "    Input: $function_input"
+    echo "  Mean MaxRSS: $mean_rss KB"
+    echo "  Std Dev: $stddev_rss KB"
+    echo "  Min: $(printf '%s\n' "${max_rss_values[@]}" | sort -n | head -n1) KB"
+    echo "  Max: $(printf '%s\n' "${max_rss_values[@]}" | sort -n | tail -n1) KB"
+    echo ""
+
+    # Append to results file
+    echo "## $config_name" >> "$output_file"
+    echo "Mean MaxRSS: $mean_rss KB (over $BENCH_RUNS runs)" >> "$output_file"
+    echo "Std Dev: $stddev_rss KB" >> "$output_file"
+    echo "Min: $(printf '%s\n' "${max_rss_values[@]}" | sort -n | head -n1) KB" >> "$output_file"
+    echo "Max: $(printf '%s\n' "${max_rss_values[@]}" | sort -n | tail -n1) KB" >> "$output_file"
+    echo "Raw values: ${max_rss_values[*]}" >> "$output_file"
+    echo "" >> "$output_file"
+
+    # Store memory data
+    MEMORY_OVERHEAD_DATA["${config_name}"]="$mean_rss"
+    MEMORY_OVERHEAD_DATA_STDDEV["${config_name}"]="$stddev_rss"
+}
+
+compute_net_memory() {
+  local config_name=$1
+  local second_field=$2
+  local output_file=$3
+
+  if [[ "$second_field" == "NATIVE" ]]; then
+      local total_mem="${MEMORY_DATA[${config_name}]}"
+      local total_stddev="${MEMORY_DATA_STDDEV[${config_name}]}"
+      if [ -n "$total_mem" ] && [ "$total_mem" != "0" ]; then
+          echo "## $config_name" >> "$output_file"
+          echo "Total Memory: $total_mem KB (±${total_stddev} KB)" >> "$output_file"
+          echo "Overhead Memory: N/A" >> "$output_file"
+          echo "NET Memory: $total_mem KB (±${total_stddev} KB)" >> "$output_file"
+          echo "" >> "$output_file"
+      fi
+  else
+      local total_mem="${MEMORY_DATA[${config_name}]}"
+      local total_stddev="${MEMORY_DATA_STDDEV[${config_name}]}"
+      local overhead_mem="${MEMORY_OVERHEAD_DATA[${config_name}]}"
+      local overhead_stddev="${MEMORY_OVERHEAD_DATA_STDDEV[${config_name}]}"
+
+      if [ -n "$total_mem" ] && [ "$total_mem" != "0" ]; then
+          echo "## $config_name" >> "$output_file"
+          echo "Total Memory: $total_mem KB (±${total_stddev} KB)" >> "$output_file"
+
+          if [ -n "$overhead_mem" ] && [ "$overhead_mem" != "0" ]; then
+              local net_mem=$(echo "$total_mem - $overhead_mem" | bc -l)
+              # Combine standard deviations: sqrt(σ₁² + σ₂²)
+              local net_stddev=$(echo "scale=2; sqrt(($total_stddev * $total_stddev) + ($overhead_stddev * $overhead_stddev))" | bc -l)
+              echo "Overhead Memory: $overhead_mem KB (±${overhead_stddev} KB)" >> "$output_file"
+              printf "NET Memory: %.2f KB (±%.2f KB)\n" "$net_mem" "$net_stddev" >> "$output_file"
+          else
+              echo "Overhead Memory: No overhead data available" >> "$output_file"
+              echo "NET Memory: N/A" >> "$output_file"
+          fi
+          echo "" >> "$output_file"
+      fi
+  fi
+}
+
+# Function to run memory benchmark for a single WASM configuration
+run_wasm_memory_benchmark() {
     local config_name=$1
     local wasm_file=$2
     local runtime=$3
@@ -440,6 +554,7 @@ main() {
     local old_algorithm_name=""
     local output_file="$RESULTS_DIR/memory_results_${TIMESTAMP}.txt"
 
+    echo "" > "$output_file"
     for config in "${TEST_CONFIGS[@]}"; do
         IFS=':' read -r config_name second_field third_field fourth_field fifth_field sixth_field <<< "$config"
         IFS="_" read -r algorithm_name rest <<< "$config_name"
@@ -455,11 +570,48 @@ main() {
         # Check if this is a native binary configuration
         if [[ "$second_field" == "NATIVE" ]]; then
             # Format: ConfigName:NATIVE:NativeBinaryPath:Input
-            run_native_benchmark "$config_name" "$third_field" "$fourth_field" "$output_file"
+            run_native_memory_benchmark "$config_name" "$third_field" "$fourth_field" "$output_file"
         else
             # Format: ConfigName:WasmFile:Runtime:IsInterpreter:RegisterHostFn:FunctionInput
-            run_wasm_benchmark "$config_name" "$second_field" "$third_field" "$fourth_field" "$fifth_field" "$sixth_field" "$output_file"
+            run_wasm_memory_benchmark "$config_name" "$second_field" "$third_field" "$fourth_field" "$fifth_field" "$sixth_field" "$output_file"
         fi
+    done
+
+    echo -e "\n\n\n"
+
+    for config in "${TEST_CONFIGS[@]}"; do
+        IFS=':' read -r config_name second_field third_field fourth_field fifth_field sixth_field <<< "$config"
+        IFS="_" read -r algorithm_name rest <<< "$config_name"
+
+        if [[ "$old_algorithm_name" != "$algorithm_name" ]]; then
+          echo "################################################################################" >> "$output_file"
+          echo "# SCENARIO: $algorithm_name - OVERHEAD" >> "$output_file"
+          echo "################################################################################" >> "$output_file"
+          echo "" >> "$output_file"
+          old_algorithm_name=$algorithm_name
+        fi
+
+        # Check if this is a native binary configuration
+        if [[ "$second_field" != "NATIVE" ]]; then
+            # Format: ConfigName:WasmFile:Runtime:IsInterpreter:RegisterHostFn:FunctionInput
+            run_overhead_memory_benchmark "$config_name" "$second_field" "$third_field" "$fourth_field" "$fifth_field" "$sixth_field" "$output_file"
+        fi
+    done
+
+    for config in "${TEST_CONFIGS[@]}"; do
+      IFS=':' read -r config_name second_field third_field fourth_field fifth_field sixth_field <<< "$config"
+      IFS="_" read -r algorithm_name rest <<< "$config_name"
+
+      if [[ "$old_algorithm_name" != "$algorithm_name" ]]; then
+        echo "################################################################################" >> "$output_file"
+        echo "# SCENARIO: $algorithm_name - NET MEMORY" >> "$output_file"
+        echo "################################################################################" >> "$output_file"
+        echo "" >> "$output_file"
+        old_algorithm_name=$algorithm_name
+      fi
+
+      # Format: ConfigName:WasmFile:Runtime:IsInterpreter:RegisterHostFn:FunctionInput
+      compute_net_memory "$config_name" "$second_field" "$output_file"
     done
 
     # Write results to files

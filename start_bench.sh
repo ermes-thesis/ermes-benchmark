@@ -285,12 +285,12 @@ if [[ "$SKIP_BINARY_BUILD" == false ]]; then
     /bin/bash ./build.sh "${build_flags[@]}"
 fi
 
-if [[ "$DO_TIME_BENCH" == true ]]; then
-  export SKIP_TIME_BENCH_INTERACTIVE=1
-  export TEST_CONFIGS_ENV="${TEST_CONFIGS[*]}"
-
-  /bin/bash ./time_bench.sh --warmup "$WARMUP_RUNS" --runs "$BENCH_RUNS" --output-dir "$RESULTS_DIR" --compiled-binary "$TEST_COMPILED_PATH"
-fi
+#if [[ "$DO_TIME_BENCH" == true ]]; then
+#  export SKIP_TIME_BENCH_INTERACTIVE=1
+#  export TEST_CONFIGS_ENV="${TEST_CONFIGS[*]}"
+#
+#  /bin/bash ./time_bench.sh --warmup "$WARMUP_RUNS" --runs "$BENCH_RUNS" --output-dir "$RESULTS_DIR" --compiled-binary "$TEST_COMPILED_PATH"
+#fi
 
 if [[ "$DO_MEM_BENCH" == true ]]; then
   export SKIP_MEM_BENCH_INTERACTIVE=1
@@ -317,8 +317,8 @@ generate_summary() {
         RUNTIMES+=("$runtime")
     done
 
-    readarray UNIQUE_ALGORITHMS < <(printf "%s" "${ALGORITHMS[@]}" | sort -u)
-    readarray UNIQUE_RUNTIMES < <(printf "%s" "${RUNTIMES[@]}" | sort -u)
+    readarray -t UNIQUE_ALGORITHMS < <(printf "%s\n" "${ALGORITHMS[@]}" | sort -u)
+    readarray -t UNIQUE_RUNTIMES < <(printf "%s\n" "${RUNTIMES[@]}" | sort -u)
 
     cat > "$summary_file" << EOF
 # WASM vs Native Performance Benchmark Summary
@@ -330,7 +330,7 @@ Generated: $(date)
 - Algorithms Tested: ${#UNIQUE_ALGORITHMS[@]}
 - Runtime Configurations: ${#UNIQUE_RUNTIMES[@]}
 
-## Test Scenarios
+## Test Configs
 EOF
 
     for alg in "${UNIQUE_ALGORITHMS[@]}"; do
@@ -343,7 +343,7 @@ EOF
 EOF
 
     for runtime_config in "${UNIQUE_RUNTIMES[@]}"; do
-        echo "- $runtime_name" >> "$summary_file"
+        echo "- $runtime_config" >> "$summary_file"
     done
 
     cat >> "$summary_file" << EOF
@@ -358,15 +358,15 @@ All detailed results are stored in: \`$RESULTS_DIR/\`
 - \`timing_all_scenarios_${TIMESTAMP}.json\` - Combined JSON for all scenarios
 
 #### Memory Results
-- \`memory_all_scenarios_${TIMESTAMP}.txt\` - **All memory data including NET calculations with statistics**
+- \`memory_results_${TIMESTAMP}.txt\` - **All memory data including NET calculations with statistics**
 
 ### Individual JSON Files (For Detailed Analysis)
 
 #### Main Execution Times
 EOF
 
-    for scenario in "${SCENARIOS[@]}"; do
-        echo "- \`timing_${scenario}_${TIMESTAMP}.json\` - JSON data for $scenario" >> "$summary_file"
+    for runtime in "${UNIQUE_RUNTIMES[@]}"; do
+        echo "- \`timing_${runtime}_${TIMESTAMP}.json\` - JSON data for $scenario" >> "$summary_file"
     done
 
     cat >> "$summary_file" << EOF
@@ -374,8 +374,8 @@ EOF
 #### Overhead Execution Times
 EOF
 
-    for scenario in "${SCENARIOS[@]}"; do
-        echo "- \`timing_overheads_${scenario}_${TIMESTAMP}.json\` - Overhead JSON for $scenario" >> "$summary_file"
+    for runtime in "${UNIQUE_RUNTIMES[@]}"; do
+        echo "- \`timing_overheads_${runtime}_${TIMESTAMP}.json\` - Overhead JSON for $scenario" >> "$summary_file"
     done
 
     cat >> "$summary_file" << EOF
