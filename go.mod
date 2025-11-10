@@ -1,4 +1,4 @@
-module empty_binary
+module wasm_integration_test
 
 go 1.24.4
 
