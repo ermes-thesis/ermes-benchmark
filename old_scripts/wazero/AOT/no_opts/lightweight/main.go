@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"empty_binary/old_scripts/common"
 	"github.com/ermes-thesis/ermes-common/logger"
 	"github.com/ermes-thesis/ermes-common/wasm-pool"
 	"github.com/rs/zerolog"
 	"os"
+	"wasm_integration_test/old_scripts/common"
 )
 
 func main() {

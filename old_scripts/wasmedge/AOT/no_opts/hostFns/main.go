@@ -1,12 +1,12 @@
 package main
 
 import (
-	"empty_binary/old_scripts/common"
 	"github.com/ermes-thesis/ermes-common/logger"
 	"github.com/ermes-thesis/ermes-common/wasm-pool"
 	"github.com/rs/zerolog"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 	"os"
+	"wasm_integration_test/old_scripts/common"
 )
 
 func main() {

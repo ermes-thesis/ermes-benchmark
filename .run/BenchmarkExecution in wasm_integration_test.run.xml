@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="BenchmarkExecution in wasm_integration_test" type="GoTestRunConfiguration" factoryName="Go Test" nameIsGenerated="true">
-    <output_file path="$PROJECT_DIR$/scheduler/wasm_integration_test/results.json" is_save="true" />
+    <output_file path="$PROJECT_DIR$/results.json" is_save="true" />
     <module name="benchmark-files" />
     <target name="WSL - Ubuntu" />
     <working_directory value="$PROJECT_DIR$" />

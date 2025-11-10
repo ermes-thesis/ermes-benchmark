@@ -40,7 +40,7 @@ const fibonacciInput = 40
 const lightweightInput = 20000
 const fibonacciTailInput = 20000
 const hostFnsInput = 0
-const warmBench = true
+const warmBench = false
 
 var fnTwoParamOneReturnType = wasmedge.NewFunctionType(
 	[]*wasmedge.ValType{wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32()},
