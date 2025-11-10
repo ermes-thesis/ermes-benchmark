@@ -63,49 +63,49 @@ Running the script without any options will:
 
 ### 1. Quick Benchmark (Default Settings)
 ```bash
-./benchmark.sh
+./start_bench.sh
 ```
 Uses existing binaries, 15 warmup runs, 20 benchmark runs.
 
 ### 2. Rebuild and Benchmark
 ```bash
-./benchmark.sh --build
+./start_bench.sh --build
 ```
 Rebuilds all binaries before running benchmarks.
 
 ### 3. Fast Testing (Fewer Runs)
 ```bash
-./benchmark.sh --warmup 5 --runs 10
+./start_bench.sh --warmup 5 --runs 10
 ```
 Useful for quick testing.
 
 ### 4. Memory-Only Benchmark
 ```bash
-./benchmark.sh --disable-time-bench
+./start_bench.sh --disable-time-bench
 ```
 Only measures memory consumption, skips timing.
 
 ### 5. Time-Only Benchmark
 ```bash
-./benchmark.sh --disable-mem-bench
+./start_bench.sh --disable-mem-bench
 ```
 Only measures execution time, skips memory profiling.
 
 ### 6. Custom Output Directory
 ```bash
-./benchmark.sh --output-dir my_results
+./start_bench.sh --output-dir my_results
 ```
 Saves results to a custom directory.
 
 ### 7. Build with Optimizations
 ```bash
-./benchmark.sh --build --enable-opts
+./start_bench.sh --build --enable-opts
 ```
 Rebuilds binaries with Go compiler optimizations enabled.
 
 ### 8. Production Benchmark
 ```bash
-./benchmark.sh --build --warmup 30 --runs 50 --output-dir production_results
+./start_bench.sh --build --warmup 30 --runs 50 --output-dir production_results
 ```
 Comprehensive benchmark with more runs for higher statistical confidence.
 
@@ -214,7 +214,7 @@ Make sure you have:
 
 ### Combining Options
 ```bash
-./benchmark.sh \
+./start_bench.sh \
   --build \
   --enable-opts \
   --warmup 20 \
@@ -227,7 +227,7 @@ Make sure you have:
 ```bash
 # Run multiple benchmarks with different configurations
 for runs in 10 20 50; do
-  ./benchmark.sh --runs $runs --output-dir "results_${runs}_runs"
+  ./start_bench.sh --runs $runs --output-dir "results_${runs}_runs"
 done
 ```
 
