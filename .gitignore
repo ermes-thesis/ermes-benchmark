@@ -3,6 +3,8 @@ sandbox
 benchmark_results_old
 benchmark_results_old2
 
-benchmark_results
-!benchmark_results/20251103_122242
-!benchmark_results/20251104_135416
+benchmark_results/*
+old_scripts/benchmark_results/*
+!old_scripts/benchmark_results/
+!old_scripts/benchmark_results/20251103_122242/
+!old_scripts/benchmark_results/20251104_135416/

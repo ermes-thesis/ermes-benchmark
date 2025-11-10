@@ -23,33 +23,99 @@ RESULTS_DIR="benchmark_results/$TIMESTAMP"
 
 # Configuration build
 DISABLE_OPTS=true
-OUTPUT_BUILD_DIR=bin
+OUTPUT_BUILD_DIR="bin"
+TEST_COMPILED_FILENAME="built_test.test"
+TEST_COMPILED_PATH="${OUTPUT_BUILD_DIR}/${TEST_COMPILED_FILENAME}"
 
-# Test scenarios (workloads)
-SCENARIOS=(
-    "PrimeNumbers"
-    "Fibonacci"
-    "Lightweight"
-    "TailFibonacci"
-    "HostFns"
-)
+# WASM binary path prefixes
+BINARY_FIBONACCI_PATH_PREFIX="_WASM_BINARIES/cpuIntensive/fibonacci"
+BINARY_PRIMENUM_PATH_PREFIX="_WASM_BINARIES/cpuIntensive/primeNums"
+BINARY_TAILFIBONACCI_PATH_PREFIX="_WASM_BINARIES/cpuIntensive/tailFibonacci"
+BINARY_HOSTFNS_PATH_PREFIX="_WASM_BINARIES/hostFns"
+BINARY_LIGHTWEIGHT_PATH_PREFIX="_WASM_BINARIES/lightweight"
 
-# Runtime configurations
-# Format: "RuntimeName:BinaryPrefix"
-RUNTIMES=(
-    "Native:native"
-    "Wasmedge_Interpreter_NoOpts:wasmedge_interpreter_noopts"
-    "Wasmedge_Interpreter_WithOpts:wasmedge_interpreter_wopts"
-    "Wasmedge_AOT_NoOpts:wasmedge_aot_noopts"
-    "Wasmedge_AOT_WithOpts:wasmedge_aot_wopts"
-    "Wasmtime_JIT_NoOpts:wasmtime_jit_noopts"
-    "Wasmtime_JIT_WithOpts:wasmtime_jit_wopts"
-    "Wasmtime_AOT_NoOpts:wasmtime_aot_noopts"
-    "Wasmtime_AOT_WithOpts:wasmtime_aot_wopts"
-    "Wazero_AOT_NoOpts:wazero_aot_noopts"
-    "Wazero_AOT_WithOpts:wazero_aot_wopts"
-    "Wazero_Interpreter_NoOpts:wazero_interpreter_noopts"
-    "Wazero_Interpreter_WithOpts:wazero_interpreter_wopts"
+# Native binary paths
+NATIVE_FIBONACCI_PATH="./bin/native_fibonacci"
+NATIVE_PRIMENUM_PATH="./bin/native_primeNums"
+NATIVE_TAILFIBONACCI_PATH="./bin/native_tailFibonacci"
+NATIVE_LIGHTWEIGHT_PATH="./bin/native_lightweight"
+
+# Test configurations
+# Format: "ConfigName:WasmFile:Runtime:IsInterpreter:RegisterHostFn:FunctionInput"
+TEST_CONFIGS=(
+    # Fibonacci - Native first, then WASM configurations
+    "Fibonacci_Native:NATIVE:${NATIVE_FIBONACCI_PATH}:40"
+    "Fibonacci_Wasmedge_Interpreter_NoOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci.wasm:wasmedge:false:false:40"
+    "Fibonacci_Wasmedge_Interpreter_WithOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci_wOpts.wasm:wasmedge:false:false:40"
+    "Fibonacci_Wasmedge_AOT_NoOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci_noOpts_AOTwasmedge.wasm:wasmedge:false:false:40"
+    "Fibonacci_Wasmedge_AOT_WithOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci_wOpts_AOTwasmedge.wasm:wasmedge:false:false:40"
+    "Fibonacci_Wasmtime_JIT_NoOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci.wasm:wasmtime:false:false:40"
+    "Fibonacci_Wasmtime_JIT_WithOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci_wOpts.wasm:wasmtime:false:false:40"
+    "Fibonacci_Wasmtime_AOT_NoOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci_noOpts_AOTwasmtime.wasm:wasmtime:true:false:40"
+    "Fibonacci_Wasmtime_AOT_WithOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci_wOpts_AOTwasmtime.wasm:wasmtime:true:false:40"
+    "Fibonacci_Wazero_Interpreter_NoOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci.wasm:wazero:false:false:40"
+    "Fibonacci_Wazero_Interpreter_WithOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci_wOpts.wasm:wazero:false:false:40"
+    "Fibonacci_Wazero_AOT_NoOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci.wasm:wazero:true:false:40"
+    "Fibonacci_Wazero_AOT_WithOpts:${BINARY_FIBONACCI_PATH_PREFIX}/fibonacci_wOpts.wasm:wazero:true:false:40"
+
+    # PrimeNumbers - Native first, then WASM configurations
+    "PrimeNumbers_Native:NATIVE:${NATIVE_PRIMENUM_PATH}:2000000"
+    "PrimeNumbers_Wasmedge_Interpreter_NoOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums.wasm:wasmedge:false:false:2000000"
+    "PrimeNumbers_Wasmedge_Interpreter_WithOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums_wOpts.wasm:wasmedge:false:false:2000000"
+    "PrimeNumbers_Wasmedge_AOT_NoOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums_noOpts_AOTwasmedge.wasm:wasmedge:false:false:2000000"
+    "PrimeNumbers_Wasmedge_AOT_WithOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums_wOpts_AOTwasmedge.wasm:wasmedge:false:false:2000000"
+    "PrimeNumbers_Wasmtime_JIT_NoOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums.wasm:wasmtime:false:false:2000000"
+    "PrimeNumbers_Wasmtime_JIT_WithOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums_wOpts.wasm:wasmtime:false:false:2000000"
+    "PrimeNumbers_Wasmtime_AOT_NoOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums_noOpts_AOTwasmtime.wasm:wasmtime:true:false:2000000"
+    "PrimeNumbers_Wasmtime_AOT_WithOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums_wOpts_AOTwasmtime.wasm:wasmtime:true:false:2000000"
+    "PrimeNumbers_Wazero_Interpreter_NoOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums.wasm:wazero:false:false:2000000"
+    "PrimeNumbers_Wazero_Interpreter_WithOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums_wOpts.wasm:wazero:false:false:2000000"
+    "PrimeNumbers_Wazero_AOT_NoOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums.wasm:wazero:true:false:2000000"
+    "PrimeNumbers_Wazero_AOT_WithOpts:${BINARY_PRIMENUM_PATH_PREFIX}/fnPrimeNums_wOpts.wasm:wazero:true:false:2000000"
+
+    # TailFibonacci - Native first, then WASM configurations
+    "TailFibonacci_Native:NATIVE:${NATIVE_TAILFIBONACCI_PATH}:20000"
+    "TailFibonacci_Wasmedge_Interpreter_NoOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci.wasm:wasmedge:false:false:20000"
+    "TailFibonacci_Wasmedge_Interpreter_WithOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci_wOpts.wasm:wasmedge:false:false:20000"
+    "TailFibonacci_Wasmedge_AOT_NoOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci_noOpts_AOTwasmedge.wasm:wasmedge:false:false:20000"
+    "TailFibonacci_Wasmedge_AOT_WithOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci_wOpts_AOTwasmedge.wasm:wasmedge:false:false:20000"
+    "TailFibonacci_Wasmtime_JIT_NoOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci.wasm:wasmtime:false:false:20000"
+    "TailFibonacci_Wasmtime_JIT_WithOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci_wOpts.wasm:wasmtime:false:false:20000"
+    "TailFibonacci_Wasmtime_AOT_NoOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci_noOpts_AOTwasmtime.wasm:wasmtime:true:false:20000"
+    "TailFibonacci_Wasmtime_AOT_WithOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci_wOpts_AOTwasmtime.wasm:wasmtime:true:false:20000"
+    "TailFibonacci_Wazero_Interpreter_NoOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci.wasm:wazero:false:false:20000"
+    "TailFibonacci_Wazero_Interpreter_WithOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci_wOpts.wasm:wazero:false:false:20000"
+    "TailFibonacci_Wazero_AOT_NoOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci.wasm:wazero:true:false:20000"
+    "TailFibonacci_Wazero_AOT_WithOpts:${BINARY_TAILFIBONACCI_PATH_PREFIX}/tailFibonacci_wOpts.wasm:wazero:true:false:20000"
+
+    # Lightweight - Native first, then WASM configurations
+    "Lightweight_Native:NATIVE:${NATIVE_LIGHTWEIGHT_PATH}:20000"
+    "Lightweight_Wasmedge_Interpreter_NoOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight.wasm:wasmedge:false:false:20000"
+    "Lightweight_Wasmedge_Interpreter_WithOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight_wOpts.wasm:wasmedge:false:false:20000"
+    "Lightweight_Wasmedge_AOT_NoOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight_noOpts_AOTwasmedge.wasm:wasmedge:false:false:20000"
+    "Lightweight_Wasmedge_AOT_WithOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight_wOpts_AOTwasmedge.wasm:wasmedge:false:false:20000"
+    "Lightweight_Wasmtime_JIT_NoOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight.wasm:wasmtime:false:false:20000"
+    "Lightweight_Wasmtime_JIT_WithOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight_wOpts.wasm:wasmtime:false:false:20000"
+    "Lightweight_Wasmtime_AOT_NoOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight_noOpts_AOTwasmtime.wasm:wasmtime:true:false:20000"
+    "Lightweight_Wasmtime_AOT_WithOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight_wOpts_AOTwasmtime.wasm:wasmtime:true:false:20000"
+    "Lightweight_Wazero_Interpreter_NoOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight.wasm:wazero:false:false:20000"
+    "Lightweight_Wazero_Interpreter_WithOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight_wOpts.wasm:wazero:false:false:20000"
+    "Lightweight_Wazero_AOT_NoOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight.wasm:wazero:true:false:20000"
+    "Lightweight_Wazero_AOT_WithOpts:${BINARY_LIGHTWEIGHT_PATH_PREFIX}/lightweight_wOpts.wasm:wazero:true:false:20000"
+
+    # HostFns - Always Register Host Functions
+    "HostFns_Wasmedge_Interpreter_NoOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections.wasm:wasmedge:false:true:10"
+    "HostFns_Wasmedge_Interpreter_WithOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections_wOpts.wasm:wasmedge:false:true:10"
+    "HostFns_Wasmedge_AOT_NoOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections_noOpts_AOTwasmedge.wasm:wasmedge:false:true:10"
+    "HostFns_Wasmedge_AOT_WithOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections_wOpts_AOTwasmedge.wasm:wasmedge:false:true:10"
+    "HostFns_Wasmtime_JIT_NoOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections.wasm:wasmtime:false:true:10"
+    "HostFns_Wasmtime_JIT_WithOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections_wOpts.wasm:wasmtime:false:true:10"
+    "HostFns_Wasmtime_AOT_NoOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections_noOpts_AOTwasmtime.wasm:wasmtime:true:true:10"
+    "HostFns_Wasmtime_AOT_WithOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections_wOpts_AOTwasmtime.wasm:wasmtime:true:true:10"
+    "HostFns_Wazero_Interpreter_NoOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections.wasm:wazero:false:true:10"
+    "HostFns_Wazero_Interpreter_WithOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections_wOpts.wasm:wazero:false:true:10"
+    "HostFns_Wazero_AOT_NoOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections.wasm:wazero:true:true:10"
+    "HostFns_Wazero_AOT_WithOpts:${BINARY_HOSTFNS_PATH_PREFIX}/functionCreateCollections_wOpts.wasm:wazero:true:true:10"
 )
 
 print_header() {
@@ -65,7 +131,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -dt|--disable-time-bench)
-            DO_TIME_BENCH=true
+            DO_TIME_BENCH=false
             shift
             ;;
         -b|--build)
@@ -102,12 +168,22 @@ while [[ $# -gt 0 ]]; do
             fi
             shift
             ;;
-        -ob|--output-build-dir)
+        -bd|--output-build-dir)
             shift
             if [[ $# -gt 0 ]]; then
               OUTPUT_BUILD_DIR=$1
             else
               echo "must specify a valid dir name"
+              exit 1
+            fi
+            shift
+            ;;
+        -bf|--output-build-filename)
+            shift
+            if [[ $# -gt 0 ]]; then
+              TEST_COMPILED_FILENAME=$1
+            else
+              echo "must specify a valid filename"
               exit 1
             fi
             shift
@@ -120,15 +196,16 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  -dm, --disable-mem-bench    Disable memory benchmarking of the binaries (default: Memory benchmarking enabled)"
-            echo "  -dt, --disable-time-bench   Disable time benchmarking of the binaries (default: Time benchmarking enabled)"
-            echo "  -b, --build                 Build the binaries needed for benchmark (default: Binaries build skipped)"
-            echo "  -w,  --warmup               Specify how many warmup runs perform (default: 15)"
-            echo "  -r,  --runs                 Specify how many benchmark runs perform (default: 20)"
-            echo "  -od, --output-dir           Directory where to place benchmark results (default: 'benchmark_results/{Timestamp}'"
-            echo "  -ob, --output-build-dir     Directory where to place the build binaries (default: 'bin')"
-            echo "  -eo, --enable-opts          Enable Go compiler optimizations (default: Opts disabled)"
-            echo "  -h, --help                  Show this help message"
+            echo "  -dm, --disable-mem-bench        Disable memory benchmarking of the binaries (default: Memory benchmarking enabled)"
+            echo "  -dt, --disable-time-bench       Disable time benchmarking of the binaries (default: Time benchmarking enabled)"
+            echo "  -b,  --build                    Build the binaries needed for benchmark (default: Binaries build skipped)"
+            echo "  -w,  --warmup                   Specify how many warmup runs perform (default: 15)"
+            echo "  -r,  --runs                     Specify how many benchmark runs perform (default: 20)"
+            echo "  -od, --output-dir               Directory where to place benchmark results (default: 'benchmark_results/{Timestamp}'"
+            echo "  -bd, --output-build-dir         Directory where to place the built binary (default: 'bin')"
+            echo "  -bf, --output-build-filename    Filename of the built test binary (default: 'built_test.test')"
+            echo "  -eo, --enable-opts              Enable Go compiler optimizations (default: Opts disabled)"
+            echo "  -h,  --help                     Show this help message"
             echo ""
             echo "Examples:"
             echo "  $0                          # Perform benchmarking with default settings and without re-building binaries"
@@ -146,38 +223,28 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ "$SKIP_BINARY_BUILD" == false ]]; then
-    build_flags=()
-    if [[ "$DISABLE_OPTS" == false ]]; then
-        build_flags+=("--enable-opts")
-    fi
-    build_flags+=("--output-build-dir" "$OUTPUT_BUILD_DIR")
-
-    /bin/bash ./build.sh "${build_flags[@]}"
-fi
-
 print_header "WASM vs Native Benchmark Suite"
 
 echo "Configuration:"
 echo "  Warmup runs: $WARMUP_RUNS"
-echo "  Benchmark runs: $BENCH_RUNS (used for timing and memory)"
+echo "  Benchmark runs: $BENCH_RUNS"
 echo "  Results directory: $RESULTS_DIR"
 echo "  Timestamp: $TIMESTAMP"
 echo "  Do memory benchmark: $DO_MEM_BENCH"
 echo "  Do time benchmark: $DO_TIME_BENCH"
+echo "  -------------------------------------------------------------"
 echo "  Skip binaries build: $SKIP_BINARY_BUILD"
 echo "  Build without optimizations (ignored if build is skipped): $DISABLE_OPTS"
 echo "  Output binaries folder: $OUTPUT_BUILD_DIR"
+echo "  Test compiled binary filename: $TEST_COMPILED_FILENAME"
+echo "  Test compiled binary path: $TEST_COMPILED_PATH"
 echo ""
-echo "Scenarios to test:"
-for scenario in "${SCENARIOS[@]}"; do
-  echo "  - $scenario"
+echo "Test configurations (${#TEST_CONFIGS[@]}):"
+for config in "${TEST_CONFIGS[@]}"; do
+    IFS=':' read -r config_name _ _ _ _ _ <<< "$config"
+    echo "  - $config_name"
 done
 echo ""
-echo "Runtime configurations (${#RUNTIMES[@]}):"
-for runtime in "${RUNTIMES[@]}"; do
-  echo "  - $runtime"
-done
 echo "Memory measurements will be averaged over $BENCH_RUNS runs per configuration"
 echo ""
 
@@ -192,6 +259,7 @@ fi
 if ! /usr/bin/time --version &> /dev/null 2>&1; then
     echo -e "${YELLOW}WARNING: GNU time not found at /usr/bin/time${NC}"
     echo "Memory benchmarks may not work correctly"
+    exit 1
 fi
 
 # Check if bc is available (needed for calculations)
@@ -206,20 +274,29 @@ read -p "Press Enter to start benchmarking or Ctrl+C to cancel..."
 # Create results directory
 mkdir -p "$RESULTS_DIR"
 
+if [[ "$SKIP_BINARY_BUILD" == false ]]; then
+    build_flags=()
+    if [[ "$DISABLE_OPTS" == false ]]; then
+        build_flags+=("--enable-opts")
+    fi
+    build_flags+=("--output-build-dir" "$OUTPUT_BUILD_DIR")
+    build_flags+=("--output-build-filename" "$TEST_COMPILED_FILENAME")
+
+    /bin/bash ./build.sh "${build_flags[@]}"
+fi
+
 if [[ "$DO_TIME_BENCH" == true ]]; then
   export SKIP_TIME_BENCH_INTERACTIVE=1
-  export SCENARIOS_ENV="${SCENARIOS[*]}"
-  export RUNTIMES_ENV="${RUNTIMES[*]}"
+  export TEST_CONFIGS_ENV="${TEST_CONFIGS[*]}"
 
-  /bin/bash ./time_bench.sh --warmup "$WARMUP_RUNS" --runs "$BENCH_RUNS" --output-dir "$RESULTS_DIR"
+  /bin/bash ./time_bench.sh --warmup "$WARMUP_RUNS" --runs "$BENCH_RUNS" --output-dir "$RESULTS_DIR" --compiled-binary "$TEST_COMPILED_PATH"
 fi
 
 if [[ "$DO_MEM_BENCH" == true ]]; then
   export SKIP_MEM_BENCH_INTERACTIVE=1
-  export SCENARIOS_ENV="${SCENARIOS[*]}"
-  export RUNTIMES_ENV="${RUNTIMES[*]}"
+  export TEST_CONFIGS_ENV="${TEST_CONFIGS[*]}"
 
-  /bin/bash ./mem_bench.sh --warmup "$WARMUP_RUNS" --runs "$BENCH_RUNS" --output-dir "$RESULTS_DIR"
+  /bin/bash ./mem_bench.sh --warmup "$WARMUP_RUNS" --runs "$BENCH_RUNS" --output-dir "$RESULTS_DIR" --compiled-binary "$TEST_COMPILED_PATH"
 fi
 
 # Function to generate summary
@@ -228,6 +305,21 @@ generate_summary() {
 
     local summary_file="$RESULTS_DIR/summary_${TIMESTAMP}.md"
 
+    ALGORITHMS=()
+    RUNTIMES=()
+
+    for entry in "${TEST_CONFIGS[@]}"; do
+        IFS=':' read -r first_part _ <<< "$entry"
+        alg="${first_part%%_*}"       # everything before first "_"
+        runtime="${first_part#*_}"     # everything after first "_"
+
+        ALGORITHMS+=("$alg")
+        RUNTIMES+=("$runtime")
+    done
+
+    readarray UNIQUE_ALGORITHMS < <(printf "%s" "${ALGORITHMS[@]}" | sort -u)
+    readarray UNIQUE_RUNTIMES < <(printf "%s" "${RUNTIMES[@]}" | sort -u)
+
     cat > "$summary_file" << EOF
 # WASM vs Native Performance Benchmark Summary
 Generated: $(date)
@@ -235,14 +327,14 @@ Generated: $(date)
 ## Configuration
 - Warmup Runs: $WARMUP_RUNS
 - Benchmark Runs: $BENCH_RUNS (used for both timing and memory measurements)
-- Scenarios Tested: ${#SCENARIOS[@]}
-- Runtime Configurations: ${#RUNTIMES[@]}
+- Algorithms Tested: ${#UNIQUE_ALGORITHMS[@]}
+- Runtime Configurations: ${#UNIQUE_RUNTIMES[@]}
 
 ## Test Scenarios
 EOF
 
-    for scenario in "${SCENARIOS[@]}"; do
-        echo "- $scenario" >> "$summary_file"
+    for alg in "${UNIQUE_ALGORITHMS[@]}"; do
+        echo "- $alg" >> "$summary_file"
     done
 
     cat >> "$summary_file" << EOF
@@ -250,8 +342,7 @@ EOF
 ## Runtime Configurations
 EOF
 
-    for runtime_config in "${RUNTIMES[@]}"; do
-        IFS=':' read -r runtime_name _ <<< "$runtime_config"
+    for runtime_config in "${UNIQUE_RUNTIMES[@]}"; do
         echo "- $runtime_name" >> "$summary_file"
     done
 
