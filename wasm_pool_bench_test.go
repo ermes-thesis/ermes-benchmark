@@ -2,6 +2,8 @@ package wasm_integration_test
 
 import (
 	"context"
+	"os"
+
 	"github.com/bytecodealliance/wasmtime-go/v37"
 	"github.com/ermes-thesis/ermes-common/logger"
 	"github.com/ermes-thesis/ermes-common/wasm-pool"
@@ -9,7 +11,6 @@ import (
 	"github.com/second-state/WasmEdge-go/wasmedge"
 	"github.com/stretchr/testify/require"
 	"github.com/tetratelabs/wazero/api"
-	"os"
 
 	"strconv"
 	"testing"
@@ -156,7 +157,7 @@ func BenchmarkExecutionTime_Native_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_PrimeNumbers(b *testing.B) {
-	primeNums, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums.wasm")
+	primeNums, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -177,7 +178,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_PrimeNumbers(b *testing.
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_Fibonacci(b *testing.B) {
-	fibonacci, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci.wasm")
+	fibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -199,7 +200,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_Fibonacci(b *testing.B) 
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_Lightweight(b *testing.B) {
-	lightweight, err := os.ReadFile("lightweight/lightweight.wasm")
+	lightweight, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -220,7 +221,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_Lightweight(b *testing.B
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_TailFibonacci(b *testing.B) {
-	tailFibonacci, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci.wasm")
+	tailFibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -241,7 +242,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_TailFibonacci(b *testing
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_HostFns(b *testing.B) {
-	hostFns, err := os.ReadFile("hostFns/functionCreateCollections.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -266,7 +267,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_HostFns(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_PrimeNumbers(b *testing.B) {
-	primeNumsWOpts, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm")
+	primeNumsWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -287,7 +288,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_PrimeNumbers(b *testin
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_Fibonacci(b *testing.B) {
-	fibonacciWOpts, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci_wOpts.wasm")
+	fibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -308,7 +309,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_Fibonacci(b *testing.B
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_Lightweight(b *testing.B) {
-	lightweightWOpts, err := os.ReadFile("lightweight/lightweight_wOpts.wasm")
+	lightweightWOpts, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -329,7 +330,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_Lightweight(b *testing
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_TailFibonacci(b *testing.B) {
-	tailFibonacciWOpts, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm")
+	tailFibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -350,7 +351,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_TailFibonacci(b *testi
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_HostFns(b *testing.B) {
-	hostFnsWOpts, err := os.ReadFile("hostFns/functionCreateCollections_wOpts.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -375,7 +376,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_HostFns(b *testing.B) 
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_PrimeNumbers(b *testing.B) {
-	primeNumsAOT, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums_noOpts_AOTwasmedge.wasm")
+	primeNumsAOT, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_noOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -396,7 +397,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_PrimeNumbers(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_Fibonacci(b *testing.B) {
-	fibonacciAOT, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci_noOpts_AOTwasmedge.wasm")
+	fibonacciAOT, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_noOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -417,7 +418,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_Fibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_Lightweight(b *testing.B) {
-	lightweightAOT, err := os.ReadFile("lightweight/lightweight_noOpts_AOTwasmedge.wasm")
+	lightweightAOT, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight_noOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -438,7 +439,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_Lightweight(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_TailFibonacci(b *testing.B) {
-	tailFibonacciAOT, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci_noOpts_AOTwasmedge.wasm")
+	tailFibonacciAOT, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_noOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -459,7 +460,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_HostFns(b *testing.B) {
-	hostFnsAOT, err := os.ReadFile("hostFns/functionCreateCollections_noOpts_AOTwasmedge.wasm")
+	hostFnsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_noOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -484,7 +485,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_HostFns(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_PrimeNumbers(b *testing.B) {
-	primeNumsWOptsAOT, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums_wOpts_AOTwasmedge.wasm")
+	primeNumsWOptsAOT, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_wOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -505,7 +506,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_PrimeNumbers(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_Fibonacci(b *testing.B) {
-	fibonacciWOptsAOT, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci_wOpts_AOTwasmedge.wasm")
+	fibonacciWOptsAOT, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_wOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -526,7 +527,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_Fibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_Lightweight(b *testing.B) {
-	lightweightWOptsAOT, err := os.ReadFile("lightweight/lightweight_wOpts_AOTwasmedge.wasm")
+	lightweightWOptsAOT, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight_wOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -547,7 +548,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_Lightweight(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_TailFibonacci(b *testing.B) {
-	tailFibonacciWOptsAOT, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci_wOpts_AOTwasmedge.wasm")
+	tailFibonacciWOptsAOT, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_wOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -568,7 +569,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_HostFns(b *testing.B) {
-	hostFnsWOptsAOT, err := os.ReadFile("hostFns/functionCreateCollections_wOpts_AOTwasmedge.wasm")
+	hostFnsWOptsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -598,7 +599,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_PrimeNumbers(b *testing.B) {
 	if err != nil {
 		panic(err)
 	}
-	primeNums, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums.wasm")
+	primeNums, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -638,7 +639,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_Fibonacci(b *testing.B) {
 		panic(err)
 	}
 
-	fibonacci, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci.wasm")
+	fibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -679,7 +680,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_Lightweight(b *testing.B) {
 		panic(err)
 	}
 
-	lightweight, err := os.ReadFile("lightweight/lightweight.wasm")
+	lightweight, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -719,7 +720,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_TailFibonacci(b *testing.B) {
 		panic(err)
 	}
 
-	tailFibonacci, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci.wasm")
+	tailFibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -759,7 +760,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_HostFns(b *testing.B) {
 		panic(err)
 	}
 
-	hostFns, err := os.ReadFile("hostFns/functionCreateCollections.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -803,7 +804,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_PrimeNumbers(b *testing.B) {
 		panic(err)
 	}
 
-	primeNumsWOpts, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm")
+	primeNumsWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -843,7 +844,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_Fibonacci(b *testing.B) {
 		panic(err)
 	}
 
-	fibonacciWOpts, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci_wOpts.wasm")
+	fibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -883,7 +884,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_Lightweight(b *testing.B) {
 		panic(err)
 	}
 
-	lightweightWOpts, err := os.ReadFile("lightweight/lightweight_wOpts.wasm")
+	lightweightWOpts, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -923,7 +924,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_TailFibonacci(b *testing.B) {
 		panic(err)
 	}
 
-	tailFibonacciWOpts, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm")
+	tailFibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -963,7 +964,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_HostFns(b *testing.B) {
 		panic(err)
 	}
 
-	hostFnsWOpts, err := os.ReadFile("hostFns/functionCreateCollections_wOpts.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1002,7 +1003,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_HostFns(b *testing.B) {
 
 // For Wasmtime AOT the cache is not used anyway
 func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_PrimeNumbers(b *testing.B) {
-	primeNums, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums_noOpts_AOTwasmtime.wasm")
+	primeNums, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_noOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1036,7 +1037,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_PrimeNumbers(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_Fibonacci(b *testing.B) {
-	fibonacci, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci_noOpts_AOTwasmtime.wasm")
+	fibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_noOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1071,7 +1072,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_Fibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_Lightweight(b *testing.B) {
-	lightweight, err := os.ReadFile("lightweight/lightweight_noOpts_AOTwasmtime.wasm")
+	lightweight, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight_noOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1105,7 +1106,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_Lightweight(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_TailFibonacci(b *testing.B) {
-	tailFibonacci, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci_noOpts_AOTwasmtime.wasm")
+	tailFibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_noOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1139,7 +1140,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_HostFns(b *testing.B) {
-	hostFns, err := os.ReadFile("hostFns/functionCreateCollections_noOpts_AOTwasmtime.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_noOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1177,7 +1178,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_HostFns(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_PrimeNumbers(b *testing.B) {
-	primeNumsWOpts, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums_wOpts_AOTwasmtime.wasm")
+	primeNumsWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_wOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1211,7 +1212,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_PrimeNumbers(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_Fibonacci(b *testing.B) {
-	fibonacciWOpts, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci_wOpts_AOTwasmtime.wasm")
+	fibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_wOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1245,7 +1246,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_Fibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_Lightweight(b *testing.B) {
-	lightweightWOpts, err := os.ReadFile("lightweight/lightweight_wOpts_AOTwasmtime.wasm")
+	lightweightWOpts, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight_wOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1279,7 +1280,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_Lightweight(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_TailFibonacci(b *testing.B) {
-	tailFibonacciWOpts, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci_wOpts_AOTwasmtime.wasm")
+	tailFibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_wOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1313,7 +1314,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_HostFns(b *testing.B) {
-	hostFnsWOpts, err := os.ReadFile("hostFns/functionCreateCollections_wOpts_AOTwasmtime.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1351,7 +1352,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_HostFns(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_NoOpts_PrimeNumbers(b *testing.B) {
-	primeNums, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums.wasm")
+	primeNums, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1385,7 +1386,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_PrimeNumbers(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_NoOpts_Fibonacci(b *testing.B) {
-	fibonacci, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci.wasm")
+	fibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1420,7 +1421,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_Fibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_NoOpts_Lightweight(b *testing.B) {
-	lightweight, err := os.ReadFile("lightweight/lightweight.wasm")
+	lightweight, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1454,7 +1455,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_Lightweight(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_NoOpts_TailFibonacci(b *testing.B) {
-	tailFibonacci, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci.wasm")
+	tailFibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1488,7 +1489,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_NoOpts_HostFns(b *testing.B) {
-	hostFns, err := os.ReadFile("hostFns/functionCreateCollections.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1526,7 +1527,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_HostFns(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_WithOpts_PrimeNumbers(b *testing.B) {
-	primeNumsWOpts, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm")
+	primeNumsWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1560,7 +1561,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_PrimeNumbers(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_WithOpts_Fibonacci(b *testing.B) {
-	fibonacciWOpts, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci_wOpts.wasm")
+	fibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1594,7 +1595,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_Fibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_WithOpts_Lightweight(b *testing.B) {
-	lightweightWOpts, err := os.ReadFile("lightweight/lightweight_wOpts.wasm")
+	lightweightWOpts, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1628,7 +1629,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_Lightweight(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_WithOpts_TailFibonacci(b *testing.B) {
-	tailFibonacciWOpts, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm")
+	tailFibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1662,7 +1663,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_WithOpts_HostFns(b *testing.B) {
-	hostFnsWOpts, err := os.ReadFile("hostFns/functionCreateCollections_wOpts.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1700,7 +1701,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_HostFns(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_PrimeNumbers(b *testing.B) {
-	primeNumsWOpts, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm")
+	primeNumsWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1735,7 +1736,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_PrimeNumbers(b *testing.
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_Fibonacci(b *testing.B) {
-	fibonacciWOpts, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci_wOpts.wasm")
+	fibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1770,7 +1771,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_Fibonacci(b *testing.B) 
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_Lightweight(b *testing.B) {
-	lightweightWOpts, err := os.ReadFile("lightweight/lightweight_wOpts.wasm")
+	lightweightWOpts, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1805,7 +1806,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_Lightweight(b *testing.B
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_TailFibonacci(b *testing.B) {
-	tailFibonacciWOpts, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm")
+	tailFibonacciWOpts, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1840,7 +1841,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_TailFibonacci(b *testing
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_HostFns(b *testing.B) {
-	hostFnsWOpts, err := os.ReadFile("hostFns/hostFns_wOpts.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/hostFns_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1879,7 +1880,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_HostFns(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_PrimeNumbers(b *testing.B) {
-	primeNums, err := os.ReadFile("cpuIntensive/primeNums/fnPrimeNums.wasm")
+	primeNums, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1914,7 +1915,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_PrimeNumbers(b *testing.B)
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_Fibonacci(b *testing.B) {
-	fibonacci, err := os.ReadFile("cpuIntensive/fibonacci/fibonacci.wasm")
+	fibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1949,7 +1950,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_Fibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_Lightweight(b *testing.B) {
-	lightweight, err := os.ReadFile("lightweight/lightweight.wasm")
+	lightweight, err := os.ReadFile("_WASM_BINARIES/lightweight/lightweight.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1984,7 +1985,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_Lightweight(b *testing.B) 
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_TailFibonacci(b *testing.B) {
-	tailFibonacci, err := os.ReadFile("cpuIntensive/tailFibonacci/tailFibonacci.wasm")
+	tailFibonacci, err := os.ReadFile("_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -2019,7 +2020,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_TailFibonacci(b *testing.B
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_HostFns(b *testing.B) {
-	hostFns, err := os.ReadFile("hostFns/functionCreateCollections.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
 	if err != nil {
 		panic(err)
 	}
