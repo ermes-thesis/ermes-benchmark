@@ -3,9 +3,7 @@ package wasm_integration
 import (
 	"context"
 	"fmt"
-	"github.com/ermes-thesis/ermes-common/logger"
-	"github.com/ermes-thesis/ermes-common/wasm-pool"
-	"github.com/rs/zerolog"
+
 	datamanager_mock "mocks/dataManager"
 	metadataManager_mock "mocks/metadataManager"
 	"os"
@@ -14,6 +12,10 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/ermes-thesis/ermes-common/logger"
+	"github.com/ermes-thesis/ermes-common/wasm-pool"
+	"github.com/rs/zerolog"
 )
 
 func TestProva(t *testing.T) {

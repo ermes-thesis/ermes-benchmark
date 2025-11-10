@@ -2,13 +2,20 @@ package wasm_integration_test
 
 import (
 	"context"
+	"db"
+	"metadataManager/propagation"
+	datamanager_mock "mocks/dataManager"
+	metadataManager_mock "mocks/metadataManager"
 	"os"
+	"scheduler"
+	"server"
 
 	"github.com/bytecodealliance/wasmtime-go/v37"
 	"github.com/ermes-thesis/ermes-common/logger"
 	"github.com/ermes-thesis/ermes-common/wasm-pool"
 	"github.com/rs/zerolog"
 	"github.com/second-state/WasmEdge-go/wasmedge"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/tetratelabs/wazero/api"
 
@@ -77,6 +84,35 @@ var wazeroFns = map[string]any{
 	"hostCreateCollection": func(ctx context.Context, m api.Module, metadataPointer, metadataLength, skipUniquenessCheck int32) int32 {
 		return 0
 	},
+}
+
+func createHostFns(b *testing.B, log logger.Logger) *scheduler.HostFunctions {
+	dataManager := datamanager_mock.NewDataManager(b)
+	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "testCollection", map[string]db.RecordValue{}, []string{"groupA"}, "userId", false, false).Return(nil)
+	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "seqCollection", map[string]db.RecordValue{}, []string{"groupA"}, "userId", true, false).Return(nil)
+	metadataManager := metadataManager_mock.NewMetadataManager(b)
+	metadataManager.
+		EXPECT().
+		CreateMetadata(mock.Anything, mock.AnythingOfType("Metadata"), propagation.FROM_LOCAL).
+		Return(nil).
+		Maybe()
+
+	serverInfo := server.ServerInfo{
+		HostName:                   "hostname",
+		Address:                    "address",
+		Port:                       "port",
+		MetadataDomain:             "domain",
+		Father:                     nil,
+		Children:                   nil,
+		Secret:                     "very secret",
+		ClientSecret:               "client secret",
+		CloudNode:                  nil,
+		ExistingDomains:            map[string]struct{}{"IT": {}},
+		GroupTokenProviderHostName: "hostnameGTP",
+		Stateful:                   false,
+		IsCentralStorage:           false,
+	}
+	return scheduler.NewHostFunctions(dataManager, metadataManager, &serverInfo, log)
 }
 
 func BenchmarkExecutionTime_Native_PrimeNumbers(b *testing.B) {
@@ -242,12 +278,13 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_TailFibonacci(b *testing
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmedgeExecutorPool(10, createNewLogger(b))
-	err = pool.RegisterHostFns(wasmedgeFns)
+	pool := wasm.NewWasmedgeExecutorPool(10, log)
+	err = createHostFns(b, log).RegisterWasmedgeHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -351,12 +388,13 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_TailFibonacci(b *testi
 }
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmedgeExecutorPool(10, createNewLogger(b))
-	err = pool.RegisterHostFns(wasmedgeFns)
+	pool := wasm.NewWasmedgeExecutorPool(10, log)
+	err = createHostFns(b, log).RegisterWasmedgeHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -460,12 +498,13 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	hostFnsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_noOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmedgeExecutorPool(10, createNewLogger(b))
-	err = pool.RegisterHostFns(wasmedgeFns)
+	pool := wasm.NewWasmedgeExecutorPool(10, log)
+	err = createHostFns(b, log).RegisterWasmedgeHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -569,12 +608,13 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	hostFnsWOptsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
 	pool := wasm.NewWasmedgeExecutorPool(10, createNewLogger(b))
-	err = pool.RegisterHostFns(wasmedgeFns)
+	err = createHostFns(b, log).RegisterWasmedgeHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -754,6 +794,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	homeFolder := os.Getenv("HOME")
 	err := os.RemoveAll(homeFolder + "/.cache/wasmtime/modules")
 	if err != nil {
@@ -764,8 +805,8 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_HostFns(b *testing.B) {
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmtimeExecutorPool(10, warmBench, false, createNewLogger(b))
-	err = pool.RegisterHostFns(wasmtimeFns)
+	pool := wasm.NewWasmtimeExecutorPool(10, warmBench, false, log)
+	err = createHostFns(b, log).RegisterWasmtimeHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -958,6 +999,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	homeFolder := os.Getenv("HOME")
 	err := os.RemoveAll(homeFolder + "/.cache/wasmtime/modules")
 	if err != nil {
@@ -968,8 +1010,8 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_HostFns(b *testing.B) {
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmtimeExecutorPool(10, warmBench, false, createNewLogger(b))
-	err = pool.RegisterHostFns(wasmtimeFns)
+	pool := wasm.NewWasmtimeExecutorPool(10, warmBench, false, log)
+	err = createHostFns(b, log).RegisterWasmtimeHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -1140,12 +1182,13 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_noOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmtimeExecutorPool(10, warmBench, true, createNewLogger(b))
-	err = pool.RegisterHostFns(wasmtimeFns)
+	pool := wasm.NewWasmtimeExecutorPool(10, warmBench, true, log)
+	err = createHostFns(b, log).RegisterWasmtimeHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -1314,12 +1357,13 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmtimeExecutorPool(10, warmBench, true, createNewLogger(b))
-	err = pool.RegisterHostFns(wasmtimeFns)
+	pool := wasm.NewWasmtimeExecutorPool(10, warmBench, true, log)
+	err = createHostFns(b, log).RegisterWasmtimeHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -1489,12 +1533,13 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_NoOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWazeroExecutorPool(10, false, warmBench, context.Background(), createNewLogger(b))
-	err = pool.RegisterHostFns(wazeroFns)
+	pool := wasm.NewWazeroExecutorPool(10, false, warmBench, context.Background(), log)
+	err = createHostFns(b, log).RegisterWazeroHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -1663,12 +1708,13 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_TailFibonacci(b *testing.B) {
 }
 
 func BenchmarkExecutionTime_Wazero_AOT_WithOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWazeroExecutorPool(10, false, warmBench, context.Background(), createNewLogger(b))
-	err = pool.RegisterHostFns(wazeroFns)
+	pool := wasm.NewWazeroExecutorPool(10, false, warmBench, context.Background(), log)
+	err = createHostFns(b, log).RegisterWazeroHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -1841,13 +1887,14 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_TailFibonacci(b *testing
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_HostFns(b *testing.B) {
-	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/hostFns_wOpts.wasm")
+	log := createNewLogger(b)
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
 	if err != nil {
 		panic(err)
 	}
 
-	pool := wasm.NewWazeroExecutorPool(10, true, warmBench, context.Background(), createNewLogger(b))
-	err = pool.RegisterHostFns(wazeroFns)
+	pool := wasm.NewWazeroExecutorPool(10, true, warmBench, context.Background(), log)
+	err = createHostFns(b, log).RegisterWazeroHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
@@ -2020,13 +2067,14 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_TailFibonacci(b *testing.B
 }
 
 func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_HostFns(b *testing.B) {
+	log := createNewLogger(b)
 	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
 	if err != nil {
 		panic(err)
 	}
 
-	pool := wasm.NewWazeroExecutorPool(10, true, warmBench, context.Background(), createNewLogger(b))
-	err = pool.RegisterHostFns(wazeroFns)
+	pool := wasm.NewWazeroExecutorPool(10, true, warmBench, context.Background(), log)
+	err = createHostFns(b, log).RegisterWazeroHostFns(pool)
 	if err != nil {
 		panic(err)
 	}
