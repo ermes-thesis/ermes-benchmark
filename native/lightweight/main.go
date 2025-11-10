@@ -1,7 +1,7 @@
 package main
 
 import (
-	"empty_binary/common"
+	"empty_binary/old_scripts/common"
 )
 
 func main() {

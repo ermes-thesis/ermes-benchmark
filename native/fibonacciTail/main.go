@@ -1,6 +1,8 @@
 package main
 
-import "empty_binary/common"
+import (
+	"empty_binary/old_scripts/common"
+)
 
 func main() {
 	fibTailFun(common.FibonacciTailInput, 0, 1)
