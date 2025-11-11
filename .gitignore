@@ -2,6 +2,7 @@ bin
 sandbox
 benchmark_results_old
 benchmark_results_old2
+.venv
 
 benchmark_results/*
 old_scripts/benchmark_results/*

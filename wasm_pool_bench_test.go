@@ -1888,7 +1888,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_TailFibonacci(b *testing
 
 func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}

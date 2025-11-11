@@ -27,12 +27,15 @@ replace (
 )
 
 require (
+	db v0.0.0-00010101000000-000000000000
 	github.com/bytecodealliance/wasmtime-go/v37 v37.0.0
 	github.com/ermes-thesis/ermes-common/logger v0.0.0-00010101000000-000000000000
 	github.com/ermes-thesis/ermes-common/wasm-pool v0.0.0-00010101000000-000000000000
 	github.com/rs/zerolog v1.34.0
 	github.com/second-state/WasmEdge-go v0.14.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tetratelabs/wazero v1.10.0
+	metadataManager v0.0.0-00010101000000-000000000000
 	mocks v0.0.0-00010101000000-000000000000
 	scheduler v0.0.0-00010101000000-000000000000
 	server v0.0.0-00010101000000-000000000000
@@ -42,7 +45,6 @@ require (
 	caches v0.0.0-00010101000000-000000000000 // indirect
 	config v0.0.0-00010101000000-000000000000 // indirect
 	dataManager v0.0.0-00010101000000-000000000000 // indirect
-	db v0.0.0-00010101000000-000000000000 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -59,11 +61,9 @@ require (
 	github.com/redis/go-redis/v9 v9.14.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/stretchr/testify v1.11.1 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	metadataManager v0.0.0-00010101000000-000000000000 // indirect
 	tokenDecoder v0.0.0-00010101000000-000000000000 // indirect
 )
