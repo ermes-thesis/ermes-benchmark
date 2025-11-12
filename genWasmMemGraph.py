@@ -8,15 +8,28 @@ import re
 import numpy as np
 
 # === CONFIG ===
-if len(sys.argv) < 2:
+# Imposta l'estensione predefinita
+file_ext = ".png"
+args = sys.argv[1:] # Copia gli argomenti
+
+# Controlla il flag --pdf
+if "--pdf" in args:
+    file_ext = ".pdf"
+    args.remove("--pdf") # Rimuovi il flag dalla lista degli argomenti
+    print("Output format set to PDF.")
+else:
+    print("Output format set to PNG (default).")
+
+
+# Controlla il percorso del file di memoria
+if len(args) < 1:
     print("Error: Memory file path not provided.", file=sys.stderr)
-    print("Usage: python plot.py <path_to_memory_file.txt>", file=sys.stderr)
+    print("Usage: python plot.py [--pdf] <path_to_memory_file.txt>", file=sys.stderr)
     sys.exit(1)
 
-memory_path = Path(sys.argv[1])
-mem_img = Path("fig1-memory-maxrss.png")
-net_mem_img = Path("fig1-memory-net.png")
-mem_summary_img = Path("fig1-memory-summary.png")
+memory_path = Path(args[0])
+
+mem_summary_img = Path(f"memory-summary{file_ext}")
 
 sns.set_theme(style="whitegrid", font_scale=1.2)
 palette = "Set2"
@@ -127,7 +140,7 @@ def parse_memory_stats(lines):
     """
     Parse the NET MEMORY sections from the benchmark text file.
     Returns a DataFrame with columns:
-    [Algorithm, Runtime, Compilation, Optimization, Label, NetMemory_KB, etc.]
+    [Algorithm, Runtime, Compilation, Optimization, Label, NetMemory_MB, etc.]
     """
     records = []
     text = "".join(lines)
@@ -200,9 +213,9 @@ def parse_memory_stats(lines):
                 "Compilation": compiler,
                 "Optimization": opt,
                 "Label": label,
-                "TotMemory_KB": tot_mem,
-                "OverheadMemory_KB": overhead_mem,
-                "NetMemory_KB": net_mem
+                "TotMemory_MB": tot_mem / 1000,
+                "OverheadMemory_MB": overhead_mem / 1000,
+                "NetMemory_MB": net_mem / 1000
             })
 
     return pd.DataFrame(records)
@@ -230,104 +243,47 @@ print("---------------------------------------------------\n")
 # PLOTTING
 # ============================================================
 
-print("Generating MaxRSS plot...")
-plt.figure(figsize=(15, 6))
-sns.barplot(
-    data=df_max_mem,
-    x="Label",
-    y="MaxRSS_KB",
-    hue="Algorithm",
-    palette=palette,
-)
-
-plt.yscale("log")
-plt.title("Maximum Resident Set Size (Memory Usage)")
-plt.ylim(1e2, 1e6)
-plt.ylabel("Max RSS (KB)")
-plt.xlabel("Scenario")
-plt.xticks(fontsize=12)
-plt.legend(title="Algorithm",
-           bbox_to_anchor=(1.02, 1),  # move legend just outside the plot (right side)
-           loc="upper left",
-           borderaxespad=0)
-plt.tight_layout()
-plt.savefig(mem_img)
-plt.close()
-
-
-print("Generating NET Memory plot...")
-plt.figure(figsize=(15, 6))
-sns.barplot(
-    data=df_mem,
-    x="Label",
-    y="NetMemory_KB",
-    hue="Algorithm",
-    palette=palette,
-)
-
-plt.yscale("log")
-plt.title("NET Memory Usage") # Updated title
-plt.ylim(1e2, 1e6)
-plt.ylabel("Net(Max) RSS (KB)")
-plt.xlabel("Scenario")
-plt.xticks(fontsize=12)
-plt.legend(title="Algorithm",
-           bbox_to_anchor=(1.02, 1),  # move legend just outside the plot (right side)
-           loc="upper left",
-           borderaxespad=0)
-plt.tight_layout()
-plt.savefig(net_mem_img)
-plt.close()
-
-
-print("Generating combined memory summary plot...")
+print(f"Generating combined memory summary plot ({mem_summary_img})...")
 # --- Create the figure grid ---
-# *** MODIFICA: Figura più alta (15 larghezza, 18 altezza) ***
-fig = plt.figure(figsize=(15, 18))
+fig = plt.figure(figsize=(15, 18)) # Figura alta
 
-# *** MODIFICA: Griglia 3x1 (verticale) ***
+# Griglia 3x1 (verticale)
 ax1 = plt.subplot2grid((3, 1), (0, 0)) # Riga 0
 ax2 = plt.subplot2grid((3, 1), (1, 0)) # Riga 1
 ax3 = plt.subplot2grid((3, 1), (2, 0)) # Riga 2
 
 # --- Plot 1: Total Memory ---
-sns.barplot(data=df_mem, x="Label", y="TotMemory_KB", hue="Algorithm", ax=ax1, palette=palette)
-ax1.set_title("Total Memory (KB)")
-ax1.set_yscale("log")
+sns.barplot(data=df_mem, x="Label", y="TotMemory_MB", hue="Algorithm", ax=ax1, palette=palette)
+ax1.set_title("Total Memory (MB)")
+# ax1.set_yscale("log")
 ax1.set_xlabel("")
-ax1.set_ylabel("Memory (KB, log scale)")
-ax1.set_ylim(1e3, 1e5)
-# *** MODIFICA: Nascondi etichette X ***
-# ax1.tick_params(axis="x", labelbottom=False)
-# *** MODIFICA: Cattura gli handle e rimuovi la legenda ***
+ax1.set_ylabel("Memory (MB)")
+# ax1.set_ylim(1e3, 1e5)
+ax1.tick_params(axis="x", labelsize=12)
 handles, labels = ax1.get_legend_handles_labels()
 ax1.legend_.remove()
 
 # --- Plot 2: Overhead Memory ---
-sns.barplot(data=df_mem, x="Label", y="OverheadMemory_KB", hue="Algorithm", ax=ax2, palette=palette)
-ax2.set_title("Overhead Memory (KB)")
-ax2.set_yscale("log")
+sns.barplot(data=df_mem, x="Label", y="OverheadMemory_MB", hue="Algorithm", ax=ax2, palette=palette)
+ax2.set_title("Overhead Memory (MB)")
+# ax2.set_yscale("log")
 ax2.set_xlabel("")
-# *** MODIFICA: Aggiungi etichetta Y ***
-ax2.set_ylabel("Memory (KB, log scale)")
-ax2.set_ylim(1e3, 1e5)
-# *** MODIFICA: Nascondi etichette X ***
-# ax2.tick_params(axis="x", labelbottom=False)
+ax2.set_ylabel("Memory (MB)")
+# ax2.set_ylim(1e3, 1e5)
+ax2.tick_params(axis="x", labelsize=12)
 ax2.legend_.remove()
 
 # --- Plot 3: Net Memory ---
-sns.barplot(data=df_mem, x="Label", y="NetMemory_KB", hue="Algorithm", ax=ax3, palette=palette)
-ax3.set_title("Net Memory (KB)")
+sns.barplot(data=df_mem, x="Label", y="NetMemory_MB", hue="Algorithm", ax=ax3, palette=palette)
+ax3.set_title("Net Memory (MB)")
 ax3.set_xlabel("Runtime Configuration")
-ax3.set_ylabel("Memory (KB)")
-ax3.tick_params(axis="x", labelsize=12) # Lascia le etichette X visibili
-# *** MODIFICA: Rimuovi la legenda individuale ***
+ax3.set_ylabel("Memory (MB)")
+ax3.tick_params(axis="x", labelsize=12)
 ax3.legend_.remove()
 
 # --- Layout adjustments ---
 fig.suptitle("Memory Usage Comparison across Scenarios", fontsize=16, y=0.98)
 
-# *** MODIFICA: Aggiungi legenda orizzontale globale in ALTO ***
 num_labels = len(labels)
 ncol = min(num_labels, 6) # Massimo 6 colonne
 fig.legend(
@@ -340,7 +296,6 @@ fig.legend(
     ncol=ncol
 )
 
-# *** MODIFICA: Sostituisci tight_layout() with subplots_adjust() ***
 plt.subplots_adjust(
     top=0.90,    # Spazio per il titolo e la legenda
     bottom=0.05, # Meno spazio in basso
@@ -352,4 +307,4 @@ plt.subplots_adjust(
 plt.savefig(mem_summary_img)
 plt.close(fig)
 
-print(f"Plots generated and saved to:\n- {mem_img}\n- {net_mem_img}\n- {mem_summary_img}")
+print(f"Plots generated and saved to {mem_summary_img}")
