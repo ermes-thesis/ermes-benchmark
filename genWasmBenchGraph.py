@@ -387,15 +387,14 @@ if df_avg_cold is not None and df_avg_warm is not None:
         ax2.tick_params(axis="x", labelsize=12)
         ax2.legend_.remove() # Remove individual legend
         ax2.set_yscale("log")
-
-
-    # Add 'No Speedup' line to handles if not already there
-    if "No Speedup (1.auto.0x)" not in labels:
-        handles.append(plt.Line2D([0], [0], color='k', linestyle='--', label='No Speedup (1.0x)'))
-        labels.append('No Speedup (1.0x)')
     else:
         ax2.set_title("Speedup - WITH Optimizations (Data not available)")
         ax2.text(0.5, 0.5, "No data for WithOpts", horizontalalignment='center', verticalalignment='center', transform=ax2.transAxes, color='red')
+
+    # Add 'No Speedup' line to handles if not already there
+    if "No Speedup (1.0x)" not in labels:
+        handles.append(plt.Line2D([0], [0], color='k', linestyle='--', label='No Speedup (1.0x)'))
+        labels.append('No Speedup (1.0x)')
 
     # --- Add Global Legend (Top) ---
     if handles: # Only add legend if we have handles
