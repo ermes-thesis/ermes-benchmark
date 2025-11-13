@@ -34,7 +34,7 @@ require (
 	github.com/rs/zerolog v1.34.0
 	github.com/second-state/WasmEdge-go v0.14.0
 	github.com/stretchr/testify v1.11.1
-	github.com/tetratelabs/wazero v1.10.0
+	github.com/tetratelabs/wazero v1.10.1
 	metadataManager v0.0.0-00010101000000-000000000000
 	mocks v0.0.0-00010101000000-000000000000
 	scheduler v0.0.0-00010101000000-000000000000
@@ -67,3 +67,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	tokenDecoder v0.0.0-00010101000000-000000000000 // indirect
 )
+
+replace github.com/tetratelabs/wazero => ../wazero
