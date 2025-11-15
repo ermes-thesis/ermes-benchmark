@@ -366,7 +366,7 @@ All detailed results are stored in: \`$RESULTS_DIR/\`
 EOF
 
     for runtime in "${UNIQUE_RUNTIMES[@]}"; do
-        echo "- \`timing_${runtime}_${TIMESTAMP}.json\` - JSON data for $scenario" >> "$summary_file"
+        echo "- \`timing_${runtime}_${TIMESTAMP}.json\` - JSON data for $runtime" >> "$summary_file"
     done
 
     cat >> "$summary_file" << EOF
@@ -375,7 +375,7 @@ EOF
 EOF
 
     for runtime in "${UNIQUE_RUNTIMES[@]}"; do
-        echo "- \`timing_overheads_${runtime}_${TIMESTAMP}.json\` - Overhead JSON for $scenario" >> "$summary_file"
+        echo "- \`timing_overheads_${runtime}_${TIMESTAMP}.json\` - Overhead JSON for $runtime" >> "$summary_file"
     done
 
     cat >> "$summary_file" << EOF

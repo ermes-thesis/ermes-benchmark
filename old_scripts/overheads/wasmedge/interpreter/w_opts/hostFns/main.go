@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/second-state/WasmEdge-go/wasmedge"
 	"os"
+	"time"
 	"wasm_integration_test/old_scripts/common"
 )
 
@@ -27,7 +28,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmedgeExecutorPool(10, log)
+	pool := wasm.NewWasmedgeExecutorPool(wasm.Config{
+		PoolSize:  10,
+		Timeout:   5 * time.Second,
+		WithCache: false,
+		IsAot:     false,
+	}, log)
 
 	fnTwoParamOneReturnType := wasmedge.NewFunctionType(
 		[]*wasmedge.ValType{wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32()},
@@ -54,9 +60,6 @@ func main() {
 	}
 	defer pool.Close()
 
-	executor := pool.Acquire()
-
 	req, ctx := common.GetTestReqAndCtx("userId", 0)
 	_, _, _ = req, ctx, hostFn
-	executor.Release()
 }

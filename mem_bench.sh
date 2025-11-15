@@ -246,7 +246,7 @@ run_overhead_memory_benchmark() {
         # Only stderr from time command is captured
         local time_output=$( { /usr/bin/time -f "%M" \
             "$TEST_COMPILED_PATH" \
-            -test.run ^TestProva$ \
+            -test.run ^TestGenericRuntimeAlg$ \
             "$wasm_file" \
             "$runtime" \
             "$is_interpreter" \
@@ -358,7 +358,7 @@ run_wasm_memory_benchmark() {
         # Only stderr from time command is captured
         local time_output=$( { /usr/bin/time -f "%M" \
             "$TEST_COMPILED_PATH" \
-            -test.run ^TestProva$ \
+            -test.run ^TestGenericRuntimeAlg$ \
             "$wasm_file" \
             "$runtime" \
             "$is_interpreter" \

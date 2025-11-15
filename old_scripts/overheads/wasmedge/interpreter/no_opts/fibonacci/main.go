@@ -5,6 +5,7 @@ import (
 	"github.com/ermes-thesis/ermes-common/wasm-pool"
 	"github.com/rs/zerolog"
 	"os"
+	"time"
 	"wasm_integration_test/old_scripts/common"
 )
 
@@ -26,12 +27,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pool := wasm.NewWasmedgeExecutorPool(10, log)
+	pool := wasm.NewWasmedgeExecutorPool(wasm.Config{
+		PoolSize:  10,
+		Timeout:   5 * time.Second,
+		WithCache: false,
+		IsAot:     false,
+	}, log)
 	defer pool.Close()
-
-	executor := pool.Acquire()
 
 	req, ctx := common.GetTestReqAndCtx("userId", common.FibonacciInput)
 	_, _, _ = req, ctx, fibonacci
-	executor.Release()
 }

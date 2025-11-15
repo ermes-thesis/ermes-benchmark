@@ -18,8 +18,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func TestProva(t *testing.T) {
-	fmt.Println(os.Args)
+func TestGenericRuntimeAlg(t *testing.T) {
 	fileToRead := os.Args[3]
 	runtimeToUse := os.Args[4]
 	IsAOT, err := strconv.ParseBool(os.Args[5])
@@ -83,7 +82,10 @@ func TestProva(t *testing.T) {
 	var pool wasm.ExecutorPool
 	switch runtimeToUse {
 	case "wasmedge":
-		poolImpl := wasm.NewWasmedgeExecutorPool(10, log)
+		poolImpl := wasm.NewWasmedgeExecutorPool(wasm.Config{
+			PoolSize: 10,
+			Timeout:  5 * time.Second,
+		}, log)
 		if registerHostFn {
 			err := hostFns.RegisterWasmedgeHostFns(poolImpl)
 			if err != nil {
@@ -92,7 +94,12 @@ func TestProva(t *testing.T) {
 		}
 		pool = poolImpl
 	case "wasmtime":
-		poolImpl := wasm.NewWasmtimeExecutorPool(10, false, IsAOT, log)
+		poolImpl := wasm.NewWasmtimeExecutorPool(wasm.Config{
+			PoolSize:  10,
+			Timeout:   5 * time.Second,
+			WithCache: false,
+			IsAot:     IsAOT,
+		}, log)
 		if registerHostFn {
 			err := hostFns.RegisterWasmtimeHostFns(poolImpl)
 			if err != nil {
@@ -101,7 +108,12 @@ func TestProva(t *testing.T) {
 		}
 		pool = poolImpl
 	case "wazero":
-		poolImpl := wasm.NewWazeroExecutorPool(10, !IsAOT, false, context.Background(), log)
+		poolImpl := wasm.NewWazeroExecutorPool(wasm.Config{
+			PoolSize:  10,
+			Timeout:   5 * time.Second,
+			WithCache: false,
+			IsAot:     IsAOT,
+		}, context.Background(), log)
 		if registerHostFn {
 			err := hostFns.RegisterWazeroHostFns(poolImpl)
 			if err != nil {
@@ -114,13 +126,10 @@ func TestProva(t *testing.T) {
 	}
 	defer pool.Close()
 
-	executor := pool.Acquire()
-
 	req, ctx := getTestReqAndCtx("userId", functionInput)
 	if callInvoke {
-		fmt.Println(executor.Invoke(hostFn, "entry", req, ctx))
+		fmt.Println(pool.Invoke(hostFn, "entry", req, ctx))
 	}
-	executor.Release()
 }
 
 func getTestReqAndCtx(userId string, inputN int) ([]byte, []byte) {
