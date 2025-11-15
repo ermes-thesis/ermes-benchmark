@@ -246,7 +246,7 @@ run_overhead_memory_benchmark() {
         # Only stderr from time command is captured
         local time_output=$( { /usr/bin/time -f "%M" \
             "$TEST_COMPILED_PATH" \
-            -test.run ^TestGenericRuntimeAlg$ \
+            -test.run ^TestMemoryGeneric$ \
             "$wasm_file" \
             "$runtime" \
             "$is_interpreter" \
@@ -358,7 +358,7 @@ run_wasm_memory_benchmark() {
         # Only stderr from time command is captured
         local time_output=$( { /usr/bin/time -f "%M" \
             "$TEST_COMPILED_PATH" \
-            -test.run ^TestGenericRuntimeAlg$ \
+            -test.run ^TestMemoryGeneric$ \
             "$wasm_file" \
             "$runtime" \
             "$is_interpreter" \
@@ -420,8 +420,9 @@ Configuration                              | Mean MaxRSS | Std Dev |
 ---------------------------------------------------------|---------|
 EOF
 
-    for config in "${TEST_CONFIGS[@]}"; do
-        IFS=':' read -r config_name _ _ _ _ _ <<< "$config"
+    # Iterate over all collected keys (configs) in the MEMORY_DATA array
+    # and sort them alphabetically for a clean table
+    for config_name in $(echo "${!MEMORY_DATA[@]}" | tr ' ' '\n' | sort); do
         local mean_rss="${MEMORY_DATA[$config_name]}"
         local stddev_rss="${MEMORY_DATA_STDDEV[$config_name]}"
 
@@ -548,7 +549,7 @@ main() {
     # Create results directory
     mkdir -p "$RESULTS_DIR"
 
-    print_header "RUNNING MEMORY BENCHMARKS"
+    print_header "RUNNING MEMORY BENCHMARKS (TestMemory)"
 
     # Run benchmarks for each configuration
     local old_algorithm_name=""
@@ -579,6 +580,10 @@ main() {
 
     echo -e "\n\n\n"
 
+
+    # --- Run Overhead Benchmarks ---
+    print_header "RUNNING MEMORY OVERHEAD BENCHMARKS (TestMemory)"
+    old_algorithm_name="" # Reset for new section
     for config in "${TEST_CONFIGS[@]}"; do
         IFS=':' read -r config_name second_field third_field fourth_field fifth_field sixth_field <<< "$config"
         IFS="_" read -r algorithm_name rest <<< "$config_name"
@@ -598,6 +603,9 @@ main() {
         fi
     done
 
+    # --- Compute NET Memory ---
+    print_header "COMPUTING NET MEMORY"
+    old_algorithm_name="" # Reset for new section
     for config in "${TEST_CONFIGS[@]}"; do
       IFS=':' read -r config_name second_field third_field fourth_field fifth_field sixth_field <<< "$config"
       IFS="_" read -r algorithm_name rest <<< "$config_name"
