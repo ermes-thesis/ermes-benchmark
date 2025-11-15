@@ -1,10 +1,8 @@
 bin
 sandbox
-benchmark_results_old
-benchmark_results_old2
-.venv
+benchmark_results*
+.venv*
 
-benchmark_results/*
 old_scripts/benchmark_results/*
 !old_scripts/benchmark_results/
 !old_scripts/benchmark_results/20251103_122242/
