@@ -10,18 +10,15 @@ import (
 	"scheduler"
 	"server"
 
-	"github.com/bytecodealliance/wasmtime-go/v37"
-	"github.com/ermes-thesis/ermes-common/logger"
-	"github.com/ermes-thesis/ermes-common/wasm-pool"
-	"github.com/rs/zerolog"
-	"github.com/second-state/WasmEdge-go/wasmedge"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"github.com/tetratelabs/wazero/api"
-
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/ermes-thesis/ermes-common/logger"
+	"github.com/ermes-thesis/ermes-common/wasm-pool"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func createNewLogger(t testing.TB) logger.Logger {
@@ -41,50 +38,6 @@ const lightweightInput = 20000
 const fibonacciTailInput = 20000
 const hostFnsInput = 0
 const warmBench = false
-
-var fnTwoParamOneReturnType = wasmedge.NewFunctionType(
-	[]*wasmedge.ValType{wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32()},
-	[]*wasmedge.ValType{wasmedge.NewValTypeI32()},
-)
-var fnFourParamOneReturnType = wasmedge.NewFunctionType(
-	[]*wasmedge.ValType{wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32(), wasmedge.NewValTypeI32()},
-	[]*wasmedge.ValType{wasmedge.NewValTypeI32()},
-)
-var wasmedgeFns = map[string]any{
-	"hostGet": wasmedge.NewFunction(fnFourParamOneReturnType, func(data any, callframe *wasmedge.CallingFrame, params []any) ([]any, wasmedge.Result) {
-		return []any{1}, wasmedge.Result_Success
-	}, nil, 0),
-	"hostMultipleGet": wasmedge.NewFunction(fnFourParamOneReturnType, func(data any, callframe *wasmedge.CallingFrame, params []any) ([]any, wasmedge.Result) {
-		return []any{1}, wasmedge.Result_Success
-	}, nil, 0),
-	"hostCreateCollection": wasmedge.NewFunction(fnTwoParamOneReturnType, func(data any, callframe *wasmedge.CallingFrame, params []any) ([]any, wasmedge.Result) {
-		return []any{1}, wasmedge.Result_Success
-	}, nil, 0),
-}
-
-var wasmtimeFns = map[string]any{
-	"hostGet": func(collIdPtr, collIdLength, recordNamePtr, recordNameLength, groupsPtr, groupsLength, userIdPtr, userIdLength int32, caller *wasmtime.Caller) int32 {
-		return 0
-	},
-	"hostMultipleGet": func(collIdPtr, collIdLength, recordNamesPtr, recordNamesLength, groupsPtr, groupsLength, userIdPtr, userIdLength int32, caller *wasmtime.Caller) int32 {
-		return 0
-	},
-	"hostCreateCollection": func(metadataPointer, metadataLength, skipUniquenessCheck int32, caller *wasmtime.Caller) int32 {
-		return 0
-	},
-}
-
-var wazeroFns = map[string]any{
-	"hostGet": func(ctx context.Context, m api.Module, collIdPtr, collIdLength, recordNamePtr, recordNameLength, groupsPtr, groupsLength, userIdPtr, userIdLength int32) int32 {
-		return 0
-	},
-	"hostMultipleGet": func(ctx context.Context, m api.Module, collIdPtr, collIdLength, recordNamesPtr, recordNamesLength, groupsPtr, groupsLength, userIdPtr, userIdLength int32) int32 {
-		return 0
-	},
-	"hostCreateCollection": func(ctx context.Context, m api.Module, metadataPointer, metadataLength, skipUniquenessCheck int32) int32 {
-		return 0
-	},
-}
 
 func createHostFns(b *testing.B, log logger.Logger) *scheduler.HostFunctions {
 	dataManager := datamanager_mock.NewDataManager(b)
