@@ -24,8 +24,11 @@ import (
 
 func createHostFns(t *testing.T, log logger.Logger) *scheduler.HostFunctions {
 	dataManager := datamanager_mock.NewDataManager(t)
-	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "testCollection", map[string]db.RecordValue{}, []string{"groupA"}, "userId", false, false).Return(nil)
-	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "seqCollection", map[string]db.RecordValue{}, []string{"groupA"}, "userId", true, false).Return(nil)
+	dataManager.EXPECT().GetRecord("255ef4af-3a49-4382-a90d-6524bdee5ad1", []string{"test"}, "userId", "battiti").Return("72", nil)
+	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "nuova_collection", map[string]db.RecordValue{}, []string{"test", "pippo"}, "userId", false, false).Return(nil)
+	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "multiple_get_coll", map[string]db.RecordValue{}, []string{"test", "fake"}, "userId", false, false).Return(nil)
+	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"testMGET", "testMGET2"}).Return([]any{"val1", "val2"}, nil)
+	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"cicico"}).Return([]any{"val1"}, nil)
 	metadataManager := metadataManager_mock.NewMetadataManager(t)
 	metadataManager.
 		EXPECT().
@@ -43,7 +46,7 @@ func createHostFns(t *testing.T, log logger.Logger) *scheduler.HostFunctions {
 		Secret:                     "very secret",
 		ClientSecret:               "client secret",
 		CloudNode:                  nil,
-		ExistingDomains:            map[string]struct{}{"IT": {}},
+		ExistingDomains:            map[string]struct{}{"IT": {}, "IT/Milan": {}},
 		GroupTokenProviderHostName: "hostnameGTP",
 		Stateful:                   false,
 		IsCentralStorage:           false,
@@ -155,8 +158,8 @@ func TestMemoryTimeline(t *testing.T) {
 		"_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm",
 		"_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci.wasm",
 		"_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm",
-		"_WASM_BINARIES/hostFns/functionCreateCollections.wasm",
-		"_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm",
+		"_WASM_BINARIES/hostFns/statefulFunction.wasm",
+		"_WASM_BINARIES/hostFns/statefulFunction_wOpts.wasm",
 		"_WASM_BINARIES/lightweight/lightweight.wasm",
 		"_WASM_BINARIES/lightweight/lightweight_wOpts.wasm",
 	}
