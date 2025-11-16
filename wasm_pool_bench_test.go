@@ -23,7 +23,7 @@ import (
 
 func createNewLogger(t testing.TB) logger.Logger {
 	log, err := logger.NewLogger(logger.Config{
-		Level:     zerolog.DebugLevel,
+		Level:     zerolog.WarnLevel,
 		Format:    "text",
 		AddSource: false,
 		Muted:     true,
@@ -41,8 +41,11 @@ const warmBench = false
 
 func createHostFns(b *testing.B, log logger.Logger) *scheduler.HostFunctions {
 	dataManager := datamanager_mock.NewDataManager(b)
-	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "testCollection", map[string]db.RecordValue{}, []string{"groupA"}, "userId", false, false).Return(nil)
-	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "seqCollection", map[string]db.RecordValue{}, []string{"groupA"}, "userId", true, false).Return(nil)
+	dataManager.EXPECT().GetRecord("255ef4af-3a49-4382-a90d-6524bdee5ad1", []string{"test"}, "userId", "battiti").Return("72", nil)
+	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "nuova_collection", map[string]db.RecordValue{}, []string{"test", "pippo"}, "userId", false, false).Return(nil)
+	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "multiple_get_coll", map[string]db.RecordValue{}, []string{"test", "fake"}, "userId", false, false).Return(nil)
+	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"testMGET", "testMGET2"}).Return([]any{"val1", "val2"}, nil)
+	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"cicico"}).Return([]any{"val1"}, nil)
 	metadataManager := metadataManager_mock.NewMetadataManager(b)
 	metadataManager.
 		EXPECT().
@@ -60,7 +63,7 @@ func createHostFns(b *testing.B, log logger.Logger) *scheduler.HostFunctions {
 		Secret:                     "very secret",
 		ClientSecret:               "client secret",
 		CloudNode:                  nil,
-		ExistingDomains:            map[string]struct{}{"IT": {}},
+		ExistingDomains:            map[string]struct{}{"IT": {}, "IT/Milan": {}},
 		GroupTokenProviderHostName: "hostnameGTP",
 		Stateful:                   false,
 		IsCentralStorage:           false,
@@ -158,7 +161,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_PrimeNumbers(b *testing.
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 
 	for b.Loop() {
 		response := pool.Invoke(primeNums, "entry", req, ctx)
@@ -181,7 +184,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_Fibonacci(b *testing.B) 
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 
 	for b.Loop() {
 		response := pool.Invoke(fibonacci, "entry", req, ctx)
@@ -203,7 +206,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_Lightweight(b *testing.B
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 
 	for b.Loop() {
 		response := pool.Invoke(lightweight, "entry", req, ctx)
@@ -226,7 +229,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_TailFibonacci(b *testing
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 
 	for b.Loop() {
 		response := pool.Invoke(tailFibonacci, "entry", req, ctx)
@@ -240,7 +243,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_TailFibonacci(b *testing
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -254,7 +257,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_HostFns(b *testing.B) {
 	}
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 
 	for b.Loop() {
 		response := pool.Invoke(hostFns, "entry", req, ctx)
@@ -277,7 +280,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_PrimeNumbers(b *testin
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 
 	for b.Loop() {
 		response := pool.Invoke(primeNumsWOpts, "entry", req, ctx)
@@ -300,7 +303,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_Fibonacci(b *testing.B
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 
 	for b.Loop() {
 		response := pool.Invoke(fibonacciWOpts, "entry", req, ctx)
@@ -323,7 +326,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_Lightweight(b *testing
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 
 	for b.Loop() {
 		response := pool.Invoke(lightweightWOpts, "entry", req, ctx)
@@ -346,7 +349,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_TailFibonacci(b *testi
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 
 	for b.Loop() {
 		response := pool.Invoke(tailFibonacciWOpts, "entry", req, ctx)
@@ -360,7 +363,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_TailFibonacci(b *testi
 
 func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -374,7 +377,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_HostFns(b *testing.B) 
 	}
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 
 	for b.Loop() {
 		response := pool.Invoke(hostFnsWOpts, "entry", req, ctx)
@@ -397,7 +400,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_PrimeNumbers(b *testing.B) {
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 
 	for b.Loop() {
 		response := pool.Invoke(primeNumsAOT, "entry", req, ctx)
@@ -420,7 +423,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_Fibonacci(b *testing.B) {
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 
 	for b.Loop() {
 		response := pool.Invoke(fibonacciAOT, "entry", req, ctx)
@@ -443,7 +446,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_Lightweight(b *testing.B) {
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 
 	for b.Loop() {
 		response := pool.Invoke(lightweightAOT, "entry", req, ctx)
@@ -466,7 +469,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_TailFibonacci(b *testing.B) {
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 
 	for b.Loop() {
 		response := pool.Invoke(tailFibonacciAOT, "entry", req, ctx)
@@ -480,7 +483,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_TailFibonacci(b *testing.B) {
 
 func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFnsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_noOpts_AOTwasmedge.wasm")
+	hostFnsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_noOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -494,13 +497,13 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_HostFns(b *testing.B) {
 	}
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 
 	for b.Loop() {
 		response := pool.Invoke(hostFnsAOT, "entry", req, ctx)
 
 		if response.HttpCode != 200 {
-			b.Fatalf("invoke function failed: %s", response.Response)
+			b.Errorf("invoke function failed: %s", response.Response)
 		}
 
 	}
@@ -517,7 +520,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_PrimeNumbers(b *testing.B) {
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", true, primeNumsInput)
 
 	for b.Loop() {
 		response := pool.Invoke(primeNumsWOptsAOT, "entry", req, ctx)
@@ -540,7 +543,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_Fibonacci(b *testing.B) {
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 
 	for b.Loop() {
 		response := pool.Invoke(fibonacciWOptsAOT, "entry", req, ctx)
@@ -563,7 +566,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_Lightweight(b *testing.B) {
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 
 	for b.Loop() {
 		response := pool.Invoke(lightweightWOptsAOT, "entry", req, ctx)
@@ -586,7 +589,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_TailFibonacci(b *testing.B) {
 	}, createNewLogger(b))
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 
 	for b.Loop() {
 		response := pool.Invoke(tailFibonacciWOptsAOT, "entry", req, ctx)
@@ -600,7 +603,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_TailFibonacci(b *testing.B) {
 
 func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFnsWOptsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts_AOTwasmedge.wasm")
+	hostFnsWOptsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts_AOTwasmedge.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -614,7 +617,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_HostFns(b *testing.B) {
 	}
 	defer pool.Close()
 
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 
 	for b.Loop() {
 		response := pool.Invoke(hostFnsWOptsAOT, "entry", req, ctx)
@@ -645,7 +648,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_PrimeNumbers(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", true, primeNumsInput)
 
 	if warmBench {
 		response := pool.Invoke(primeNums, "entry", req, ctx)
@@ -684,7 +687,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_Fibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 	if warmBench {
 		response := pool.Invoke(fibonacci, "entry", req, ctx)
 
@@ -722,7 +725,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_Lightweight(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 	if warmBench {
 		response := pool.Invoke(lightweight, "entry", req, ctx)
 
@@ -760,7 +763,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_TailFibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 	if warmBench {
 		response := pool.Invoke(tailFibonacci, "entry", req, ctx)
 
@@ -786,7 +789,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_HostFns(b *testing.B) {
 		panic(err)
 	}
 
-	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -803,7 +806,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_HostFns(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 	if warmBench {
 		response := pool.Invoke(hostFns, "entry", req, ctx)
 
@@ -841,7 +844,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_PrimeNumbers(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 	if warmBench {
 		response := pool.Invoke(primeNumsWOpts, "entry", req, ctx)
 
@@ -879,7 +882,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_Fibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 	if warmBench {
 		response := pool.Invoke(fibonacciWOpts, "entry", req, ctx)
 
@@ -917,7 +920,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_Lightweight(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 	if warmBench {
 		response := pool.Invoke(lightweightWOpts, "entry", req, ctx)
 
@@ -955,7 +958,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_TailFibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 	if warmBench {
 		response := pool.Invoke(tailFibonacciWOpts, "entry", req, ctx)
 
@@ -981,7 +984,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_HostFns(b *testing.B) {
 		panic(err)
 	}
 
-	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -998,7 +1001,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_HostFns(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 	if warmBench {
 		response := pool.Invoke(hostFnsWOpts, "entry", req, ctx)
 
@@ -1031,7 +1034,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_PrimeNumbers(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 	if warmBench {
 		response := pool.Invoke(primeNums, "entry", req, ctx)
 
@@ -1064,7 +1067,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_Fibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 	if warmBench {
 		response := pool.Invoke(fibonacci, "entry", req, ctx)
 
@@ -1096,7 +1099,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_Lightweight(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 	if warmBench {
 		response := pool.Invoke(lightweight, "entry", req, ctx)
 
@@ -1128,7 +1131,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_TailFibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 	if warmBench {
 		response := pool.Invoke(tailFibonacci, "entry", req, ctx)
 
@@ -1148,7 +1151,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_TailFibonacci(b *testing.B) {
 
 func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_noOpts_AOTwasmtime.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_noOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1165,7 +1168,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_HostFns(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 	if warmBench {
 		response := pool.Invoke(hostFns, "entry", req, ctx)
 
@@ -1197,7 +1200,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_PrimeNumbers(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 	if warmBench {
 		response := pool.Invoke(primeNumsWOpts, "entry", req, ctx)
 
@@ -1229,7 +1232,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_Fibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 	if warmBench {
 		response := pool.Invoke(fibonacciWOpts, "entry", req, ctx)
 
@@ -1261,7 +1264,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_Lightweight(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 	if warmBench {
 		response := pool.Invoke(lightweightWOpts, "entry", req, ctx)
 
@@ -1293,7 +1296,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_TailFibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 	if warmBench {
 		response := pool.Invoke(tailFibonacciWOpts, "entry", req, ctx)
 
@@ -1313,7 +1316,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_TailFibonacci(b *testing.B) {
 
 func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts_AOTwasmtime.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts_AOTwasmtime.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1330,7 +1333,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_HostFns(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 	if warmBench {
 		response := pool.Invoke(hostFnsWOpts, "entry", req, ctx)
 
@@ -1362,7 +1365,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_PrimeNumbers(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 	if warmBench {
 		response := pool.Invoke(primeNums, "entry", req, ctx)
 
@@ -1395,7 +1398,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_Fibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 	if warmBench {
 		response := pool.Invoke(fibonacci, "entry", req, ctx)
 
@@ -1427,7 +1430,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_Lightweight(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 	if warmBench {
 		response := pool.Invoke(lightweight, "entry", req, ctx)
 
@@ -1459,7 +1462,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_TailFibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 	if warmBench {
 		response := pool.Invoke(tailFibonacci, "entry", req, ctx)
 
@@ -1479,7 +1482,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_TailFibonacci(b *testing.B) {
 
 func BenchmarkExecutionTime_Wazero_AOT_NoOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1496,7 +1499,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_HostFns(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 	if warmBench {
 		response := pool.Invoke(hostFns, "entry", req, ctx)
 
@@ -1528,7 +1531,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_PrimeNumbers(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 	if warmBench {
 		response := pool.Invoke(primeNumsWOpts, "entry", req, ctx)
 
@@ -1560,7 +1563,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_Fibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 	if warmBench {
 		response := pool.Invoke(fibonacciWOpts, "entry", req, ctx)
 
@@ -1592,7 +1595,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_Lightweight(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 	if warmBench {
 		response := pool.Invoke(lightweightWOpts, "entry", req, ctx)
 
@@ -1624,7 +1627,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_TailFibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 	if warmBench {
 		response := pool.Invoke(tailFibonacciWOpts, "entry", req, ctx)
 
@@ -1644,7 +1647,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_TailFibonacci(b *testing.B) {
 
 func BenchmarkExecutionTime_Wazero_AOT_WithOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1661,7 +1664,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_HostFns(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 	if warmBench {
 		response := pool.Invoke(hostFnsWOpts, "entry", req, ctx)
 
@@ -1694,7 +1697,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_PrimeNumbers(b *testing.
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 	if warmBench {
 		response := pool.Invoke(primeNumsWOpts, "entry", req, ctx)
 
@@ -1727,7 +1730,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_Fibonacci(b *testing.B) 
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 	if warmBench {
 		response := pool.Invoke(fibonacciWOpts, "entry", req, ctx)
 
@@ -1760,7 +1763,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_Lightweight(b *testing.B
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 	if warmBench {
 		response := pool.Invoke(lightweightWOpts, "entry", req, ctx)
 
@@ -1793,7 +1796,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_TailFibonacci(b *testing
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 	if warmBench {
 		response := pool.Invoke(tailFibonacciWOpts, "entry", req, ctx)
 
@@ -1814,7 +1817,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_TailFibonacci(b *testing
 
 func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections_wOpts.wasm")
+	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -1832,7 +1835,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_HostFns(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 	if warmBench {
 		response := pool.Invoke(hostFnsWOpts, "entry", req, ctx)
 
@@ -1865,7 +1868,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_PrimeNumbers(b *testing.B)
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", primeNumsInput)
+	req, ctx := getTestReqAndCtx("userId", false, primeNumsInput)
 	if warmBench {
 		response := pool.Invoke(primeNums, "entry", req, ctx)
 
@@ -1898,7 +1901,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_Fibonacci(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciInput)
 	if warmBench {
 		response := pool.Invoke(fibonacci, "entry", req, ctx)
 
@@ -1931,7 +1934,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_Lightweight(b *testing.B) 
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", lightweightInput)
+	req, ctx := getTestReqAndCtx("userId", false, lightweightInput)
 	if warmBench {
 		response := pool.Invoke(lightweight, "entry", req, ctx)
 
@@ -1964,7 +1967,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_TailFibonacci(b *testing.B
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", fibonacciTailInput)
+	req, ctx := getTestReqAndCtx("userId", false, fibonacciTailInput)
 	if warmBench {
 		response := pool.Invoke(tailFibonacci, "entry", req, ctx)
 
@@ -1984,7 +1987,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_TailFibonacci(b *testing.B
 
 func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_HostFns(b *testing.B) {
 	log := createNewLogger(b)
-	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/functionCreateCollections.wasm")
+	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction.wasm")
 	if err != nil {
 		panic(err)
 	}
@@ -2002,7 +2005,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_HostFns(b *testing.B) {
 	defer pool.Close()
 
 	// Execute the first time to allow to start the b.Loop() with a cached compiled binary
-	req, ctx := getTestReqAndCtx("userId", hostFnsInput)
+	req, ctx := getTestReqAndCtx("userId", true, hostFnsInput)
 	if warmBench {
 		response := pool.Invoke(hostFns, "entry", req, ctx)
 
@@ -2020,25 +2023,30 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_HostFns(b *testing.B) {
 	}
 }
 
-func getTestReqAndCtx(userId string, inputN int) ([]byte, []byte) {
+func getTestReqAndCtx(userId string, addTestColl bool, inputN int) ([]byte, []byte) {
 	req := "{\"prova\": \"ciao\", \"n\":\"" + strconv.FormatInt(int64(inputN), 10) + "\"}"
 
-	timestamp, _ := time.Now().MarshalJSON()
+	var testColl string
+	if addTestColl {
+		timestamp, _ := time.Now().MarshalJSON()
+		testColl = "\"test_collection\": [" +
+			"{" +
+			"\"Id\": \"255ef4af-3a49-4382-a90d-6524bdee5ad1\"," +
+			"\"Metadata\": {" +
+			"\"consistency\": 1," +
+			"\"name\": \"dati\"," +
+			"\"owner\": \"pippo\"," +
+			"\"createdAt\": " + string(timestamp) + "" +
+			"}" +
+			"}" +
+			"]"
+	}
+
 	ctx := "{" +
 		"\"userId\": \"" + userId + "\"," +
 		"\"groupList\": [\"test\"]," +
 		"\"collections\": {" +
-		"\"test_collection\": [" +
-		"{" +
-		"\"Id\": \"255ef4af-3a49-4382-a90d-6524bdee5ad1\"," +
-		"\"Metadata\": {" +
-		"\"consistency\": 1," +
-		"\"name\": \"dati\"," +
-		"\"owner\": \"pippo\"," +
-		"\"createdAt\": " + string(timestamp) + "" +
-		"}" +
-		"}" +
-		"]" +
+		testColl +
 		"}" +
 		"}"
 	return []byte(req), []byte(ctx)
