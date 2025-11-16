@@ -241,7 +241,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_TailFibonacci(b *testing
 	}
 }
 
-func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wasmedge_Interpreter_NoOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction.wasm")
 	if err != nil {
@@ -361,7 +361,7 @@ func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_TailFibonacci(b *testi
 	}
 }
 
-func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wasmedge_Interpreter_WithOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts.wasm")
 	if err != nil {
@@ -481,7 +481,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_TailFibonacci(b *testing.B) {
 	}
 }
 
-func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wasmedge_AOT_NoOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFnsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_noOpts_AOTwasmedge.wasm")
 	if err != nil {
@@ -601,7 +601,7 @@ func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_TailFibonacci(b *testing.B) {
 	}
 }
 
-func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wasmedge_AOT_WithOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFnsWOptsAOT, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts_AOTwasmedge.wasm")
 	if err != nil {
@@ -781,7 +781,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_TailFibonacci(b *testing.B) {
 	}
 }
 
-func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wasmtime_JIT_NoOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	homeFolder := os.Getenv("HOME")
 	err := os.RemoveAll(homeFolder + "/.cache/wasmtime/modules")
@@ -976,7 +976,7 @@ func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_TailFibonacci(b *testing.B) {
 	}
 }
 
-func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wasmtime_JIT_WithOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	homeFolder := os.Getenv("HOME")
 	err := os.RemoveAll(homeFolder + "/.cache/wasmtime/modules")
@@ -1149,7 +1149,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_TailFibonacci(b *testing.B) {
 	}
 }
 
-func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wasmtime_AOT_NoOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_noOpts_AOTwasmtime.wasm")
 	if err != nil {
@@ -1314,7 +1314,7 @@ func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_TailFibonacci(b *testing.B) {
 	}
 }
 
-func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wasmtime_AOT_WithOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts_AOTwasmtime.wasm")
 	if err != nil {
@@ -1480,7 +1480,7 @@ func BenchmarkExecutionTime_Wazero_AOT_NoOpts_TailFibonacci(b *testing.B) {
 	}
 }
 
-func BenchmarkExecutionTime_Wazero_AOT_NoOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wazero_AOT_NoOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction.wasm")
 	if err != nil {
@@ -1645,7 +1645,7 @@ func BenchmarkExecutionTime_Wazero_AOT_WithOpts_TailFibonacci(b *testing.B) {
 	}
 }
 
-func BenchmarkExecutionTime_Wazero_AOT_WithOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wazero_AOT_WithOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts.wasm")
 	if err != nil {
@@ -1815,7 +1815,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_TailFibonacci(b *testing
 	}
 }
 
-func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wazero_Interpreter_WithOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFnsWOpts, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction_wOpts.wasm")
 	if err != nil {
@@ -1985,7 +1985,7 @@ func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_TailFibonacci(b *testing.B
 	}
 }
 
-func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_HostFns(b *testing.B) {
+func BenchmarkExecutionTime_Wazero_Interpreter_NoOpts_Stateful(b *testing.B) {
 	log := createNewLogger(b)
 	hostFns, err := os.ReadFile("_WASM_BINARIES/hostFns/statefulFunction.wasm")
 	if err != nil {
