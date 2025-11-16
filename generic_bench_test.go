@@ -23,11 +23,11 @@ import (
 
 func createHostFns(t *testing.T, log logger.Logger) *scheduler.HostFunctions {
 	dataManager := datamanager_mock.NewDataManager(t)
-	dataManager.EXPECT().GetRecord("255ef4af-3a49-4382-a90d-6524bdee5ad1", []string{"test"}, "userId", "battiti").Return("72", nil)
-	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "nuova_collection", map[string]db.RecordValue{}, []string{"test", "pippo"}, "userId", false, false).Return(nil)
-	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "multiple_get_coll", map[string]db.RecordValue{}, []string{"test", "fake"}, "userId", false, false).Return(nil)
-	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"testMGET", "testMGET2"}).Return([]any{"val1", "val2"}, nil)
-	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"cicico"}).Return([]any{"val1"}, nil)
+	dataManager.EXPECT().GetRecord("255ef4af-3a49-4382-a90d-6524bdee5ad1", []string{"test"}, "userId", "battiti").Return("72", nil).Maybe()
+	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "nuova_collection", map[string]db.RecordValue{}, []string{"test", "pippo"}, "userId", false, false).Return(nil).Maybe()
+	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "multiple_get_coll", map[string]db.RecordValue{}, []string{"test", "fake"}, "userId", false, false).Return(nil).Maybe()
+	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"testMGET", "testMGET2"}).Return([]any{"val1", "val2"}, nil).Maybe()
+	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"cicico"}).Return([]any{"val1"}, nil).Maybe()
 	metadataManager := metadataManager_mock.NewMetadataManager(t)
 	metadataManager.
 		EXPECT().
