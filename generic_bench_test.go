@@ -9,7 +9,6 @@ import (
 	datamanager_mock "mocks/dataManager"
 	metadataManager_mock "mocks/metadataManager"
 	"os"
-	"runtime"
 	"scheduler"
 	"server"
 	"strconv"
@@ -232,7 +231,7 @@ func TestMemoryTimeline(t *testing.T) {
 				fmt.Fprintf(os.Stderr, "Error on %s: %+v\n", fileToRead, res)
 			}
 
-			runtime.GC()
+			//runtime.GC()
 			fmt.Println("SYNC_POINT")
 			os.Stdout.Sync()
 
