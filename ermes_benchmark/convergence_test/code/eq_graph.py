@@ -8,9 +8,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-ignored_functions = ['functionCreateCollections']
+ignored_functions = ['functionCreateCollections', 'functionCreateSeqCollections']
 eq_map = {
-    'functionUseCollections-10.10.101.50:12345': '10.10.101.55:12345',
+    'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
+    'functionReadSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
 }
 
 def parse_dfs(files, n):
@@ -254,7 +255,7 @@ def plot_logs_avg_latency(dfs, eq_timestamp):
 
         avg = full_df.groupby('Group')['Duration'].mean()
         
-        group_min_dates = full_df.groupby('Group')['Duration'].min()
+        group_min_dates = full_df.groupby('Group')['StartTime'].min()
         
         colors = []
         highlight_color =  '#348ABD' # Blue (After Equilibrium)
@@ -322,8 +323,8 @@ def plot_logs_avg_latency(dfs, eq_timestamp):
         print(f"{e}")
         return None
 
-n = 2 # Numero di funzioni per round
-files = ['../data/results_log.csv_12345_2025_11_19_14_23_37.csv', '../data/results_log.csv_12345_2025_11_19_14_23_37.csv'] 
+n = 50 # Numero di funzioni per round
+files = ['../data/results_log_54321_2025_11_19_17_40_57.csv', '../data/results_log_12345_2025_11_19_17_40_55.csv'] 
 
 dfs = parse_dfs(files, n)
 

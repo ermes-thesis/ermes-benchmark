@@ -1,7 +1,0 @@
-StartTime,EntryHost,FuncName,ExecHost,FuncDuration,GTPAccessed,TotalDuration
-2025-11-19T14:23:37Z,10.10.101.50:12345,functionCreateCollections,10.10.101.50:12345,49.846559ms,true,68.01265ms
-2025-11-19T14:23:37Z,10.10.101.50:12345,functionUseCollections,10.10.101.50:12345,71.746164ms,false,71.878827ms
-2025-11-19T14:23:37Z,10.10.101.50:12345,functionUseCollections,10.10.101.50:12345,5.764552ms,false,5.808214ms
-2025-11-19T14:23:37Z,10.10.101.50:12345,functionUseCollections,10.10.101.50:12345,4.981384ms,false,5.02307ms
-2025-11-19T14:23:37Z,10.10.101.50:12345,functionUseCollections,10.10.101.50:12345,4.723069ms,false,4.761068ms
-2025-11-19T14:23:37Z,10.10.101.50:12345,functionUseCollections,10.10.101.50:12345,5.051749ms,false,5.082189ms
