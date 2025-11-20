@@ -46,8 +46,10 @@ def parse_dfs(files, n):
         current_df['StartTime'] = pd.to_datetime(current_df['StartTime'])
 
         current_df['Is_Local'] = current_df['EntryHost'] == current_df['ExecHost']
+
+        current_df = current_df.sort_values(by=['StartTime']).reset_index(drop=True)
             
-        current_df['Group'] = current_df.index // n
+        current_df['Group'] = current_df.index // n 
             
         dfs.append(current_df)
     
@@ -159,7 +161,7 @@ def local_vs_remote_latency(dfs):
         from matplotlib.lines import Line2D
         
         plt.style.use('ggplot')
-        fig, ax = plt.subplots(figsize=(12, 7)) # Aumento leggermente la dimensione per far spazio alle etichette
+        fig, ax = plt.subplots(figsize=(12, 7))
         
         n_files = len(dfs)
         x = np.arange(n_files)
@@ -172,13 +174,11 @@ def local_vs_remote_latency(dfs):
         all_durations = []
         data_to_plot = []
         
-        # --- Calcolo dei limiti dell'asse Y e delle medie/min/max ---
         for df in dfs:
             durations = df['Duration'].dropna()
             if not durations.empty:
                 all_durations.extend(durations.tolist())
             
-            # Statistiche
             min_overall = durations.min() if not durations.empty else np.nan
             max_overall = durations.max() if not durations.empty else np.nan
             mean_total = durations.mean() if not durations.empty else np.nan
@@ -209,17 +209,14 @@ def local_vs_remote_latency(dfs):
             
             ax.set_ylim(bottom=y_min, top=y_max)
             
-        # --- Plotting e Etichettatura ---
         for i, data in enumerate(data_to_plot):
             current_x = x[i]
             user_color = colors[i]
             bar_width = single_bar_width * 0.8
-            stem_line_width = 1.2
+            stem_line_width = 1.5
             
-            # Posizione per le etichette di testo (leggermente a destra del centro della barra)
             text_x_pos = current_x + bar_width * 0.25 
             
-            # 1. Barra Min/Max (Sfondo Trasparente)
             if not np.isnan(data['min']) and not np.isnan(data['max']):
                 min_val = data['min']
                 max_val = data['max']
@@ -228,7 +225,6 @@ def local_vs_remote_latency(dfs):
                 ax.bar(current_x, height_overall, bottom=min_val, width=bar_width,
                        color='grey', alpha=0.15, edgecolor=None, linewidth=0, zorder=0, label='_nolegend_')
 
-            # 2. Barra Media Locale vs Media Remota (Il "Box") e Steli
             if not np.isnan(data['lower_mean']) and not np.isnan(data['upper_mean']):
                 lower_mean = data['lower_mean']
                 upper_mean = data['upper_mean']
@@ -240,37 +236,42 @@ def local_vs_remote_latency(dfs):
 
                 # Stelo inferiore (Min al bordo inferiore del box)
                 if not np.isnan(data['min']):
-                     ax.vlines(current_x, data['min'], lower_mean,
-                              colors=[user_color], linestyle='-', linewidth=stem_line_width, zorder=1, label='_nolegend_')
-                
+                    ax.vlines(current_x, data['min'], lower_mean,
+                            colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1, label='_nolegend_')
+
                 # Stelo superiore (bordo superiore del box al Max)
                 if not np.isnan(data['max']):
                     ax.vlines(current_x, upper_mean, data['max'],
-                              colors=[user_color], linestyle='-', linewidth=stem_line_width, zorder=1, label='_nolegend_')
+                            colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1, label='_nolegend_')
+            elif not np.isnan(data['mean_total']):
+                # Stelo inferiore (Min al bordo inferiore del box)
+                if not np.isnan(data['min']):
+                    ax.vlines(current_x, data['min'], data['mean_total'],
+                            colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1, label='_nolegend_')
+
+                # Stelo superiore (bordo superiore del box al Max)
+                if not np.isnan(data['max']):
+                    ax.vlines(current_x, data['mean_total'], data['max'],
+                            colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1, label='_nolegend_')
                        
             # 3. Segni Min/Max (i "whiskers") + ETICHETTE MIN E MAX
             if not np.isnan(data['min']):
-                # Whisker Min
                 ax.hlines(data['min'], current_x - bar_width*0.2, current_x + bar_width*0.2,
-                          colors=[user_color], linewidth=1, zorder=4, label='_nolegend_')
+                          colors=[user_color], linewidth=2, zorder=4, label='_nolegend_')
                 # Etichetta Min
                 ax.text(text_x_pos, data['min'], f'Min: {data["min"]:.2f}', 
                         ha='left', va='center', fontsize=8, color=user_color, weight='bold')
                 
             if not np.isnan(data['max']):
-                # Whisker Max
                  ax.hlines(data['max'], current_x - bar_width*0.2, current_x + bar_width*0.2,
-                          colors=[user_color], linewidth=1, zorder=4, label='_nolegend_')
-                # Etichetta Max
+                          colors=[user_color], linewidth=2, zorder=4, label='_nolegend_')
                  ax.text(text_x_pos, data['max'], f'Max: {data["max"]:.2f}', 
                         ha='left', va='center', fontsize=8, color=user_color, weight='bold')
 
             # 4. Linea Media Totale + ETICHETTA MEDIA
             if not np.isnan(data['mean_total']):
-                # Linea Media Totale
                 ax.hlines(data['mean_total'], current_x - bar_width*0.4, current_x + bar_width*0.4,
-                          colors='black', linewidth=1.5, zorder=3, label='_nolegend_')
-                # Etichetta Media Totale
+                          colors=[user_color], linewidth=2, zorder=3, label='_nolegend_')
                 ax.text(text_x_pos, data['mean_total'], f'Avg: {data["mean_total"]:.2f}', 
                         ha='left', va='center', fontsize=9, color='black', weight='bold',
                         bbox=dict(facecolor='white', alpha=0.8, edgecolor='none', boxstyle='square,pad=0.2'))
@@ -451,6 +452,104 @@ def plot_logs_avg_latency(dfs, eq_timestamp):
         traceback.print_exc()
         return None
 
+def local_vs_remote_latency_violin(dfs):
+    """
+    Violin Plot personalizzato con Min, Max, Avg, Avg Local e Avg Remote.
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    plt.style.use('ggplot')
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    n_files = len(dfs)
+    x = np.arange(n_files)
+    colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
+    file_labels = [f'User {i+1}' for i in range(n_files)]
+
+    data_list = []
+    stats = []
+
+    for df in dfs:
+        durations = df['Duration'].dropna()
+        local_data = df[df['Is_Local'] == True]['Duration'].dropna()
+        remote_data = df[df['Is_Local'] == False]['Duration'].dropna()
+
+        data_list.append(durations.values)
+
+        stats.append({
+            'min': durations.min(),
+            'max': durations.max(),
+            'avg': durations.mean(),
+            'avg_local': local_data.mean() if not local_data.empty else np.nan,
+            'avg_remote': remote_data.mean() if not remote_data.empty else np.nan,
+        })
+
+    # --- Plotta i violini ---
+    vp = ax.violinplot(
+        data_list,
+        positions=x,
+        showmeans=False,
+        showmedians=False,
+        showextrema=False
+    )
+
+    # Colora ogni violino
+    for i, b in enumerate(vp['bodies']):
+        b.set_facecolor(colors[i])
+        b.set_alpha(0.4)
+
+    # --- Disegna Min, Max, Avg, Avg Local e Avg Remote ---
+    for i, stat in enumerate(stats):
+        current_x = x[i]
+        user_color = colors[i]
+
+        # Min e Max
+        ax.vlines(current_x, stat['min'], stat['max'], color=user_color, linestyle=':', linewidth=1.5)
+        ax.hlines(stat['min'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=2)
+        ax.hlines(stat['max'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=2)
+
+        # Avg totale
+        ax.hlines(stat['avg'], current_x - 0.15, current_x + 0.15, color='black', linewidth=2)
+        ax.text(current_x + 0.2, stat['avg'], f'Avg: {stat["avg"]:.2f}', fontsize=9, color='black',
+                bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+        # Avg Local
+        if not np.isnan(stat['avg_local']):
+            if int(stat['avg_local']) != int(stat['avg']):
+                ax.hlines(stat['avg_local'], current_x - 0.12, current_x + 0.12,
+                        color=user_color, linestyle='--', linewidth=2)
+                ax.text(current_x + 0.2, stat['avg_local'], f'Loc: {stat["avg_local"]:.2f}',
+                        fontsize=8, color=user_color)
+
+        # Avg Remote
+        if not np.isnan(stat['avg_remote']):
+            if int(stat['avg_remote']) != int(stat['avg']):
+                ax.hlines(stat['avg_remote'], current_x - 0.12, current_x + 0.12,
+                        color=user_color, linestyle='-.', linewidth=2)
+                ax.text(current_x + 0.2, stat['avg_remote'], f'Rem: {stat["avg_remote"]:.2f}',
+                        fontsize=8, color=user_color)
+
+    # --- Legenda ---
+    legend_elements = [
+        Line2D([0], [0], color='black', lw=2, label='Avg Totale'),
+        Line2D([0], [0], color='grey', lw=2, linestyle='--', label='Avg Local'),
+        Line2D([0], [0], color='grey', lw=2, linestyle='-.', label='Avg Remote'),
+        Line2D([0], [0], color='grey', lw=1.5, linestyle=':', label='Min/Max (Linea verticale)')
+    ]
+    ax.legend(handles=legend_elements, loc='upper right')
+
+    # --- Etichette e Titolo ---
+    ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
+    ax.set_xlabel('User')
+    ax.set_ylabel('Latency (ms)')
+    ax.set_xticks(x)
+    ax.set_xticklabels(file_labels)
+
+    plt.tight_layout()
+    return fig
+
+
 def plot_heatmap_count_tasks(dfs, n):
     """
     Genera una heatmap che mostra il numero totale di esecuzioni (task) 
@@ -626,5 +725,8 @@ plt.savefig(f'{base_dir}/../output_img/heatmap_avg_latency_{timestamp}.png', dpi
 
 plot_heatmap_count_tasks(dfs, n)
 plt.savefig(f'{base_dir}/../output_img/heatmap_count_tasks_{timestamp}.png', dpi=300, bbox_inches='tight')
+
+local_vs_remote_latency_violin(dfs)
+plt.savefig(f'{base_dir}/../output_img/local_vs_remote_latency_violin_{timestamp}.png', dpi=300, bbox_inches='tight')
 
 plt.show()
