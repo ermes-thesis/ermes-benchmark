@@ -7,3 +7,5 @@ old_scripts/benchmark_results/*
 !old_scripts/benchmark_results/
 !old_scripts/benchmark_results/20251103_122242/
 !old_scripts/benchmark_results/20251104_135416/
+
+.~lock*.csv#
