@@ -8,7 +8,7 @@ from pathlib import Path
 sns.set_theme(style="whitegrid", font_scale=1.2)
 
 def plot_timelines(csv_files, output_file="memory_timeline.png"):
-    plt.figure(figsize=(16, 8))
+    plt.figure(figsize=(10, 6))
     ax = plt.gca()
 
     palette = sns.color_palette("tab10", n_colors=len(csv_files))
@@ -28,6 +28,12 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
 
             # Estrai etichetta (es. "wasmedge")
             label = Path(csv_path).stem.replace("trace_sync_", "").replace("_", " ")
+            if label == "wasmedge":
+                label = "WasmEdge"
+            elif label == "wasmtime":
+                label = "Wasmtime"
+            elif label == "wazero":
+                label = "Wazero"
 
             # Grafico 1: RSS (Memoria Totale di Sistema)
             sns.lineplot(
@@ -35,7 +41,7 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
                 x="Execution_N",
                 y="RSS_MB",
                 label=label,
-                linewidth=2.5,
+                # linewidth=1.0,
                 alpha=0.9,
                 color=palette[i],
                 ax=ax
@@ -47,20 +53,16 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
         except Exception as e:
             print(f"Error plotting {csv_path}: {e}", file=sys.stderr)
 
-    ax.set_title("Total System Memory (RSS) after each Function Execution")
+    # ax.set_title("Total System Memory (RSS) after each Function Execution", fontsize=15)
     ax.set_ylabel("RSS Memory (MB)")
     ax.set_xlabel("Number of Function Executions (Sequential)")
-    ax.set_ylim(bottom=0)
 
     if max_exec > 0:
         ax.set_xlim(0, max_exec)
 
-    # Legenda esterna
-    ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
-
     plt.tight_layout()
 
-    plt.savefig(output_file, dpi=300)
+    plt.savefig(output_file)
     print(f"Chart saved to {output_file}")
 
 if __name__ == "__main__":

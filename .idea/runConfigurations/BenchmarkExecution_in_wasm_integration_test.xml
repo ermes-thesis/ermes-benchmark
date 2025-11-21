@@ -1,9 +1,9 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="BenchmarkExecution in wasm_integration_test" type="GoTestRunConfiguration" factoryName="Go Test" nameIsGenerated="true">
-    <output_file path="$PROJECT_DIR$/results_cold.json" is_save="true" />
+    <output_file path="$PROJECT_DIR$/wasm_benchmark/results_cold.json" is_save="true" />
     <module name="benchmark-files" />
     <target name="WSL - Ubuntu" />
-    <working_directory value="$PROJECT_DIR$" />
+    <working_directory value="$PROJECT_DIR$/" />
     <parameters value="-test.benchtime=10s -test.benchmem" />
     <kind value="PACKAGE" />
     <package value="wasm_integration_test" />

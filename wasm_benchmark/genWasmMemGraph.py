@@ -12,6 +12,13 @@ import numpy as np
 file_ext = ".png"
 args = sys.argv[1:] # Copia gli argomenti
 
+# Controlla il flag --individual
+save_individual = False
+if "--individual" in args:
+    save_individual = True
+    args.remove("--individual") # Rimuovi il flag dalla lista degli argomenti
+    print("Individual plots generation enabled.")
+
 # Controlla il flag --pdf
 if "--pdf" in args:
     file_ext = ".pdf"
@@ -20,11 +27,10 @@ if "--pdf" in args:
 else:
     print("Output format set to PNG (default).")
 
-
 # Controlla il percorso del file di memoria
 if len(args) < 1:
     print("Error: Memory file path not provided.", file=sys.stderr)
-    print("Usage: python plot.py [--pdf] <path_to_memory_file.txt>", file=sys.stderr)
+    print("Usage: python plot.py [--pdf] [--individual] <path_to_memory_file.txt>", file=sys.stderr)
     sys.exit(1)
 
 memory_path = Path(args[0])
@@ -308,3 +314,87 @@ plt.savefig(mem_summary_img)
 plt.close(fig)
 
 print(f"Plots generated and saved to {mem_summary_img}")
+
+# ============================================================
+# INDIVIDUAL PLOTS GENERATION
+# ============================================================
+
+if save_individual:
+    print("\nGenerating individual plots (--individual flag detected)...")
+
+    # Configurazione dei 5 grafici richiesti
+    # Struttura: (Nome Colonna, Filtro (lambda), Titolo File, Titolo Grafico opzionale)
+
+    configs = [
+        # 1. Total Memory | Con Ottimizzazioni | Senza Native
+        {
+            "col": "TotMemory_MB",
+            "filter": lambda df: df[(df["Optimization"] == "WithOpts") & (df["Runtime"] != "Native")],
+            "filename": f"memory-total-withopts-no-native{file_ext}",
+            "title": "Total Memory (WithOpts - No Native)"
+        },
+        # 2. Total Memory | Senza Ottimizzazioni | Senza Native
+        {
+            "col": "TotMemory_MB",
+            "filter": lambda df: df[(df["Optimization"] == "NoOpts") & (df["Runtime"] != "Native")],
+            "filename": f"memory-total-noopts-no-native{file_ext}",
+            "title": "Total Memory (NoOpts - No Native)"
+        },
+        # 3. Total Memory | Con Ottimizzazioni | Con Native
+        {
+            "col": "TotMemory_MB",
+            "filter": lambda df: df[(df["Optimization"] == "WithOpts") | (df["Runtime"] == "Native")],
+            "filename": f"memory-total-withopts-native{file_ext}",
+            "title": "Total Memory (WithOpts + Native)"
+        },
+        # 4. Overhead Memory | Con Ottimizzazioni | Senza Native
+        {
+            "col": "OverheadMemory_MB",
+            "filter": lambda df: df[(df["Optimization"] == "WithOpts") & (df["Runtime"] != "Native")],
+            "filename": f"memory-overhead-withopts-no-native{file_ext}",
+            "title": "Overhead Memory (WithOpts - No Native)"
+        },
+        # 5. Net Memory | Con Ottimizzazioni | Con Native
+        {
+            "col": "NetMemory_MB",
+            "filter": lambda df: df[(df["Optimization"] == "WithOpts") | (df["Runtime"] == "Native")],
+            "filename": f"memory-net-withopts-native{file_ext}",
+            "title": "Net Memory (WithOpts + Native)"
+        }
+    ]
+
+    for cfg in configs:
+        # Applica il filtro
+        filtered_data = cfg["filter"](df_mem)
+
+        if filtered_data.empty:
+            print(f"  -> Skipping {cfg['filename']} (No data found matching criteria)")
+            continue
+
+        plt.figure(figsize=(8, 5))
+
+        ax = sns.barplot(data=filtered_data, x="Label", y=cfg["col"], hue="Algorithm", palette=palette)
+
+        # Se si vuole il titolo sul grafico decommentare la riga sotto:
+        # plt.title(cfg["title"], fontsize=16)
+
+        plt.xlabel("")
+        plt.ylabel("Memory (MB)")
+        plt.tick_params(axis="x")
+        plt.tick_params(axis="y")
+        plt.ylim(top=75)
+
+        # Legenda
+        # plt.legend(
+        #     loc='upper right', # Spostato in alto a destra per evitare sovrapposizioni
+        #     bbox_to_anchor=(1.15, 1),
+        #     title="Algorithm",
+        #     borderaxespad=0
+        # )
+        plt.legend().remove()
+        plt.tight_layout()
+        plt.savefig(cfg["filename"])
+        plt.close()
+        print(f"  -> Saved {cfg['filename']}")
+
+    print("Individual plots generation complete.")
