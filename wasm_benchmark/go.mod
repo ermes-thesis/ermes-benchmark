@@ -2,28 +2,24 @@ module wasm_integration_test
 
 go 1.24.4
 
-replace github.com/ermes-thesis/ermes-common/logger => ./../ermes-common/logger
-
-replace github.com/ermes-thesis/ermes-common/wasm-pool => ./../ermes-common/wasm-pool
-
-replace github.com/ermes-thesis/ermes-common/model => ./../ermes-common/model
-
-replace github.com/ermes-thesis/ermes-common/utils => ./../ermes-common/utils
-
-replace scheduler => ./../ermes-generic-node/scheduler
-
-replace server => ./../ermes-generic-node/server
-
-replace mocks => ./../ermes-generic-node/mocks
+replace (
+	github.com/ermes-thesis/ermes-common/logger => ./../../ermes-common/logger
+	github.com/ermes-thesis/ermes-common/model => ./../../ermes-common/model
+	github.com/ermes-thesis/ermes-common/utils => ./../../ermes-common/utils
+	github.com/ermes-thesis/ermes-common/wasm-pool => ./../../ermes-common/wasm-pool
+)
 
 replace (
-	caches => ./../ermes-generic-node/caches
-	config => ./../ermes-generic-node/config
-	dataManager => ./../ermes-generic-node/dataManager
-	db => ./../ermes-generic-node/db
-	github.com/ermes-thesis/ermes-common/caches => ./../ermes-common/caches
-	metadataManager => ./../ermes-generic-node/metadataManager
-	tokenDecoder => ./../ermes-generic-node/tokenDecoder
+	caches => ./../../ermes-generic-node/caches
+	config => ./../../ermes-generic-node/config
+	dataManager => ./../../ermes-generic-node/dataManager
+	db => ./../../ermes-generic-node/db
+	github.com/ermes-thesis/ermes-common/caches => ./../../ermes-common/caches
+	metadataManager => ./../../ermes-generic-node/metadataManager
+	mocks => ./../../ermes-generic-node/mocks
+	scheduler => ./../../ermes-generic-node/scheduler
+	server => ./../../ermes-generic-node/server
+	tokenDecoder => ./../../ermes-generic-node/tokenDecoder
 )
 
 require (
@@ -68,4 +64,4 @@ require (
 	tokenDecoder v0.0.0-00010101000000-000000000000 // indirect
 )
 
-replace github.com/tetratelabs/wazero => ../wazero
+replace github.com/tetratelabs/wazero => ../../wazero
