@@ -1,59 +1,204 @@
 import pandas as pd
 import numpy as np
+import os
+import shutil
+import networkx as nx
 import matplotlib.pyplot as plt
 import inspect
 from pathlib import Path
+from matplotlib.patches import Rectangle
 from datetime import datetime
-
-
+import zipfile
+import re
+from typing import Dict, List
+from colorama import Fore, Style
+import pytz #pydot
+import itertools
+from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
+relative_files = [
+    '../data/full_traversal.zip',
+    '../data/full_traversal.zip',
+]
+
+out_dir = 'full_traversal_analysis'
+
+log_search_key = 'DEFAULT-STRONG-POLICY, transition to idle state' #'DEFAULT-STRONG-POLICY, transition to decision state' 
+
 ignored_functions = ['functionCreateCollections', 'functionCreateSeqCollections']
+default_address = '10.10.101.'
+default_port = ':12345'
+
 eq_map = {
     'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
     'functionReadSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
 }
 
-def parse_dfs(files, n):
-    """
-    Parse multiple CSV files into DataFrames, ensuring they have the same number of rows.
-    """
-    dfs = []
-    reference_len = None
+tree = {
+    57: [56, 55],
+    56: [52, 53, 54],
+    55: [50, 51],
+}
 
-    for file_name in files:
-        current_df = pd.read_csv(file_name, header=0)
+def processa_zip_files(zip_path):
+    """
+    Legge un file ZIP contenente file .csv e .log e restituisce due dizionari.
 
+    Args:
+        zip_path (str): Il percorso completo del file ZIP.
+
+    Returns:
+        tuple: Una tupla contenente (dati_csv, dati_log).
+               - dati_csv (dict): Chiave=nome_file, Valore=pandas.DataFrame.
+               - dati_log (dict): Chiave=nome_file, Valore=contenuto_stringa.
+    """
+    dati_csv = {}
+    dati_log = {}
+
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            for filename in zf.namelist():
+                if filename.endswith('/') or filename.startswith('__MACOSX'):
+                    continue
+
+                nome_base, estensione = os.path.splitext(filename)
+                
+                if estensione.lower() == '.csv':
+                    with zf.open(filename) as file_obj:
+                        try:
+                            df = pd.read_csv(file_obj)
+                            dati_csv[filename] = df
+                        except Exception as e:
+                            print(f"Errore nella lettura del CSV {filename}: {e}")
+
+                elif estensione.lower() == '.log':
+                    with zf.open(filename, 'r') as file_obj:
+                        try:
+                            # Assumiamo la codifica UTF-8
+                            content = file_obj.read().decode('utf-8')
+                            filename = filename.replace('.log', '')
+                            filename = filename.split('_')[-1]
+                            filename = default_address + filename + default_port
+                            dati_log[filename] = content
+                        except Exception as e:
+                            print(f"Errore nella lettura del LOG {filename}: {e}")
+
+    except FileNotFoundError:
+        print(f"Errore: File ZIP non trovato al percorso specificato: {zip_path}")
+        return {}, {}
+    except zipfile.BadZipFile:
+        print(f"Errore: Il file non è un archivio ZIP valido o è corrotto: {zip_path}")
+        return {}, {}
+    except Exception as e:
+        print(f"Si è verificato un errore inatteso: {e}")
+        return {}, {}
+
+    return dati_csv, dati_log
+
+def parse_log(dati_log_input):
+    """
+    Analizza i contenuti dei file di log, cercando una stringa specifica, 'DEFAULT-STRONG-POLICY, transition to decision state'.
+    Estrae i timestamp dalle righe che contengono tale stringa.
+
+    Args:
+        dati_log_input (dict): Dizionario con Chiave=nome_file, Valore=contenuto_stringa del log.
+
+    Returns:
+        dict: Dizionario con Chiave=nome_file, Valore=Lista di timestamp (stringhe).
+    """
+    timestamp_data = {}
+
+    TIMESTAMP_PATTERN = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})'
+
+    for nome_file, content_log in dati_log_input.items():
+        list_timestamp = []
+        
+        righe = content_log.splitlines()
+       
+        for riga in righe:
+            if log_search_key in riga:
+                match = re.search(TIMESTAMP_PATTERN, riga)
+                
+                if match:
+                    timestamp = match.group(1)
+                    list_timestamp.append(timestamp)
+        
+        timestamp_data[nome_file] = list_timestamp
+
+    return timestamp_data
+
+def parse_dfs(dati_csv: Dict[str, pd.DataFrame], dati_timestamp_per_ip: Dict[str, List[str]]):
+    """
+    Elabora i DataFrame CSV assegnando a ciascuna riga un gruppo basato sui timestamp di transizione estratti dai log.
+    """
+    elaborated_dfs = []
+    
+    utc = pytz.utc
+    ip_windows: Dict[str, List[datetime]] = {}
+    
+    for ip, timestamps in dati_timestamp_per_ip.items():
+        try:
+            sorted_dt = sorted([
+                datetime.strptime(ts, '%Y-%m-%d %H:%M:%S').replace(tzinfo=utc) 
+                for ts in timestamps
+            ])
+            ip_windows[ip] = sorted_dt
+        except ValueError as e:
+            print(f"Skipping IP {ip}: Errore nel parsing del formato dei timestamp di log. Errore: {e}")
+            ip_windows[ip] = []
+
+    for filename, current_df in dati_csv.items():
+        
         if 'ignored_functions' in globals() and ignored_functions:
             current_df = current_df[~current_df['FuncName'].isin(ignored_functions)]
-            
+
         current_df = current_df.reset_index(drop=True)
+
+        if 'ExecHost' not in current_df.columns or 'StartTime' not in current_df.columns:
+            elaborated_dfs[filename] = current_df
+            continue
+
+        try:
+            current_df['StartTime_dt'] = pd.to_datetime(current_df['StartTime'], format='ISO8601', utc=True)
+        except Exception as e:
+            print(f"\033[91mError: Skipping {filename}: Errore nel parsing del formato 'StartTime'.\033[0m Errore: {e}")
+            elaborated_dfs[filename] = current_df
+            continue
             
-        current_len = len(current_df)
-        if reference_len is None:
-            reference_len = current_len
-        elif current_len != reference_len:
-            raise Exception(
-                    f"CRITICAL ERROR: The file '{file_name}' has {current_len} rows, "
-                    f"but the first analyzed file had {reference_len}. "
-                    "All files must have the same number of executions to avoid skewing the average."
-            )
+        def get_window_group(row):
+            exec_host = row['ExecHost']
+            start_time = row['StartTime_dt']
             
+            if exec_host not in ip_windows or not ip_windows[exec_host]:
+                print(f"\033[91mError: ExecHost {row['ExecHost']} has no defined windows. Assigned to Group -1.\033[0m")
+                return -1 # Nessuna finestra definita per questo host
+
+            windows = ip_windows[exec_host]
+            
+            # Confronto tra datetimes AWARE in UTC
+            for i, window_ts in enumerate(windows):
+                if start_time < window_ts: 
+                    return i
+                
+            print(f"\033[93mWarning: ExecHost {row['ExecHost']} assigned after last window. {row['StartTime']} - {row['FuncName']} on {row['EntryHost']}\033[0m")
+            return len(windows)
+
+        current_df['Group'] = current_df.apply(get_window_group, axis=1)
+
+
         current_df['Duration'] = current_df['FuncDuration'].astype(str).str.replace('ms', '').astype(float)
-        
         current_df['StartTime'] = pd.to_datetime(current_df['StartTime'])
-
         current_df['Is_Local'] = current_df['EntryHost'] == current_df['ExecHost']
+        current_df = current_df.drop(columns=['StartTime_dt'])
 
-        current_df = current_df.sort_values(by=['StartTime']).reset_index(drop=True)
-            
-        current_df['Group'] = current_df.index // n 
-            
-        dfs.append(current_df)
-    
-    return dfs
+        current_df = current_df.sort_values(by=['Group', 'StartTime']).reset_index(drop=True)
+                
+
+        elaborated_dfs.append(current_df)
+    return elaborated_dfs
 
 def find_equilibrium_timestamp(dfs):
     """
@@ -66,10 +211,23 @@ def find_equilibrium_timestamp(dfs):
                 min_timestamps.append(row['StartTime'])
                 break
 
-    if min_timestamps:
-        return max(min_timestamps)
-    else:
-        return None
+    if not min_timestamps:
+        for df in dfs:
+            df['BeforeEq'] = False 
+        return dfs, None
+
+    equilibrium_ts = pd.to_datetime(max(min_timestamps))
+
+    group_max_s = set()
+    for df in dfs:
+        df['StartTime'] = pd.to_datetime(df['StartTime'])
+
+        group_max = df.groupby('Group')['StartTime'].transform('min')
+        group_max_s.update(group_max)
+
+        df['BeforeEq'] = group_max <= equilibrium_ts
+
+    return dfs, equilibrium_ts
 
 def local_vs_remote_number_of_executions(dfs):
     """
@@ -90,7 +248,8 @@ def local_vs_remote_number_of_executions(dfs):
 
         for i, df in enumerate(dfs):
             counts = df.groupby(['Group', 'Is_Local']).size().unstack(fill_value=0)
-            
+            counts = counts / len(dfs)
+
             if True not in counts.columns: counts[True] = 0
             if False not in counts.columns: counts[False] = 0
             
@@ -140,7 +299,6 @@ def local_vs_remote_number_of_executions(dfs):
         ax.spines['right'].set_visible(False)
         
         plt.tight_layout()
-        # plt.show()
         
         return fig
 
@@ -306,37 +464,33 @@ def local_vs_remote_latency(dfs):
         traceback.print_exc()
         return None
     
-def plot_logs_avg_latency(dfs, eq_timestamp):
+def plot_logs_avg_latency(dfs, show_if_remote = True):
     """
     Plots the overall average per round alongside the average per file for that round,
     using WARM/COOL colors for equilibrium and different SHADES to distinguish files.
     """
     try:
-        import pandas as pd
-        import matplotlib.pyplot as plt
-        import numpy as np
-        from matplotlib.lines import Line2D
         
-        limit_ts = pd.to_datetime(eq_timestamp)
-
+        # Concatenazione dei DataFrame
         full_df = pd.concat(dfs, keys=range(1, len(dfs) + 1), names=['FileID', None])
         full_df = full_df.reset_index(level=0)
-
+        
         avg_all_files = full_df.groupby('Group')['Duration'].mean().rename('Avg_All')
         avg_per_file = full_df.groupby(['Group', 'FileID'])['Duration'].mean().unstack(fill_value=np.nan)
 
         plot_df = pd.merge(avg_all_files, avg_per_file, left_index=True, right_index=True)
         all_groups = plot_df.index.tolist()
         
+        # Colore WARM/COOL basato su BeforeEq
+        group_before_eq = full_df.groupby('Group')['BeforeEq'].first()  # True/False per gruppo
+        
+        # 2. Setup Plot
         n_files = len(dfs)
         WARM_CMAP = plt.cm.Oranges
         COOL_CMAP = plt.cm.Blues
 
         warm_shades = WARM_CMAP(np.linspace(0.4, 1.0, n_files + 1)) 
         cool_shades = COOL_CMAP(np.linspace(0.4, 1.0, n_files + 1))
-        
-        group_file_min_dates = full_df.groupby(['Group', 'FileID'])['StartTime'].min()
-        group_min_dates = full_df.groupby('Group')['StartTime'].min()
         
         plt.style.use('ggplot')
         fig, ax = plt.subplots(figsize=(14, 8))
@@ -347,12 +501,13 @@ def plot_logs_avg_latency(dfs, eq_timestamp):
 
         agg_pos = x - (total_bars_in_group / 2 - 0.5) * bar_width 
         
+        # 3. Barre Aggregate (Avg_All)
         agg_colors = []
         for g in all_groups:
-            if limit_ts is not None and group_min_dates[g] > limit_ts:
-                agg_colors.append(cool_shades[0])
-            else:
+            if group_before_eq[g]:
                 agg_colors.append(warm_shades[0])
+            else:
+                agg_colors.append(cool_shades[0])
 
         ax.bar(
             agg_pos,
@@ -364,24 +519,29 @@ def plot_logs_avg_latency(dfs, eq_timestamp):
             label='_nolegend_'
         )
 
+        # 4. Barre per File
         for j in range(1, n_files + 1):
             file_col_name = j 
             file_pos = agg_pos + j * bar_width
             
             file_bar_colors = []
-            for g in all_groups:
-                try:
-                    min_date = group_file_min_dates[(g, j)]
-                except KeyError:
-                    min_date = pd.NaT 
-                
-                if pd.notna(min_date) and limit_ts is not None and min_date > limit_ts:
-                    file_bar_colors.append(cool_shades[j])
-                else:
-                    file_bar_colors.append(warm_shades[j])
+            file_bar_hatches = []
 
-            
-            ax.bar(
+            for g in all_groups:
+                # Colore basato su BeforeEq
+                if group_before_eq[g]:
+                    file_bar_colors.append(warm_shades[j])
+                else:
+                    file_bar_colors.append(cool_shades[j])
+
+                # Hatch se presente operazione non locale
+                if 'Is_Local' in full_df.columns:
+                    has_non_local = full_df[(full_df['Group'] == g) & (full_df['FileID'] == j)]['Is_Local'].apply(lambda x: not x).any()
+                    file_bar_hatches.append('//') if has_non_local and show_if_remote else file_bar_hatches.append(None)
+                else:
+                    file_bar_hatches.append(None)
+
+            bars = ax.bar(
                 file_pos,
                 plot_df[file_col_name],
                 bar_width,
@@ -391,35 +551,49 @@ def plot_logs_avg_latency(dfs, eq_timestamp):
                 label='_nolegend_'
             )
 
+            for bar, hatch_pattern in zip(bars, file_bar_hatches):
+                if hatch_pattern:
+                    bar.set_hatch(hatch_pattern)
+
+        # 5. Linea media globale
         global_mean = plot_df['Avg_All'].mean()
         ax.axhline(global_mean, linestyle='--', linewidth=2, color='black', zorder=3)
 
+        # 6. Etichette valori
         for i, v in enumerate(plot_df['Avg_All']):
             ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', fontsize=9, fontweight='bold')
             
         for j in range(1, n_files + 1):
             file_col_name = j 
             file_pos = agg_pos + j * bar_width
-            
             for i, v in enumerate(plot_df[file_col_name]):
                 if pd.notna(v):
                     ax.text(file_pos[i], v + 0.5, f'{v:.1f}', ha='center', fontsize=9)
 
+        # 7. Legenda
         equilibrium_legend = [
-            Line2D([0], [0], color=WARM_CMAP(0.8), lw=4, label='Round avg Time Before Eq. (Warm Tones)'),
-            Line2D([0], [0], color=COOL_CMAP(0.8), lw=4, label='Round avg Time After Eq. (Cool Tones)'),
+            Line2D([0], [0], color=WARM_CMAP(0.8), lw=4, label='Round avg Before Eq. (Warm Tones)'),
+            Line2D([0], [0], color=COOL_CMAP(0.8), lw=4, label='Round avg After Eq. (Cool Tones)'),
         ]
         
         file_legend_elements = []
+        hatch_legend_added = False
         for j in range(1, n_files + 1):
             file_legend_elements.append(
-                Line2D([0], [0], color=warm_shades[j], lw=4, alpha=0.7, label=f'User {j} avg Time Before Eq.')
+                Line2D([0], [0], color=warm_shades[j], lw=4, alpha=0.7, label=f'User {j} avg Before Eq.')
             )
             file_legend_elements.append(
-                Line2D([0], [0], color=cool_shades[j], lw=4, alpha=0.7, label=f'User {j} avg Time After Eq.')
+                Line2D([0], [0], color=cool_shades[j], lw=4, alpha=0.7, label=f'User {j} avg After Eq.')
             )
+            if 'Is_Local' in full_df.columns and not hatch_legend_added and show_if_remote:
+                file_legend_elements.append(
+                    Rectangle((0,0),1,1, facecolor='white', edgecolor='black', hatch='//', label='Non-Local Operation Present')
+                )
+                hatch_legend_added = True
 
-        legend_elements = equilibrium_legend + file_legend_elements + [Line2D([0], [0], color='black', lw=2, linestyle='--', label=f'Global Mean: {global_mean:.2f} ms')]
+        legend_elements = equilibrium_legend + file_legend_elements + [
+            Line2D([0], [0], color='black', lw=2, linestyle='--', label=f'Global Mean: {global_mean:.2f} ms')
+        ]
         
         ax.legend(
             handles=legend_elements, 
@@ -430,9 +604,10 @@ def plot_logs_avg_latency(dfs, eq_timestamp):
             fontsize=10
         )
 
+        # 8. Asse e ticks
         ax.set_xlabel('Round number', fontsize=12)
         ax.set_ylabel('Average Time (ms)', fontsize=12)
-        ax.set_xticks(x + (bar_width * total_bars_in_group / 2) - (bar_width / 2) ) 
+        ax.set_xticks(x + (bar_width * total_bars_in_group / 2) - (bar_width / 2)) 
         ax.set_xticklabels(all_groups, rotation=0, fontsize=10)
         plt.yticks(fontsize=10)
 
@@ -441,6 +616,7 @@ def plot_logs_avg_latency(dfs, eq_timestamp):
 
         plt.tight_layout()
         
+        # 9. Output
         print(f"Analysis completed for {len(all_groups)} groups using {len(dfs)} files.")
         print(f"Global average (Aggregated): {global_mean:.2f} ms")
         
@@ -451,7 +627,7 @@ def plot_logs_avg_latency(dfs, eq_timestamp):
         import traceback
         traceback.print_exc()
         return None
-
+    
 def local_vs_remote_latency_violin(dfs):
     """
     Violin Plot personalizzato con Min, Max, Avg, Avg Local e Avg Remote.
@@ -485,7 +661,6 @@ def local_vs_remote_latency_violin(dfs):
             'avg_remote': remote_data.mean() if not remote_data.empty else np.nan,
         })
 
-    # --- Plotta i violini ---
     vp = ax.violinplot(
         data_list,
         positions=x,
@@ -494,12 +669,10 @@ def local_vs_remote_latency_violin(dfs):
         showextrema=False
     )
 
-    # Colora ogni violino
     for i, b in enumerate(vp['bodies']):
         b.set_facecolor(colors[i])
         b.set_alpha(0.4)
 
-    # --- Disegna Min, Max, Avg, Avg Local e Avg Remote ---
     for i, stat in enumerate(stats):
         current_x = x[i]
         user_color = colors[i]
@@ -530,7 +703,6 @@ def local_vs_remote_latency_violin(dfs):
                 ax.text(current_x + 0.2, stat['avg_remote'], f'Rem: {stat["avg_remote"]:.2f}',
                         fontsize=8, color=user_color)
 
-    # --- Legenda ---
     legend_elements = [
         Line2D([0], [0], color='black', lw=2, label='Avg Totale'),
         Line2D([0], [0], color='grey', lw=2, linestyle='--', label='Avg Local'),
@@ -539,7 +711,6 @@ def local_vs_remote_latency_violin(dfs):
     ]
     ax.legend(handles=legend_elements, loc='upper right')
 
-    # --- Etichette e Titolo ---
     ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
     ax.set_xlabel('User')
     ax.set_ylabel('Latency (ms)')
@@ -549,8 +720,239 @@ def local_vs_remote_latency_violin(dfs):
     plt.tight_layout()
     return fig
 
+def compute_path(tree: dict, start_node: int, end_node: int) -> list[int]:
+    G = nx.Graph()  # undirected graph
+    for parent, children in tree.items():
+        for child in children:
+            G.add_edge(parent, child)
 
-def plot_heatmap_count_tasks(dfs, n):
+    try:
+        path = nx.shortest_path(G, source=start_node, target=end_node)
+        return path
+    except (nx.NetworkXNoPath, nx.NodeNotFound):
+        return []
+
+def plot_tree_with_sparklines(tree: dict, dfs: list[pd.DataFrame]):
+
+    # --- 1. Pre-elaborazione Dati per Sparklines ---
+    try:
+        df_combined = pd.concat(dfs, ignore_index=True)
+    except ValueError:
+        print("Errore: La lista di DataFrame è vuota o non è valida.")
+        return
+
+    try:
+        # Pulisci host e converti in interi
+        df_combined['Node_Exec'] = df_combined['ExecHost'].str.split('.').str[-1].str.split(':').str[0].astype(int)
+        df_combined['Node_Entry'] = df_combined['EntryHost'].str.split('.').str[-1].str.split(':').str[0].astype(int)
+    except Exception as e:
+        print(f"Errore nella pulizia degli host: assicurati che siano presenti etichette numeriche. {e}")
+        return
+        
+    all_nodes = df_combined['ExecHost'].str.split('.').str[-1].str.split(':').str[0].astype(int).unique()
+    all_groups = df_combined['Group'].unique()
+
+    all_combinations = pd.DataFrame(
+        list(itertools.product(all_nodes, all_groups)),
+        columns=['Node', 'Group']
+    )
+    all_combinations['TaskCount'] = 0
+    all_combinations['indirectLoad'] = 0
+
+    task_counts_real = df_combined.groupby(['ExecHost', 'Group']).size().reset_index(name='TaskCount')
+    # Pulisci Node come prima
+    task_counts_real['Node'] = task_counts_real['ExecHost'].str.split('.').str[-1].str.split(':').str[0].astype(int)
+
+    # Merge lasciando tutte le combinazioni possibili
+    task_counts = all_combinations.merge(
+        task_counts_real[['Node', 'Group', 'TaskCount']],
+        on=['Node', 'Group'],
+        how='left',
+        suffixes=('_filled', '')
+    )
+
+    # Riempie i valori mancanti con 0
+    task_counts['TaskCount'] = task_counts['TaskCount'].fillna(0).astype(int)
+    task_counts['TaskCount'] = task_counts['TaskCount'] / len(relative_files) # Normalizzazione
+    
+    paths = defaultdict(list)   
+    
+    # Calcola i percorsi unici tra nodi di Entry e nodi di Exec
+    for _, row in df_combined.iterrows():
+        entry_node = row['Node_Entry']
+        exec_node = row['Node_Exec']
+        short_exec_host = int(row['ExecHost'].split('.')[-1].split(':')[0])
+        group = row['Group']
+
+        if exec_node == entry_node:
+            continue
+
+        if (entry_node, exec_node) not in paths:
+            paths[(entry_node,exec_node)]= compute_path(tree, entry_node, exec_node)
+
+        path = paths[(entry_node,exec_node)]
+        for node in path:
+            if node == short_exec_host:
+                continue
+            mask = (task_counts['Node'] == node) & (task_counts['Group'] == group)
+            task_counts.loc[mask, 'indirectLoad'] = task_counts.loc[mask, 'indirectLoad'] + 1
+
+    task_counts['indirectLoad'] = task_counts['indirectLoad'] / len(relative_files) # Normalizzazione
+
+    sparkline_data = task_counts.pivot_table(
+        index='Node',
+        columns='Group',
+        values='TaskCount',
+        fill_value=0
+    )
+
+    sparkline_data = sparkline_data.reindex(sorted(sparkline_data.columns), axis=1)
+    max_count = sparkline_data.values.max()
+    if max_count == 0:
+        max_count = 1 
+    
+    # --- 2. Creazione del Grafo e Posizionamento ---
+    
+    G = nx.DiGraph()
+    for parent, children in tree.items():
+        for child in children:
+            G.add_edge(parent, child)
+
+    # *** MODIFICA PER LAYOUT GERARCHICO ***
+    try:
+        import pydot
+        pos = nx.nx_pydot.graphviz_layout(G, prog='dot')
+        print("Layout Graphviz ('dot') applicato con successo.")
+    except ImportError:
+        print("Avviso: 'pydot' o Graphviz non installati. Fallback a 'spring_layout' con inversione asse Y.")
+        pos = nx.spring_layout(G, seed=42)
+        pos = {node: (x, -y) for node, (x, y) in pos.items()}
+    except Exception as e:
+        print(f"Avviso: Errore nell'esecuzione di Graphviz: {e}. Fallback a 'spring_layout' con inversione asse Y.")
+        pos = nx.spring_layout(G, seed=42)
+        pos = {node: (x, -y) for node, (x, y) in pos.items()}
+
+    # --- 3. Disegno del Grafico e delle Sparklines ---
+    
+    fig_scale = 1.3
+    num_nodes = G.number_of_nodes()
+    
+    fig_width = max(14, num_nodes * 0.4 * fig_scale)
+    fig_height = max(6, num_nodes * 0.7 * fig_scale)
+    fig_size = (fig_width, fig_height)
+    
+    fig = plt.figure(figsize=fig_size) 
+    plt.subplots_adjust(wspace=3) #spazio tra subplots
+    ax = plt.gca()
+    ax.set_axis_off() 
+
+    # 3.1 Disegna gli archi
+    nx.draw_networkx_edges(G, pos, ax=ax, edge_color='gray', width=1, alpha=0.3)
+    
+    num_groups = len(sparkline_data.columns)
+    x_group_indices = np.arange(num_groups)
+
+    x_label = "Time (Round)"
+    y_label = "N. Req per experiment"
+    
+    for node in G.nodes():
+
+        # --- TaskCount verde ---
+        if node in sparkline_data.index:
+            counts = sparkline_data.loc[node].values
+            # Se counts ha meno valori di num_groups, padding con 0
+            if len(counts) < num_groups:
+                counts = np.pad(counts, (0, num_groups - len(counts)), 'constant')
+            max_tasks_in_round = counts.max()
+        else:
+            counts = np.zeros(num_groups, dtype=int)
+            max_tasks_in_round = 0
+
+        # --- indirectLoad azzurro ---
+        node_task_rows = task_counts[task_counts['Node'] == node].sort_values('Group')
+        if not node_task_rows.empty:
+            indirect_counts = node_task_rows['indirectLoad'].values
+            if len(indirect_counts) < num_groups:
+                indirect_counts = np.pad(indirect_counts, (0, num_groups - len(indirect_counts)), 'constant')
+            max_indirect = indirect_counts.max()
+        else:
+            indirect_counts = np.zeros(num_groups, dtype=int)
+            max_indirect = 0
+
+        x_center, y_center = pos[node]
+        spark_ax_width = 0.10 * fig_scale
+        spark_ax_height = 0.08 * fig_scale
+
+        fig.canvas.draw()
+        x_norm, y_norm = ax.transData.transform((x_center, y_center))
+        bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        fig_width_pix, fig_height_pix = bbox.width * fig.dpi, bbox.height * fig.dpi
+        x_norm_fig = x_norm / fig_width_pix
+        y_norm_fig = y_norm / fig_height_pix
+
+        spark_ax = fig.add_axes([
+            x_norm_fig - spark_ax_width / 2,
+            y_norm_fig - spark_ax_height / 2,
+            spark_ax_width,
+            spark_ax_height
+        ], frameon=True, zorder=3, facecolor='white')
+
+        # Plot TaskCount verde
+        spark_ax.plot(x_group_indices, counts, color='#4CAF50', linewidth=1.5)
+        spark_ax.fill_between(x_group_indices, counts, color='#4CAF50', alpha=0.3)
+
+        # Plot indirectLoad azzurro
+        spark_ax.plot(x_group_indices, indirect_counts, color='#03A9F4', linewidth=1.5)
+        spark_ax.fill_between(x_group_indices, indirect_counts, color='#03A9F4', alpha=0.2)
+
+        # Linee verticali tra round
+        for i in range(num_groups - 1):
+            spark_ax.axvline(x=i + 0.5, color='gray', linestyle=':', linewidth=0.5, alpha=0.7)
+
+        spark_ax.set_xticks([0, num_groups - 1])
+        spark_ax.set_xticklabels([sparkline_data.columns.min(), sparkline_data.columns.max()])
+        spark_ax.set_xlabel("Tempo (Round)", fontsize=6 * fig_scale / 1.5, labelpad=2)
+
+        # Y-axis scaling: massimo tra TaskCount e indirectLoad
+        local_max = max(max_tasks_in_round, max_indirect, 1)
+        spark_ax.set_yticks([0, local_max])
+        spark_ax.set_yticklabels([0, local_max])
+        spark_ax.set_ylabel("N. Req", fontsize=6 * fig_scale / 1.5, rotation=90, labelpad=2)
+
+        spark_ax.spines['top'].set_visible(False)
+        spark_ax.spines['right'].set_visible(False)
+        spark_ax.spines['left'].set_linewidth(0.5)
+        spark_ax.spines['bottom'].set_linewidth(0.5)
+        spark_ax.tick_params(axis='both', which='major', labelsize=6 * fig_scale / 1.5, pad=1)
+
+        spark_ax.set_ylim(0, local_max * 1.05)
+        spark_ax.set_xlim(-0.5, num_groups - 0.5)
+
+        # Etichetta nodo
+        spark_ax.text(
+            0.5, 1.25,
+            str(node),
+            transform=spark_ax.transAxes,
+            ha='center', va='center',
+            fontsize=12 * fig_scale / 1.5,
+            fontweight='bold',
+            color='black'
+        )
+
+        # Etichetta Max TaskCount / indirectLoad
+        spark_ax.text(
+            0.5, -0.65,
+            f"Max: {max_tasks_in_round} / {max_indirect} (req/round)",
+            transform=spark_ax.transAxes,
+            ha='center', va='center',
+            fontsize=8 * fig_scale / 1.5,
+            color='darkred',
+            fontweight='bold'
+        )
+
+    return fig
+
+def plot_heatmap_count_tasks(dfs):
     """
     Genera una heatmap che mostra il numero totale di esecuzioni (task) 
     per ogni nodo di esecuzione (ExecHost) su ogni round (Group).
@@ -564,7 +966,7 @@ def plot_heatmap_count_tasks(dfs, n):
         df_combined = pd.concat(dfs, ignore_index=True)
 
         heatmap_data = df_combined.groupby(['Group', 'ExecHost']).size().reset_index(name='TaskCount')
-
+        heatmap_data['TaskCount'] = heatmap_data['TaskCount'] / len(dfs)  # Normalizzazione
         heatmap_data['Host_Label'] = heatmap_data['ExecHost'].str.split('.').str[-1].str.split(':').str[0]
         
         pivot_table = heatmap_data.pivot_table(
@@ -620,7 +1022,7 @@ def plot_heatmap_count_tasks(dfs, n):
         traceback.print_exc()
         return None
 
-def plot_heatmap_avg_latency(dfs, n):
+def plot_heatmap_avg_latency(dfs):
     """
     Genera una heatmap che mostra il tempo medio di esecuzione (Duration) 
     per ogni nodo di esecuzione (ExecHost) su ogni round (Group).
@@ -687,12 +1089,7 @@ def plot_heatmap_avg_latency(dfs, n):
         traceback.print_exc()
         return None
 
-n = 50 # Numero di funzioni per round
-relative_files = [
-    '../data/results_log_54321_2025_11_19_17_40_57.csv', 
-    '../data/results_log_12345_2025_11_19_17_40_55.csv'
-]
-
+# ============== MAIN EXECUTION ==============
 
 current_file_path = inspect.getfile(inspect.currentframe())
 base_dir = Path(current_file_path).parent
@@ -702,31 +1099,58 @@ files = [
     for rel_path in relative_files
 ]
 
+output_dir = os.path.join(base_dir, '..', 'output_img', out_dir)
+output_dir = Path(output_dir).resolve()
+
+if output_dir.exists() and output_dir.is_dir():
+    for item in output_dir.iterdir():
+        if item.is_dir():
+            shutil.rmtree(item)
+        else:
+            item.unlink()
+
+output_dir.mkdir(parents=True, exist_ok=True)
 
 
-dfs = parse_dfs(files, n)
+full_dfs = []
+for f in files:
+    csv, log = processa_zip_files(f)
+    parsed_log = parse_log(log)
+    print(f"Processed {len(csv)} CSV files and {len(log)} LOG files from ZIP archives.")
+    
+    dfs = parse_dfs(csv, parsed_log)
+    print(f"Parsed {len(dfs)} DataFrames from CSV files.")
+ 
+    dfs, eq_timestamp = find_equilibrium_timestamp(dfs)
 
-find_equilibrium_timestamp(dfs)
-eq_timestamp = find_equilibrium_timestamp(dfs)
+    if full_dfs == []:
+        full_dfs = dfs
+    else:
+        for i, df in enumerate(dfs):
+            full_dfs[i] = pd.concat([full_dfs[i], df], ignore_index=True)
+
+
 print(f"Equilibrium Timestamp: {eq_timestamp}")
 
-plot_logs_avg_latency(dfs, eq_timestamp)
+plot_logs_avg_latency(full_dfs)
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-plt.savefig(f'{base_dir}/../output_img/execution_time_analysis_{timestamp}.png', dpi=300, bbox_inches='tight')
+plt.savefig(f'{output_dir}/execution_time_analysis_{timestamp}.png', dpi=300, bbox_inches='tight')
 
-local_vs_remote_number_of_executions(dfs)
-plt.savefig(f'{base_dir}/../output_img/local_vs_remote_executions_{timestamp}.png', dpi=300, bbox_inches='tight')
+local_vs_remote_number_of_executions(full_dfs)
+plt.savefig(f'{output_dir}/local_vs_remote_executions_{timestamp}.png', dpi=300, bbox_inches='tight')
 
-local_vs_remote_latency(dfs)
-plt.savefig(f'{base_dir}/../output_img/local_vs_remote_latency_{timestamp}.png', dpi=300, bbox_inches='tight')
+local_vs_remote_latency(full_dfs)
+plt.savefig(f'{output_dir}/local_vs_remote_latency_{timestamp}.png', dpi=300, bbox_inches='tight')
 
-plot_heatmap_avg_latency(dfs, n)
-plt.savefig(f'{base_dir}/../output_img/heatmap_avg_latency_{timestamp}.png', dpi=300, bbox_inches='tight')
+plot_heatmap_avg_latency(full_dfs)
+plt.savefig(f'{output_dir}/heatmap_avg_latency_{timestamp}.png', dpi=300, bbox_inches='tight')
 
-plot_heatmap_count_tasks(dfs, n)
-plt.savefig(f'{base_dir}/../output_img/heatmap_count_tasks_{timestamp}.png', dpi=300, bbox_inches='tight')
+plot_heatmap_count_tasks(full_dfs)
+plt.savefig(f'{output_dir}/heatmap_count_tasks_{timestamp}.png', dpi=300, bbox_inches='tight')
 
-local_vs_remote_latency_violin(dfs)
-plt.savefig(f'{base_dir}/../output_img/local_vs_remote_latency_violin_{timestamp}.png', dpi=300, bbox_inches='tight')
+local_vs_remote_latency_violin(full_dfs)
+plt.savefig(f'{output_dir}/local_vs_remote_latency_violin_{timestamp}.png', dpi=300, bbox_inches='tight')
 
+fig_tree = plot_tree_with_sparklines(tree, full_dfs)
+fig_tree.savefig(f'{output_dir}/tree_with_sparklines_{timestamp}.png', dpi=300, bbox_inches='tight')
 plt.show()
