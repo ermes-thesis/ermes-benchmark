@@ -12,12 +12,12 @@ import (
 	"scheduler"
 	"server"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/ermes-thesis/ermes-common/logger"
 	"github.com/ermes-thesis/ermes-common/wasm-pool"
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -78,7 +78,7 @@ func TestMemoryGeneric(t *testing.T) {
 		panic(err)
 	}
 	log, err := logger.NewLogger(logger.Config{
-		Level:         zerolog.FatalLevel,
+		Level:         logger.FatalLevel,
 		Format:        "text",
 		Output:        nil,
 		StdoutEnabled: false,
@@ -137,10 +137,13 @@ func TestMemoryGeneric(t *testing.T) {
 }
 
 func TestMemoryTimeline(t *testing.T) {
-	runtimeToUse := os.Args[3]
+	configuration := os.Args[3]
+	parts := strings.Split(configuration, "_")
+	runtime := parts[0]
+	isAot := parts[1] == "AOT"
 
 	log, err := logger.NewLogger(logger.Config{
-		Level:         zerolog.FatalLevel,
+		Level:         logger.FatalLevel,
 		Format:        "text",
 		Output:        nil,
 		StdoutEnabled: false,
@@ -176,34 +179,52 @@ func TestMemoryTimeline(t *testing.T) {
 	}
 
 	var pool wasm.ExecutorPool
-	switch runtimeToUse {
-	case "wasmedge":
+	switch runtime {
+	case "WasmEdge":
+		if isAot {
+			for i, file := range binaries {
+				if !strings.HasSuffix(file, "_wOpts.wasm") {
+					binaries[i] = strings.ReplaceAll(file, ".wasm", "_noOpts_AOTwasmedge.wasm")
+				} else {
+					binaries[i] = strings.ReplaceAll(file, ".wasm", "_AOTwasmedge.wasm")
+				}
+			}
+		}
 		poolImpl := wasm.NewWasmedgeExecutorPool(wasm.Config{
 			PoolSize:  1,
 			WithCache: true,
-			IsAot:     false,
+			IsAot:     isAot,
 		}, log)
 		err = createHostFns(t, log).RegisterWasmedgeHostFns(poolImpl)
 		if err != nil {
 			panic(err)
 		}
 		pool = poolImpl
-	case "wasmtime":
+	case "Wasmtime":
+		if isAot {
+			for i, file := range binaries {
+				if !strings.HasSuffix(file, "_wOpts.wasm") {
+					binaries[i] = strings.ReplaceAll(file, ".wasm", "_noOpts_AOTwasmtime.wasm")
+				} else {
+					binaries[i] = strings.ReplaceAll(file, ".wasm", "_AOTwasmtime.wasm")
+				}
+			}
+		}
 		poolImpl := wasm.NewWasmtimeExecutorPool(wasm.Config{
 			PoolSize:  1,
 			WithCache: true,
-			IsAot:     false,
+			IsAot:     isAot,
 		}, log)
 		err = createHostFns(t, log).RegisterWasmtimeHostFns(poolImpl)
 		if err != nil {
 			panic(err)
 		}
 		pool = poolImpl
-	case "wazero":
+	case "Wazero":
 		poolImpl := wasm.NewWazeroExecutorPool(wasm.Config{
 			PoolSize:  1,
 			WithCache: true,
-			IsAot:     true,
+			IsAot:     isAot,
 		}, context.Background(), log)
 		err = createHostFns(t, log).RegisterWazeroHostFns(poolImpl)
 		if err != nil {

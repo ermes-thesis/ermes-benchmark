@@ -58,7 +58,7 @@ mkdir -p "$RESULTS_DIR"
 echo "I file CSV di trace verranno salvati in: $RESULTS_DIR"
 
 declare -a csv_files=()
-declare -a runtimes_to_test=("wasmedge" "wasmtime" "wazero")
+declare -a runtimes_to_test=("WasmEdge_interpreter" "WasmEdge_AOT" "Wasmtime_JIT" "Wasmtime_AOT" "Wazero_AOT" "Wazero_interpreter")
 
 # --- Esecuzione Test ---
 for runtime in "${runtimes_to_test[@]}"; do
