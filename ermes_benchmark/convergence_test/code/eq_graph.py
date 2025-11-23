@@ -275,7 +275,7 @@ def local_vs_remote_number_of_executions(dfs):
             for bar in bars_local:
                 height = bar.get_height()
                 ax.text(bar.get_x() + bar.get_width() / 2., height,
-                        f'{int(height)}',
+                        f'{height}',
                         ha='center', va='bottom', fontsize=9, color='#555555')
 
             bars_remote = ax.bar(pos_remote, remote_vals, single_bar_width,
@@ -285,7 +285,7 @@ def local_vs_remote_number_of_executions(dfs):
             for bar in bars_remote:
                 height = bar.get_height()
                 ax.text(bar.get_x() + bar.get_width() / 2., height,
-                        f'{int(height)}',
+                        f'{height}',
                         ha='center', va='bottom', fontsize=9, color='#555555')
 
         # Estetica
