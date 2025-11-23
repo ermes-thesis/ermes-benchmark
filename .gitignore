@@ -2,6 +2,8 @@ bin
 sandbox
 benchmark_results*
 .venv*
+results
+logs
 
 old_scripts/benchmark_results/*
 !old_scripts/benchmark_results/
