@@ -143,12 +143,10 @@ def parse_dfs(dati_csv: Dict[str, pd.DataFrame], dati_timestamp_per_ip: Dict[str
 
     for ip, timestamps in dati_timestamp_per_ip.items():
         try:
-            print(timestamps)
             sorted_dt = sorted([
                 datetime.fromisoformat(ts)
                 for ts in timestamps
             ])
-            print(sorted_dt)
             ip_windows[ip] = sorted_dt
         except ValueError as e:
             print(f"Skipping IP {ip}: Errore nel parsing del formato dei timestamp di log. Errore: {e}")
@@ -254,7 +252,7 @@ def local_vs_remote_number_of_executions(dfs):
 
         for i, df in enumerate(dfs):
             counts = df.groupby(['Group', 'Is_Local']).size().unstack(fill_value=0)
-            counts = counts / len(dfs)
+            counts = counts / len(relative_files)
 
             if True not in counts.columns: counts[True] = 0
             if False not in counts.columns: counts[False] = 0
@@ -983,7 +981,7 @@ def plot_heatmap_count_tasks(dfs):
         df_combined = pd.concat(dfs, ignore_index=True)
 
         heatmap_data = df_combined.groupby(['Group', 'ExecHost']).size().reset_index(name='TaskCount')
-        heatmap_data['TaskCount'] = heatmap_data['TaskCount'] / len(dfs)  # Normalizzazione
+        heatmap_data['TaskCount'] = heatmap_data['TaskCount'] / len(relative_files)  # Normalizzazione
         heatmap_data['Host_Label'] = heatmap_data['ExecHost'].str.split('.').str[-1].str.split(':').str[0]
 
         pivot_table = heatmap_data.pivot_table(
