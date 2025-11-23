@@ -13,6 +13,7 @@ func main() {
 	// Parse the client id from the command line
 
 	clientId := 12345
+	geolocation := ""
 
 	if len(os.Args) < 2 {
 		fmt.Println("No client id passed to the application. Using default value: ", clientId)
@@ -23,6 +24,10 @@ func main() {
 		} else {
 			clientId = newId
 		}
+	}
+
+	if len(os.Args) >= 2 {
+		geolocation = os.Args[2]
 	}
 
 	// Call the library setup
@@ -43,40 +48,25 @@ func main() {
 
 	}
 
-	// Do some test calls and see what happens
-	body, code, err := lib.ExecuteFunction(
-		"functionCreateSeqCollections",
-		"",
-		map[string]string{
-			"name":        "my_new_collection",
-			"geolocation": "IT/Rome/LaSapienza",
-		},
-		map[string]map[string]string{},
-		"IT",
-	)
-	fmt.Println(code, string(body), err)
-
 	rounds := 10
 	functionsForRound := 50
 	roundDuration := 15.0
 
-	for i := 0; i < rounds; i++ {
-		for i := 0; i < functionsForRound; i++ {
-			go func() {
-				body, code, err = lib.ExecuteFunction(
-					"functionUseSeqCollections",
-					"",
-					map[string]string{"data": "write number " + strconv.Itoa(i)},
-					map[string]map[string]string{
-						"query": {
-							"name": "my_new_collection",
-						},
+	for i := 0; i < functionsForRound*rounds; i++ {
+		go func() {
+			body, code, err := lib.ExecuteFunction(
+				"functionUseSeqCollections",
+				"",
+				map[string]string{"data": "write number " + strconv.Itoa(i)},
+				map[string]map[string]string{
+					"query": {
+						"name": "my_new_collection",
 					},
-					"IT/Rome/LaSapienza",
-				)
-				fmt.Println(code, string(body), err)
-			}()
-			time.Sleep(time.Duration((roundDuration / float64(functionsForRound)) * 1_000_000_000))
-		}
+				},
+				geolocation,
+			)
+			fmt.Println(code, string(body), err)
+		}()
+		time.Sleep(time.Duration((roundDuration / float64(functionsForRound)) * 1_000_000_000))
 	}
 }
