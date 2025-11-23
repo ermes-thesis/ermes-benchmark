@@ -58,9 +58,9 @@ func main() {
 
 	rounds := 10
 	functionsForRound := 50
+	roundDuration := 15.0
 
 	for i := 0; i < rounds; i++ {
-		time.Sleep(2 * time.Second)
 		for i := 0; i < functionsForRound; i++ {
 			go func() {
 				body, code, err = lib.ExecuteFunction(
@@ -76,8 +76,7 @@ func main() {
 				)
 				fmt.Println(code, string(body), err)
 			}()
-			time.Sleep(time.Duration((11.0 / float64(functionsForRound)) * 1_000_000_000))
+			time.Sleep(time.Duration((roundDuration / float64(functionsForRound)) * 1_000_000_000))
 		}
-		time.Sleep(2 * time.Second)
 	}
 }
