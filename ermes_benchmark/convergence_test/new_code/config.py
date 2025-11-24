@@ -7,6 +7,21 @@ out_dir = '../output_img_new/full_traversal_analysis_newcode/'
 
 log_search_key = 'DEFAULT-STRONG-POLICY, transition to idle state' #'DEFAULT-STRONG-POLICY, transition to decision state' 
 
+messages_log_strings = [
+    #collection discoverer
+    'Received remote access request',
+    'Received update propagation request',
+    'Received group update propagation request',
+    'Received new collection creation request',
+    'Received collection removal request',
+    'Received remote collection set request',
+    #migration manager
+    'New gossip message received through HTTP request',
+    'New collection received through HTTP request',
+    
+    
+]
+
 ignored_functions = ['functionCreateCollections', 'functionCreateSeqCollections']
 default_address = '10.10.101.'
 default_port = ':12345'

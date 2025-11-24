@@ -1,3 +1,4 @@
+from collections import defaultdict
 import pandas as pd
 import os
 import zipfile
@@ -9,6 +10,8 @@ from typing import Dict, List
 
 # Import custom config
 import config
+
+TIMESTAMP_PATTERN = r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)'
 
 def processa_zip_files(zip_path):
     """
@@ -65,7 +68,6 @@ def processa_zip_files(zip_path):
 
     return dati_csv, dati_log
 
-
 def parse_log(dati_log_input):
     """
     Analizza i contenuti dei file di log, cercando una stringa specifica, 'DEFAULT-STRONG-POLICY, transition to decision state'.
@@ -79,24 +81,66 @@ def parse_log(dati_log_input):
     """
     timestamp_data = {}
 
-    TIMESTAMP_PATTERN = r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)'
+    for file_name, content_log in dati_log_input.items():
+        timestamp_list = []
 
-    for nome_file, content_log in dati_log_input.items():
-        list_timestamp = []
+        rows = content_log.splitlines()
 
-        righe = content_log.splitlines()
-
-        for riga in righe:
-            if config.log_search_key in riga:
-                match = re.search(TIMESTAMP_PATTERN, riga)
+        for row in rows:
+            if config.log_search_key in row:
+                match = re.search(TIMESTAMP_PATTERN, row)
 
                 if match:
                     timestamp = match.group(1)
-                    list_timestamp.append(timestamp)
+                    timestamp_list.append(timestamp)
 
-        timestamp_data[nome_file] = list_timestamp
+        timestamp_data[file_name] = timestamp_list
 
     return timestamp_data
+
+def experiment_start_time(dataframes):
+    min_times = []
+    for df in dataframes:
+        if 'StartTime' in df.columns:
+            min_times.append(df['StartTime'].min())
+
+    return min(min_times) if min_times else None
+
+
+def experiment_end_time(dataframes):
+    max_times = []
+    for df in dataframes:
+        if 'StartTime' in df.columns:
+            max_times.append(df['StartTime'].max())
+
+    return max(max_times) if max_times else None
+
+def find_message_counter_from_log(dati_log_input, message_keys, min_ts: datetime, max_ts: datetime):
+    '''
+    in functions exectuion time range, find how many messages were sent/received thrugh the network, classified by message_type and receivers.
+    '''
+    node_map = defaultdict(dict) # dict of dicts: node_map[receiver][message_type] = count
+    for file_name, content_log in dati_log_input.items():
+
+        rows = content_log.splitlines()
+
+        for row in rows:
+            match = re.search(TIMESTAMP_PATTERN, row)
+            if not match: # no timestamp found, skip
+                continue
+            timestamp_str = match.group(1)
+            timestamp = parse_timestamp(timestamp_str)
+            
+            if timestamp < min_ts:
+                continue
+            if timestamp > max_ts:
+                break
+        
+            for message_type in message_keys:
+                if message_type in row:
+                    node_map[file_name][message_type] = node_map[file_name].get(message_type, 0) + 1
+                            
+    return node_map
 
 def parse_timestamp(ts: str) -> datetime:
     
@@ -186,7 +230,6 @@ def parse_dfs(dati_csv: Dict[str, pd.DataFrame], dati_timestamp_per_ip: Dict[str
         elaborated_dfs.append(current_df)
     return elaborated_dfs
 
-
 def find_equilibrium_timestamp(dfs):
     """
     Find the equilibrium timestamp across multiple DataFrames.
@@ -216,3 +259,4 @@ def find_equilibrium_timestamp(dfs):
         df['BeforeEq'] = group_max <= equilibrium_ts
 
     return dfs, equilibrium_ts
+

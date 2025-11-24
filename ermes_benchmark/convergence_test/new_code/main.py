@@ -14,7 +14,7 @@ from datetime import datetime
 # Custom modules
 import config
 import data_processor
-from plots import latency, distribution, topology
+from plots import latency, distribution, topology, overhead_plots as overhead
 
 def main():
     # ==========================================
@@ -69,13 +69,21 @@ def main():
         else:
             for i, df in enumerate(dfs):
                 full_dfs[i] = pd.concat([full_dfs[i], df], ignore_index=True)
-
+    
+    # Extract message counts from logs for overhead analysis
+    message_counter = data_processor.find_message_counter_from_log(log, config.messages_log_strings, data_processor.experiment_start_time(dfs), data_processor.experiment_end_time(dfs))
     # ==========================================
     # 3. Plotting Phase
     # ==========================================
     
     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    overhead.plot_stacked_bar_chart(message_counter)
+    plt.savefig(f'{output_dir}/message_counts_{timestamp_str}.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    plt.show()
     
+
     # 3.1 Latency Analysis (Line Plot)
     print("Generating execution time analysis...")
     latency.plot_logs_avg_latency(full_dfs)
