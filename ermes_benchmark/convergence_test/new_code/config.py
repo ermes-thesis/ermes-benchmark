@@ -5,21 +5,28 @@ relative_files = [
 
 out_dir = '../output_img_new/full_traversal_analysis_newcode/'
 
-log_search_key = 'DEFAULT-STRONG-POLICY, transition to idle state' #'DEFAULT-STRONG-POLICY, transition to decision state' 
+log_search_key = 'DEFAULT-STRONG-POLICY, transition to idle state'  # 'DEFAULT-STRONG-POLICY, transition to decision state'
 
 messages_log_strings = [
-    #collection discoverer
+    # collection discoverer
     'Received remote access request',
     'Received update propagation request',
     'Received group update propagation request',
     'Received new collection creation request',
     'Received collection removal request',
     'Received remote collection set request',
-    #migration manager
+    # migration manager
     'New gossip message received through HTTP request',
     'New collection received through HTTP request',
-    
-    
+    # metadata manager
+    "Received group update new request for metadata",
+    "Received group update propagation request",
+    "Received metadata creation request",
+    "Received metadata deletion request",
+    "Received collection lookup request",
+    # scheduler
+    "Received function invocation request",
+    "Received offloaded function invocation request"
 ]
 
 ignored_functions = ['functionCreateCollections', 'functionCreateSeqCollections']
