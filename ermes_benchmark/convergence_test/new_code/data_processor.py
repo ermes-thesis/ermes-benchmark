@@ -4,7 +4,7 @@ import os
 import zipfile
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 from typing import Dict, List
 
@@ -115,10 +115,21 @@ def experiment_end_time(dataframes):
 
     return max(max_times) if max_times else None
 
+
+safe_offset = 1  # seconds
 def find_message_counter_from_log(dati_log_input, message_keys, min_ts: datetime, max_ts: datetime):
     '''
     in functions exectuion time range, find how many messages were sent/received thrugh the network, classified by message_type and receivers.
     '''
+    def extract_last_octet(ip_str):
+        match = re.search(r'(\d+)$', ip_str.split(':')[0])
+        return match.group(1) if match else ip_str
+
+    def extract_remote_addr(row):
+        match = re.search(r'remote_addr=([\d\.]+:\d+)', row)
+        return match.group(1) if match else None
+    
+
     node_map = defaultdict(dict) # dict of dicts: node_map[receiver][message_type] = count
     for file_name, content_log in dati_log_input.items():
 
@@ -131,14 +142,20 @@ def find_message_counter_from_log(dati_log_input, message_keys, min_ts: datetime
             timestamp_str = match.group(1)
             timestamp = parse_timestamp(timestamp_str)
             
-            if timestamp < min_ts:
+            if timestamp < min_ts - timedelta(seconds=safe_offset):
                 continue
-            if timestamp > max_ts:
+
+            if timestamp > max_ts + timedelta(seconds=safe_offset):
                 break
         
-            for message_type in message_keys:
-                if message_type in row:
-                    node_map[file_name][message_type] = node_map[file_name].get(message_type, 0) + 1
+            for filter_string, alias in message_keys:
+                if filter_string in row:
+                    node_label = extract_last_octet(file_name)
+                    remote_ip = extract_last_octet(extract_remote_addr(row))
+                    key = (alias, remote_ip)
+
+                    node_map[node_label][key] = node_map[node_label].get(key, 0) + 1
+
                             
     return node_map
 

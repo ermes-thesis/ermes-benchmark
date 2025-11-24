@@ -9,24 +9,26 @@ log_search_key = 'DEFAULT-STRONG-POLICY, transition to idle state'  # 'DEFAULT-S
 
 messages_log_strings = [
     # collection discoverer
-    'Received remote access request',
-    'Received update propagation request',
-    'Received group update propagation request',
-    'Received new collection creation request',
-    'Received collection removal request',
-    'Received remote collection set request',
+    ('Received remote access request','Remote Acess'), 
+    ('Received update propagation request', 'Update Propagation'),
+    ('Received collection creation request', 'Collection Creation'),
+    ('Received group update propagation request', 'Group Update Propagation'),
+    ('Received new collection creation request', 'New Collection Creation'),
+    ('Received collection removal request', 'Collection Removal'),
+    ('Received remote collection set request', 'Remote Collection Set'),
     # migration manager
-    'New gossip message received through HTTP request',
-    'New collection received through HTTP request',
+    ('New gossip message received through HTTP request', 'Gossip Message'),
+    ('New collection received through HTTP request', 'Collection Received'),
+    ('New collection request info message received through HTTP request', 'Collection Request Info'),
     # metadata manager
-    "Received group update new request for metadata",
-    "Received group update propagation request",
-    "Received metadata creation request",
-    "Received metadata deletion request",
-    "Received collection lookup request",
+    ('Received group update new request for metadata', 'Group Update Metadata'),
+    ('Received group update propagation request', 'Group Update Propagation Request'),
+    ('Received metadata creation request', 'Metadata Creation'),
+    ('Received metadata deletion request', 'Metadata Deletion'),
+    ('Received collection lookup request', 'Collection Lookup'),
     # scheduler
-    "Received function invocation request",
-    "Received offloaded function invocation request"
+    ("Received function invocation request", "Function Invocation"),
+    ("Received offloaded function invocation request", "Offloaded Function Invocation"),
 ]
 
 ignored_functions = ['functionCreateCollections', 'functionCreateSeqCollections']

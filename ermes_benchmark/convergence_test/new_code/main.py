@@ -3,7 +3,7 @@ import sys
 
 # Disable pycache generation
 sys.dont_write_bytecode = True
-
+import holoviews as hv
 import shutil
 import inspect
 import pandas as pd
@@ -81,9 +81,10 @@ def main():
     overhead.plot_stacked_bar_chart(message_counter)
     plt.savefig(f'{output_dir}/message_counts_{timestamp_str}.png', dpi=300, bbox_inches='tight')
     plt.close()
-    plt.show()
-    
 
+    chord = overhead.create_chord_diagram(message_counter)
+    hv.save(chord, f'{output_dir}/messaggi_chord_diagram_{timestamp_str}.html')
+    
     # 3.1 Latency Analysis (Line Plot)
     print("Generating execution time analysis...")
     latency.plot_logs_avg_latency(full_dfs)
@@ -130,6 +131,5 @@ def main():
     
     print(f"All processing complete. Outputs saved to: {output_dir}")
     # plt.show() # Optional: uncomment if running interactively
-
 if __name__ == "__main__":
     main()
