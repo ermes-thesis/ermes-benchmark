@@ -138,10 +138,10 @@ def local_vs_remote_latency(dfs):
             Line2D([0], [0], color='black', lw=1.5, label='Overall User Mean (Linea Mediana)')
         ]
         
-        ax.legend(handles=legend_elements, loc='upper right')
+        ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=2, frameon=False, fontsize=10)
         
         # --- Etichette e Titolo ---
-        ax.set_title('User Latency Analysis: Custom Boxplot con Valori Etichettati')
+        #ax.set_title('User Latency Analysis: Custom Boxplot con Valori Etichettati')
         ax.set_xlabel('User')
         ax.set_ylabel('Latency (ms)')
         ax.set_xticks(x)
@@ -239,11 +239,11 @@ def local_vs_remote_latency_violin(dfs):
         Line2D([0], [0], color='black', lw=2, label='Avg Totale'),
         Line2D([0], [0], color='grey', lw=2, linestyle='--', label='Avg Local'),
         Line2D([0], [0], color='grey', lw=2, linestyle='-.', label='Avg Remote'),
-        Line2D([0], [0], color='grey', lw=1.5, linestyle=':', label='Min/Max (Linea verticale)')
+        #Line2D([0], [0], color='grey', lw=1.5, linestyle=':', label='Min/Max (Vertical Line)'),
     ]
-    ax.legend(handles=legend_elements, loc='upper right')
+    ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=4, frameon=False, fontsize=10)
 
-    ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
+    #ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
     ax.set_xlabel('User')
     ax.set_ylabel('Latency (ms)')
     ax.set_xticks(x)
