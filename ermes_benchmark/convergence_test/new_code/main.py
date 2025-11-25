@@ -82,10 +82,9 @@ def main():
     plt.savefig(f'{output_dir}/message_counts_{timestamp_str}.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-    chord = overhead.create_chord_diagram(message_counter)
-    hv.save(chord, f'{output_dir}/messaggi_chord_diagram_{timestamp_str}.html')
-    
-    # 3.1 Latency Analysis (Line Plot)
+    overhead.create_chord_diagram(message_counter, f'{output_dir}/messaggi_chord_diagram_{timestamp_str}')
+
+# 3.1 Latency Analysis (Line Plot)
     print("Generating execution time analysis...")
     latency.plot_logs_avg_latency(full_dfs)
     plt.savefig(f'{output_dir}/execution_time_analysis_{timestamp_str}.png', dpi=300, bbox_inches='tight')

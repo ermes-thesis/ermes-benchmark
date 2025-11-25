@@ -1,14 +1,14 @@
-from matplotlib import pyplot as plt
+from itertools import cycle
+
+import bokeh
+import holoviews as hv
 import numpy as np
 import pandas as pd
-import holoviews as hv
-from holoviews import opts, dim
+from matplotlib import pyplot as plt
+
 hv.extension('bokeh')
-import itertools
-from itertools import cycle
-import bokeh.palettes
-from bokeh.palettes import Category20
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple
+from d3blocks import D3Blocks
 
 
 def plot_stacked_bar_chart(node_map):
@@ -34,13 +34,13 @@ def plot_stacked_bar_chart(node_map):
 
         for i, bar in enumerate(bars):
             if values[i] > 0:
-                ax.text( 
-                    bar.get_x() - 0.05, 
-                    bottom[i] + values[i] / 2, 
-                    str(values[i]), ha='right', 
-                    va='center', 
-                    fontsize=8, 
-                    color=bar.get_facecolor() 
+                ax.text(
+                    bar.get_x() - 0.05,
+                    bottom[i] + values[i] / 2,
+                    str(values[i]), ha='right',
+                    va='center',
+                    fontsize=8,
+                    color=bar.get_facecolor()
                 )
 
         bottom += values
@@ -63,20 +63,23 @@ def plot_stacked_bar_chart(node_map):
     plt.tight_layout()
 
 
-NODE_COLOR_PALETTE = 'Category10' 
+NODE_COLOR_PALETTE = 'Category10'
 ALIAS_COLOR_PALETTE = 'Category20'
-def create_chord_diagram(node_map: Dict[str, Dict[Tuple[str, str], int]]):
+
+def create_chord_diagram(node_map: Dict[str, Dict[Tuple[str, str], int]], filename: str):
     """
     Crea un Chord Diagram con legenda separata per gli Alias.
     """
     records = []
-    for source_node, connections in node_map.items():
-        for (alias, target_node), count in connections.items():
+    for target_node, connections in node_map.items():
+        for (alias, source_node), count in connections.items():
             if count > 0:
                 records.append({
-                    'source': source_node,
-                    'target': target_node,
-                    'value': count,
+                    'node': source_node,
+                    'node_target': target_node,
+                    'source': source_node + "_" + alias,
+                    'target': target_node + "_" + alias,
+                    'weight': count,
                     'alias': alias
                 })
 
@@ -84,64 +87,45 @@ def create_chord_diagram(node_map: Dict[str, Dict[Tuple[str, str], int]]):
 
     if df_flows.empty:
         return None
-    
-    all_nodes = pd.Series(df_flows['source'].tolist() + df_flows['target'].tolist()).unique()
-    df_nodes = pd.DataFrame({'name': all_nodes})
-    nodes = hv.Dataset(df_nodes, kdims=['name'])
 
     # --- 2. GENERAZIONE MAPPA COLORI (Il Fix) ---
     # Estraiamo gli alias unici ordinati
     unique_aliases = sorted(df_flows['alias'].unique())
-    
+    unique_node = sorted(df_flows['node'].unique())
+
     # Recuperiamo la lista dei colori esadecimali dalla palette Bokeh
     # Prendiamo la versione con più colori (20) della palette richiesta
     # Se non trovasse la palette, usa una default
     palette_colors = bokeh.palettes.all_palettes.get(ALIAS_COLOR_PALETTE, {}).get(20)
     if not palette_colors:
-        palette_colors = bokeh.palettes.Category20[20] # Fallback sicuro
-        
+        palette_colors = bokeh.palettes.Category20[20]  # Fallback sicuro
+
+    palette_colors_nodes = bokeh.palettes.all_palettes.get(NODE_COLOR_PALETTE, {}).get(10)
+    if not palette_colors_nodes:
+        palette_colors_nodes = bokeh.palettes.Category10[10]  # Fallback sicuro
+
     # Creiamo il dizionario { 'AliasA': '#1f77b4', 'AliasB': '#aec7e8', ... }
     # Usiamo cycle() nel caso ci siano più di 20 alias (i colori ricominceranno)
     color_cycle = cycle(palette_colors)
     alias_color_map = {alias: next(color_cycle) for alias in unique_aliases}
 
-    # --- 3. Chord Diagram ---
-    chord = hv.Chord((df_flows, nodes), kdims=['source', 'target'], vdims=['value', 'alias'])
-    CHORD_SIZE = 800
-    
-    chord.opts(
-        opts.Chord(
-            #title="Diagramma di Flusso: Flussi per Alias",
-            frame_width=CHORD_SIZE, 
-            frame_height=CHORD_SIZE,
-            data_aspect=1, 
-            
-            node_color=dim('name').str(), 
-            node_cmap=NODE_COLOR_PALETTE,
-            node_line_width=1.5,
-            labels='name',
-            
-            edge_color=dim('alias').str(),
-            # --- MODIFICA QUI: Usiamo il dizionario invece della stringa ---
-            edge_cmap=alias_color_map, 
-            # --------------------------------------------------------------
-            edge_line_alpha=0.6,
-            show_legend=False 
-        )
-    )
+    color_cycle_nodes = cycle(palette_colors_nodes)
+    nodes_color_map = {node: next(color_cycle_nodes) for node in unique_node}
 
-    # --- 4. Legenda Proxy ---
-    dummy_data = pd.DataFrame({'x': [0]*len(unique_aliases), 'y': [0]*len(unique_aliases), 'alias': unique_aliases})
-    
-    legend_proxy = hv.Points(dummy_data, kdims=['x', 'y'], vdims=['alias']).opts(
-        color='alias',
-        # --- MODIFICA QUI: Usiamo lo STESSO dizionario ---
-        cmap=alias_color_map,
-        # -------------------------------------------------
-        size=0, 
-        show_legend=True,
-        legend_position='top_right',
-        xaxis=None, yaxis=None, show_frame=False, title=""
-    )
-    
-    return chord * legend_proxy
+    df_flows['color'] = df_flows['alias'].map(alias_color_map)
+
+    df_flows.replace(" ", "_", regex=True, inplace=True)
+    print(df_flows)
+
+    d3 = D3Blocks(chart='Chord', frame=False)
+    d3.import_example("energy")
+    d3.chord(df_flows, ordering='ascending', filepath=filename + ".html", showfig=False, figsize=[1000,1000], margin=200, fontsize=12)
+
+    for _, row in df_flows.iterrows():
+        d3.edge_properties.loc[(d3.edge_properties['source'] == row['source']) & (
+                d3.edge_properties['target'] == row['target']), 'color'] = row['color']
+        d3.edge_properties.loc[(d3.edge_properties['source'] == row['source']) & (
+                d3.edge_properties['target'] == row['target']), 'opacity'] = 0.9
+        d3.node_properties.get(row['source'])['color'] = nodes_color_map[row['node']]
+        d3.node_properties.get(row['target'])['color'] = nodes_color_map[row['node_target']]
+    d3.show()
