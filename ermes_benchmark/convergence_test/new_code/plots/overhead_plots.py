@@ -5,6 +5,8 @@ import holoviews as hv
 from holoviews import opts, dim
 hv.extension('bokeh')
 import itertools
+from itertools import cycle
+import bokeh.palettes
 from bokeh.palettes import Category20
 from typing import Dict, Tuple, Any
 
@@ -81,44 +83,65 @@ def create_chord_diagram(node_map: Dict[str, Dict[Tuple[str, str], int]]):
     df_flows = pd.DataFrame(records)
 
     if df_flows.empty:
-        print("Nessun dato di flusso da visualizzare.")
         return None
     
     all_nodes = pd.Series(df_flows['source'].tolist() + df_flows['target'].tolist()).unique()
     df_nodes = pd.DataFrame({'name': all_nodes})
     nodes = hv.Dataset(df_nodes, kdims=['name'])
+
+    # --- 2. GENERAZIONE MAPPA COLORI (Il Fix) ---
+    # Estraiamo gli alias unici ordinati
+    unique_aliases = sorted(df_flows['alias'].unique())
     
+    # Recuperiamo la lista dei colori esadecimali dalla palette Bokeh
+    # Prendiamo la versione con più colori (20) della palette richiesta
+    # Se non trovasse la palette, usa una default
+    palette_colors = bokeh.palettes.all_palettes.get(ALIAS_COLOR_PALETTE, {}).get(20)
+    if not palette_colors:
+        palette_colors = bokeh.palettes.Category20[20] # Fallback sicuro
+        
+    # Creiamo il dizionario { 'AliasA': '#1f77b4', 'AliasB': '#aec7e8', ... }
+    # Usiamo cycle() nel caso ci siano più di 20 alias (i colori ricominceranno)
+    color_cycle = cycle(palette_colors)
+    alias_color_map = {alias: next(color_cycle) for alias in unique_aliases}
+
+    # --- 3. Chord Diagram ---
     chord = hv.Chord((df_flows, nodes), kdims=['source', 'target'], vdims=['value', 'alias'])
     CHORD_SIZE = 800
     
     chord.opts(
         opts.Chord(
-            title="Diagramma di Flusso: Flussi per Alias",
-            
+            #title="Diagramma di Flusso: Flussi per Alias",
             frame_width=CHORD_SIZE, 
             frame_height=CHORD_SIZE,
             data_aspect=1, 
+            
             node_color=dim('name').str(), 
             node_cmap=NODE_COLOR_PALETTE,
             node_line_width=1.5,
             labels='name',
-            edge_color=dim('alias').str(), 
-            edge_cmap=ALIAS_COLOR_PALETTE, 
-            edge_line_alpha=0.6,
             
+            edge_color=dim('alias').str(),
+            # --- MODIFICA QUI: Usiamo il dizionario invece della stringa ---
+            edge_cmap=alias_color_map, 
+            # --------------------------------------------------------------
+            edge_line_alpha=0.6,
             show_legend=False 
         )
     )
 
-    unique_aliases = sorted(df_flows['alias'].unique())
+    # --- 4. Legenda Proxy ---
     dummy_data = pd.DataFrame({'x': [0]*len(unique_aliases), 'y': [0]*len(unique_aliases), 'alias': unique_aliases})
     
     legend_proxy = hv.Points(dummy_data, kdims=['x', 'y'], vdims=['alias']).opts(
         color='alias',
-        cmap=ALIAS_COLOR_PALETTE,
+        # --- MODIFICA QUI: Usiamo lo STESSO dizionario ---
+        cmap=alias_color_map,
+        # -------------------------------------------------
         size=0, 
         show_legend=True,
         legend_position='top_right',
         xaxis=None, yaxis=None, show_frame=False, title=""
     )
+    
     return chord * legend_proxy
