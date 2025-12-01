@@ -3,7 +3,7 @@ relative_files = [
     '../data/full_traversal.zip',
 ]
 
-out_dir = '../output_img_new/full_traversal_analysis_newcode/'
+out_dir = '../output_img/full_traversal_analysis/'
 
 log_search_key = 'DEFAULT-STRONG-POLICY, transition to idle state'  # 'DEFAULT-STRONG-POLICY, transition to decision state'
 
@@ -35,9 +35,19 @@ ignored_functions = ['functionCreateCollections', 'functionCreateSeqCollections'
 default_address = '10.10.101.'
 default_port = ':12345'
 
+# FULL TRAVERSAL
+# eq_map = {
+#     'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
+#     'functionReadSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
+# }
+
 eq_map = {
+    'functionUseSeqCollections-10.10.101.50:12345': '10.10.101.50:12345',
     'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
-    'functionReadSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
+    'functionUseSeqCollections-10.10.101.52:12345': '10.10.101.52:12345',
+    'functionUseSeqCollections-10.10.101.53:12345': '10.10.101.53:12345',
+    'functionUseSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
+    'functionReadSeqCollections-10.10.101.57:12345': '10.10.101.57:12345',
 }
 
 tree = {
