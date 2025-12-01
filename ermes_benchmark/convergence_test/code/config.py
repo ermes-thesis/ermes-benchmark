@@ -1,9 +1,6 @@
-relative_files = [
-    '../data/full_traversal.zip',
-    '../data/full_traversal.zip',
-]
+data_dir = '../data/'
 
-out_dir = '../output_img/full_traversal_analysis/'
+out_dir = '../output_img/'
 
 log_search_key = 'DEFAULT-STRONG-POLICY, transition to idle state'  # 'DEFAULT-STRONG-POLICY, transition to decision state'
 
