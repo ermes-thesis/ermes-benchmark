@@ -4,6 +4,9 @@
 NODE1_IP="10.10.101.60"
 NODE2_IP="10.10.101.59"
 
+WRITE_NODE="10.10.101.51:12345"
+READ_NODE="10.10.101.54:12345"
+
 REMOTE_PATH="convergence_test"
 
 ERMES_DEPLOY_PATH="../../../../ermes-deploy"
@@ -26,20 +29,14 @@ echo "🚀 [2/6] Copia dei binari sulle VM..."
 
 # Uccidiamo eventuali vecchi processi rimasti appesi (pulizia)
 ssh -J ubuntu@100.112.91.33 ubuntu@${NODE1_IP} "sudo pkill -f read || true"
+ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "sudo pkill -f create || true"
 ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "sudo pkill -f write || true"
 
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE1_IP} "mkdir -p ${REMOTE_PATH}"
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "mkdir -p ${REMOTE_PATH}"
+ssh -J ubuntu@100.112.91.33 ubuntu@${NODE1_IP} "mkdir -p ${REMOTE_PATH}; cd ${REMOTE_PATH}; rm *.log *.csv"
+ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "mkdir -p ${REMOTE_PATH}; cd ${REMOTE_PATH}; rm *.log *.csv"
 
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE1_IP} "cd ${REMOTE_PATH}; rm read.log *.csv"
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; rm write.log *.csv"
-
-scp -J ubuntu@100.112.91.33 -q bin/read ubuntu@${NODE1_IP}:${REMOTE_PATH}
-scp -J ubuntu@100.112.91.33 -q config.yaml ubuntu@${NODE1_IP}:${REMOTE_PATH}
-
-scp -J ubuntu@100.112.91.33 -q bin/write ubuntu@${NODE2_IP}:${REMOTE_PATH}
-scp -J ubuntu@100.112.91.33 -q bin/create ubuntu@${NODE2_IP}:${REMOTE_PATH}
-scp -J ubuntu@100.112.91.33 -q config.yaml ubuntu@${NODE2_IP}:${REMOTE_PATH}
+scp -J ubuntu@100.112.91.33 -q bin/read config.yaml ubuntu@${NODE1_IP}:${REMOTE_PATH}
+scp -J ubuntu@100.112.91.33 -q bin/{write,create} config.yaml ubuntu@${NODE2_IP}:${REMOTE_PATH}
 
 echo "✅ Upload completato."
 
@@ -51,15 +48,15 @@ echo "✅ Pulizia completata."
 echo "⚡ [4/6] Avvio dei processi..."
 
 # Avvio Nodo 1
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; ./create 0 IT/Rome/LaSapienza > create.log 2>&1"
+ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; ./create $WRITE_NODE colName 0 IT/Rome/LaSapienza > create.log 2>&1"
 echo "   -> Collection creata su ${NODE2_IP}"
 
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE1_IP} "cd ${REMOTE_PATH}; ./read > read.log 2>&1" &
+ssh -J ubuntu@100.112.91.33 ubuntu@${NODE1_IP} "cd ${REMOTE_PATH}; ./read $READ_NODE 54321 IT colName> read.log 2>&1" &
 PID_READ=$!
 echo "   -> Read avviate su ${NODE1_IP} (PID locale ssh: $PID_READ)"
 
 # Avvio Nodo 2
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; ./write 12345 IT/Rome/LaSapienza > write.log 2>&1" &
+ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; ./write $WRITE_NODE colName 12345 IT/Rome/LaSapienza > write.log 2>&1" &
 PID_WRITE=$!
 echo "   -> Write avviate su ${NODE2_IP} (PID locale ssh: $PID_WRITE)"
 
@@ -74,6 +71,7 @@ echo "📥 [5/6] Scaricamento dei risultati..."
 
 # 1. Crea una cartella locale univoca con data e ora
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+echo "   -> Timestamp: ${TIMESTAMP}"
 RESULTS_DIR="./results/$TIMESTAMP"
 mkdir -p "${RESULTS_DIR}"
 
@@ -87,13 +85,6 @@ scp -J ubuntu@100.112.91.33 -q ubuntu@${NODE1_IP}:${REMOTE_PATH}/*.csv "${RESULT
 scp -J ubuntu@100.112.91.33 -q ubuntu@${NODE2_IP}:${REMOTE_PATH}/*.log "${RESULTS_DIR}/"
 scp -J ubuntu@100.112.91.33 -q ubuntu@${NODE2_IP}:${REMOTE_PATH}/*.csv "${RESULTS_DIR}/"
 
-# Controllo finale
-if [ -f "${RESULTS_DIR}/read.log" ] && [ -f "${RESULTS_DIR}/write.log" ]; then
-    echo "✅ Risultati scaricati con successo in ${RESULTS_DIR}"
-else
-    echo "⚠️  Attenzione: uno o più risultati non sono stati scaricati."
-fi
-
 echo "📥 Scaricamento logs infrastruttura..."
 $ERMES_DEPLOY_PATH/scripts/download_logs.sh
 
@@ -103,7 +94,8 @@ echo "📦 [6/6] Creazione archivio ZIP..."
 ZIP_FILENAME="full_traversal_${TIMESTAMP}.zip"
 
 if command -v zip >/dev/null 2>&1; then
-    zip -q -j ../data/"${ZIP_FILENAME}" "${RESULTS_DIR}"/results_log_12345_*.csv "${RESULTS_DIR}"/results_log_54321_*.csv logs/*/general_*.log
+    mkdir -p ../data/full_traversal
+    zip -q -j ../data/full_traversal/"${ZIP_FILENAME}" "${RESULTS_DIR}"/results_log_12345_*.csv "${RESULTS_DIR}"/results_log_54321_*.csv logs/*/general_*.log
 
     if [ $? -eq 0 ]; then
         echo "✅ Archivio creato correttamente: ${ZIP_FILENAME}"

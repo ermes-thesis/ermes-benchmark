@@ -3,6 +3,7 @@ package main
 import (
 	lib "ermes_client_library"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -10,15 +11,20 @@ import (
 
 func main() {
 
-	// Parse the client id from the command line
-
 	clientId := 12345
+	collectionName := ""
 	geolocation := ""
+	nodeAddress := ""
 
-	if len(os.Args) < 2 {
-		fmt.Println("No client id passed to the application. Using default value: ", clientId)
-	} else {
-		newId, err := strconv.Atoi(os.Args[1])
+	if len(os.Args) < 3 {
+		log.Fatal("Missing node address argument")
+	}
+
+	nodeAddress = os.Args[1]
+	collectionName = os.Args[2]
+
+	if len(os.Args) > 3 {
+		newId, err := strconv.Atoi(os.Args[3])
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error: the client id has to be an integer. Using default value: ", clientId)
 		} else {
@@ -26,13 +32,11 @@ func main() {
 		}
 	}
 
-	if len(os.Args) >= 2 {
-		geolocation = os.Args[2]
+	if len(os.Args) > 4 {
+		geolocation = os.Args[4]
 	}
 
 	// Call the library setup
-
-	nodeAddress := "10.10.101.51:12345"
 
 	confFile := "config.yaml"
 
@@ -60,7 +64,7 @@ func main() {
 				map[string]string{"data": "write number " + strconv.Itoa(i)},
 				map[string]map[string]string{
 					"query": {
-						"name": "my_new_collection",
+						"name": collectionName,
 					},
 				},
 				geolocation,

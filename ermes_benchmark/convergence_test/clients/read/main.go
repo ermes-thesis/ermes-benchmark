@@ -3,6 +3,7 @@ package main
 import (
 	lib "ermes_client_library"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -10,15 +11,18 @@ import (
 
 func main() {
 
-	// Parse the client id from the command line
-
 	clientId := 54321
 	geolocation := ""
+	nodeAddress := ""
 
 	if len(os.Args) < 2 {
-		fmt.Println("No client id passed to the application. Using default value: ", clientId)
-	} else {
-		newId, err := strconv.Atoi(os.Args[1])
+		log.Fatal("Missing node address argument")
+	}
+
+	nodeAddress = os.Args[1]
+
+	if len(os.Args) > 2 {
+		newId, err := strconv.Atoi(os.Args[2])
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error: the client id has to be an integer. Using default value: ", clientId)
 		} else {
@@ -26,13 +30,13 @@ func main() {
 		}
 	}
 
-	if len(os.Args) >= 2 {
-		geolocation = os.Args[2]
+	if len(os.Args) > 3 {
+		geolocation = os.Args[3]
 	}
 
-	// Call the library setup
+	colNames := os.Args[4:]
 
-	nodeAddress := "10.10.101.54:12345"
+	// Call the library setup
 
 	confFile := "config.yaml"
 
@@ -54,18 +58,20 @@ func main() {
 
 	for i := 0; i < functionsForRound*rounds; i++ {
 		go func() {
-			body, code, err := lib.ExecuteFunction(
-				"functionReadSeqCollections",
-				"",
-				map[string]string{},
-				map[string]map[string]string{
-					"query": {
-						"name": "my_new_collection",
+			for _, colName := range colNames {
+				body, code, err := lib.ExecuteFunction(
+					"functionReadSeqCollections",
+					"",
+					map[string]string{},
+					map[string]map[string]string{
+						"query": {
+							"name": colName,
+						},
 					},
-				},
-				geolocation,
-			)
-			fmt.Println(code, string(body), err)
+					geolocation,
+				)
+				fmt.Println(code, string(body), err)
+			}
 		}()
 		time.Sleep(time.Duration((roundDuration / float64(functionsForRound)) * 1_000_000_000))
 	}
