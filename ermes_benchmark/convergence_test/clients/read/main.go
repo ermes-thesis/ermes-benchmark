@@ -60,7 +60,7 @@ func main() {
 		go func() {
 			for _, colName := range colNames {
 				body, code, err := lib.ExecuteFunction(
-					"functionReadSeqCollections",
+					"readCollection",
 					"",
 					map[string]string{},
 					map[string]map[string]string{

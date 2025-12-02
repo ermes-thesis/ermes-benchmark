@@ -52,10 +52,11 @@ func main() {
 	}
 
 	body, code, err := lib.ExecuteFunction(
-		"functionCreateSeqCollections",
+		"createCollection",
 		"",
 		map[string]string{
 			"name":        collectionName,
+			"consistency": "sequential",
 			"geolocation": geolocation,
 		},
 		map[string]map[string]string{},

@@ -59,9 +59,11 @@ func main() {
 	for i := 0; i < functionsForRound*rounds; i++ {
 		go func() {
 			body, code, err := lib.ExecuteFunction(
-				"functionUseSeqCollections",
+				"writeCollection",
 				"",
-				map[string]string{"data": "write number " + strconv.Itoa(i)},
+				map[string]string{
+					"data": "write number " + strconv.Itoa(i),
+				},
 				map[string]map[string]string{
 					"query": {
 						"name": collectionName,
