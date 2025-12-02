@@ -2,14 +2,14 @@ import os
 import sys
 import argparse
 from collections import Counter
-
-# Disable pycache generation
-sys.dont_write_bytecode = True
 import shutil
 import inspect
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
+
+# Disable pycache generation
+sys.dont_write_bytecode = True
 
 # Custom modules
 import config
@@ -75,8 +75,9 @@ def main():
 
     full_dfs = []
 
-    # Initialize a global counter for messages across all zips
-    total_message_counter = Counter()
+    # Initialize a global dictionary to hold nested counters
+    # Structure: { node_id: Counter({ (msg_type, remote_ip): count }) }
+    total_message_counter = {}
 
     print(f"Starting analysis for {len(files)} ZIP files...")
 
@@ -86,10 +87,10 @@ def main():
         # Extract and parse logs/csv
         csv, log = data_processor.processa_zip_files(f)
         parsed_log = data_processor.parse_log(log)
-        # print(f"  Processed {len(csv)} CSV files and {len(log)} LOG files.")
+        print(f"  Processed {len(csv)} CSV files and {len(log)} LOG files.")
 
         dfs = data_processor.parse_dfs(csv, parsed_log)
-        # print(f"  Parsed {len(dfs)} DataFrames.")
+        print(f"  Parsed {len(dfs)} DataFrames.")
 
         # Find equilibrium
         dfs, eq_timestamp = data_processor.find_equilibrium_timestamp(dfs, args.subfolder)
@@ -105,7 +106,6 @@ def main():
                 full_dfs[i] = pd.concat([full_dfs[i], dfs[i]], ignore_index=True)
 
         # Accumulate Message Counts (Overhead Analysis)
-        # We calculate it per-file to ensure the timestamps align with the current DFS
         start_t = data_processor.experiment_start_time(dfs)
         end_t = data_processor.experiment_end_time(dfs)
 
@@ -116,24 +116,41 @@ def main():
             end_t
         )
 
-        # Add current file counts to the total counter
-        # Assuming current_counts is a dict or Counter-like object
-        total_message_counter.update(current_counts)
+        # FIX: Manually merge the nested dictionaries to avoid TypeError
+        # current_counts structure: { node_id: { (msg_type, remote_ip): count } }
+        for node_id, inner_counts in current_counts.items():
+            if node_id not in total_message_counter:
+                total_message_counter[node_id] = Counter()
+
+            # Update the inner Counter for this specific node
+            total_message_counter[node_id].update(inner_counts)
+
+    # ==========================================
+    # 2.1 Post-Processing: Calculate Averages
+    # ==========================================
+
+    num_files = len(files)
+    avg_message_counter = {}
+
+    print(f"Calculating averages across {num_files} files for overhead analysis...")
+
+    for node, counts in total_message_counter.items():
+        avg_message_counter[node] = Counter()
+        for key, value in counts.items():
+            # Calculate average per execution
+            avg_message_counter[node][key] = value / num_files
 
     # ==========================================
     # 3. Plotting Phase
     # ==========================================
 
-    num_files = len(files) # Used for normalization in plots
-
-    # 3.0 Overhead Analysis
-    print("Generating overhead analysis...")
-    # Convert Counter back to dict if the plot function expects strict dict
-    overhead.plot_stacked_bar_chart(dict(total_message_counter))
+    # 3.0 Overhead Analysis (Using avg_message_counter)
+    print("Generating overhead analysis (Average per run)...")
+    overhead.plot_stacked_bar_chart(dict(avg_message_counter))
     plt.savefig(f'{output_dir}/message_counts.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-    overhead.create_chord_diagram(dict(total_message_counter), f'{output_dir}/messaggi_chord_diagram')
+    overhead.create_chord_diagram(dict(avg_message_counter), f'{output_dir}/messaggi_chord_diagram')
 
     # 3.1 Latency Analysis (Line Plot)
     print("Generating execution time analysis...")
@@ -143,7 +160,7 @@ def main():
 
     # 3.2 Local vs Remote Executions (Bar Chart)
     print("Generating local vs remote executions chart...")
-    # Updated to use num_files instead of config.relative_files
+    # Passing num_files to normalize the counts in the bars if needed inside the function
     distribution.local_vs_remote_number_of_executions(full_dfs, num_files)
     plt.savefig(f'{output_dir}/local_vs_remote_executions.png', dpi=300, bbox_inches='tight')
     plt.close()
@@ -162,7 +179,6 @@ def main():
 
     # 3.5 Task Count Heatmap
     print("Generating task count heatmap...")
-    # Updated to use num_files
     distribution.plot_heatmap_count_tasks(full_dfs, num_files)
     plt.savefig(f'{output_dir}/heatmap_count_tasks.png', dpi=300, bbox_inches='tight')
     plt.close()
@@ -175,13 +191,12 @@ def main():
 
     # 3.7 Topology Tree with Sparklines
     print("Generating topology tree...")
-    # Updated to use num_files
     fig_tree = topology.plot_tree_with_sparklines(config.tree, full_dfs, num_files)
     if fig_tree:
         fig_tree.savefig(f'{output_dir}/tree_with_sparklines.png', dpi=300, bbox_inches='tight')
+        plt.close(fig_tree)
 
     print(f"All processing complete. Outputs saved to: {output_dir}")
-    # plt.show()
 
 if __name__ == "__main__":
     main()
