@@ -6,7 +6,7 @@ log_search_key = 'DEFAULT-STRONG-POLICY, transition to idle state'  # 'DEFAULT-S
 
 messages_log_strings = [
     # collection discoverer
-    ('Received remote access request','Remote Acess'), 
+    ('Received remote access request', 'Remote Access'),
     ('Received update propagation request', 'Update Propagation'),
     ('Received collection creation request', 'Collection Creation'),
     ('Received group update propagation request', 'Group Update Propagation'),
@@ -32,19 +32,27 @@ ignored_functions = ['functionCreateCollections', 'functionCreateSeqCollections'
 default_address = '10.10.101.'
 default_port = ':12345'
 
-# FULL TRAVERSAL
-# eq_map = {
-#     'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
-#     'functionReadSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
-# }
-
-eq_map = {
-    'functionUseSeqCollections-10.10.101.50:12345': '10.10.101.50:12345',
-    'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
-    'functionUseSeqCollections-10.10.101.52:12345': '10.10.101.52:12345',
-    'functionUseSeqCollections-10.10.101.53:12345': '10.10.101.53:12345',
-    'functionUseSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
-    'functionReadSeqCollections-10.10.101.57:12345': '10.10.101.57:12345',
+eq_state = {
+    'full_traversal': {
+        'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
+        'functionReadSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
+    },
+    'bottom_up': {
+        'functionUseSeqCollections-10.10.101.50:12345': '10.10.101.50:12345',
+        'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
+        'functionUseSeqCollections-10.10.101.52:12345': '10.10.101.52:12345',
+        'functionUseSeqCollections-10.10.101.53:12345': '10.10.101.53:12345',
+        'functionUseSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
+        'functionReadSeqCollections-10.10.101.57:12345': '10.10.101.57:12345',
+    },
+    'top_down': {
+        'functionUseSeqCollections-10.10.101.57:12345': '10.10.101.57:12345',
+        'functionReadSeqCollections-10.10.101.50:12345': '10.10.101.50:12345',
+        'functionReadSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
+        'functionReadSeqCollections-10.10.101.52:12345': '10.10.101.52:12345',
+        'functionReadSeqCollections-10.10.101.53:12345': '10.10.101.53:12345',
+        'functionReadSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
+    }
 }
 
 tree = {

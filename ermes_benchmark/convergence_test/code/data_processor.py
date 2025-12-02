@@ -247,14 +247,14 @@ def parse_dfs(dati_csv: Dict[str, pd.DataFrame], dati_timestamp_per_ip: Dict[str
         elaborated_dfs.append(current_df)
     return elaborated_dfs
 
-def find_equilibrium_timestamp(dfs):
+def find_equilibrium_timestamp(dfs, scenario):
     """
     Find the equilibrium timestamp across multiple DataFrames.
     """
     min_timestamps = []
     for df in dfs:
         for index, row in df.iterrows():
-            if row['FuncName'] + "-" + row['EntryHost'] in config.eq_map and row['ExecHost'] == config.eq_map[
+            if row['FuncName'] + "-" + row['EntryHost'] in config.eq_state[scenario] and row['ExecHost'] == config.eq_state[scenario][
                 row['FuncName'] + "-" + row['EntryHost']]:
                 min_timestamps.append(row['StartTime'])
                 break

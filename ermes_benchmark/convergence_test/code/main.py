@@ -10,7 +10,6 @@ import inspect
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
-from datetime import datetime
 
 # Custom modules
 import config
@@ -93,7 +92,7 @@ def main():
         # print(f"  Parsed {len(dfs)} DataFrames.")
 
         # Find equilibrium
-        dfs, eq_timestamp = data_processor.find_equilibrium_timestamp(dfs)
+        dfs, eq_timestamp = data_processor.find_equilibrium_timestamp(dfs, args.subfolder)
         print(f"  Equilibrium Timestamp: {eq_timestamp}")
 
         # Aggregate DataFrames (Logic: merge lists of DFs index-wise)
