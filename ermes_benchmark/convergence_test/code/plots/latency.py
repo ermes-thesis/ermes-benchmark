@@ -258,44 +258,65 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
     using WARM/COOL colors for equilibrium and different SHADES to distinguish files.
     """
     try:
-        
-        # Concatenazione dei DataFrame
+        # 1. Concatenate all files
         full_df = pd.concat(dfs, keys=range(1, len(dfs) + 1), names=['FileID', None])
         full_df = full_df.reset_index(level=0)
-        
+
         avg_all_files = full_df.groupby('Group')['Duration'].mean().rename('Avg_All')
         avg_per_file = full_df.groupby(['Group', 'FileID'])['Duration'].mean().unstack(fill_value=np.nan)
 
         plot_df = pd.merge(avg_all_files, avg_per_file, left_index=True, right_index=True)
         all_groups = plot_df.index.tolist()
-        
-        # Colore WARM/COOL basato su BeforeEq
-        group_before_eq = full_df.groupby('Group')['BeforeEq'].first()  # True/False per gruppo
-        
-        # 2. Setup Plot
+
+        # ----------------------------
+        # 2. warm / cool / mixed logic
+        # ----------------------------
+        group_status = {}  # "warm", "cool", "mixed"
+
+        for g, subdf in full_df.groupby('Group')['BeforeEq']:
+            if subdf.all():
+                group_status[g] = "warm"
+            elif (~subdf).all():
+                group_status[g] = "cool"
+            else:
+                group_status[g] = "mixed"
+
+        # Colormaps
         n_files = len(dfs)
         WARM_CMAP = plt.cm.Oranges
         COOL_CMAP = plt.cm.Blues
 
-        warm_shades = WARM_CMAP(np.linspace(0.4, 1.0, n_files + 1)) 
+        warm_shades = WARM_CMAP(np.linspace(0.4, 1.0, n_files + 1))
         cool_shades = COOL_CMAP(np.linspace(0.4, 1.0, n_files + 1))
-        
+
+        # NEW: gray shades for mixed groups
+        gray_shades = np.linspace(0.35, 0.75, n_files + 1)  # from dark → light
+        # convert each to RGBA
+        gray_colors = [(g, g, g, 0.9) for g in gray_shades]  # aggregate bars (higher alpha)
+        gray_colors_file = [(g, g, g, 0.7) for g in gray_shades]  # per-file bars
+
+        # ----------------------------
+        # 3. Setup
+        # ----------------------------
         plt.style.use('ggplot')
         fig, ax = plt.subplots(figsize=(14, 8))
-        
+
         total_bars_in_group = n_files + 1
         bar_width = 0.8 / total_bars_in_group
         x = np.arange(len(all_groups))
+        agg_pos = x - (total_bars_in_group / 2 - 0.5) * bar_width
 
-        agg_pos = x - (total_bars_in_group / 2 - 0.5) * bar_width 
-        
-        # 3. Barre Aggregate (Avg_All)
+        # ----------------------------
+        # 4. Aggregate bars (Avg_All)
+        # ----------------------------
         agg_colors = []
         for g in all_groups:
-            if group_before_eq[g]:
+            if group_status[g] == "warm":
                 agg_colors.append(warm_shades[0])
-            else:
+            elif group_status[g] == "cool":
                 agg_colors.append(cool_shades[0])
+            else:  # mixed
+                agg_colors.append(gray_colors[0])  # darkest gray
 
         ax.bar(
             agg_pos,
@@ -303,99 +324,135 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
             bar_width,
             color=agg_colors,
             edgecolor='black',
+            linewidth=1.3,
             alpha=0.9,
             label='_nolegend_'
         )
 
-        # 4. Barre per File
+        # ----------------------------
+        # 5. Per-file bars
+        # ----------------------------
+        gray_hatch = (0.179, 0.179, 0.179)
         for j in range(1, n_files + 1):
-            file_col_name = j 
             file_pos = agg_pos + j * bar_width
-            
             file_bar_colors = []
             file_bar_hatches = []
+            file_bar_edgecolors = []
 
             for g in all_groups:
-                # Colore basato su BeforeEq
-                if group_before_eq[g]:
-                    file_bar_colors.append(warm_shades[j])
-                else:
-                    file_bar_colors.append(cool_shades[j])
 
-                # Hatch se presente operazione non locale
+                if group_status[g] == "warm":
+                    file_bar_colors.append(warm_shades[j])
+                elif group_status[g] == "cool":
+                    file_bar_colors.append(cool_shades[j])
+                else:
+                    file_bar_colors.append(gray_colors_file[j])  # per-file gray shade
+
+                # Hatch for non-local ops
+
+
                 if 'Is_Local' in full_df.columns:
-                    has_non_local = full_df[(full_df['Group'] == g) & (full_df['FileID'] == j)]['Is_Local'].apply(lambda x: not x).any()
-                    file_bar_hatches.append('//') if has_non_local and show_if_remote else file_bar_hatches.append(None)
+                    has_non_local = full_df[
+                        (full_df['Group'] == g) &
+                        (full_df['FileID'] == j)
+                    ]['Is_Local'].apply(lambda x: not x).any()
+
+                    if has_non_local and show_if_remote:
+                        file_bar_hatches.append('//')
+                        file_bar_edgecolors.append(gray_hatch)   # colore dell’hatch
+                    else:
+                        file_bar_hatches.append(None)
+                        file_bar_edgecolors.append('black')      # edge normale
                 else:
                     file_bar_hatches.append(None)
+                    file_bar_edgecolors.append('black')
 
             bars = ax.bar(
                 file_pos,
-                plot_df[file_col_name],
+                plot_df[j],
                 bar_width,
                 color=file_bar_colors,
-                edgecolor='black',
+                edgecolor=file_bar_edgecolors,
                 alpha=0.7,
                 label='_nolegend_'
             )
 
+            # Apply hatches
             for bar, hatch_pattern in zip(bars, file_bar_hatches):
                 if hatch_pattern:
                     bar.set_hatch(hatch_pattern)
 
-        # 5. Linea media globale
+        # ----------------------------
+        # 6. Global mean line
+        # ----------------------------
         global_mean = plot_df['Avg_All'].mean()
         ax.axhline(global_mean, linestyle='--', linewidth=2, color='black', zorder=3)
 
-        # 6. Etichette valori
+        # ----------------------------
+        # 7. Labels over bars
+        # ----------------------------
         for i, v in enumerate(plot_df['Avg_All']):
-            ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', fontsize=9, fontweight='bold')
-            
-        for j in range(1, n_files + 1):
-            file_col_name = j 
-            file_pos = agg_pos + j * bar_width
-            for i, v in enumerate(plot_df[file_col_name]):
-                if pd.notna(v):
-                    ax.text(file_pos[i], v + 0.5, f'{v:.1f}', ha='center', fontsize=9)
+            ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', rotation=45, fontsize=7, fontweight='bold')
 
-        # 7. Legenda
+        for j in range(1, n_files + 1):
+            file_pos = agg_pos + j * bar_width
+            for i, v in enumerate(plot_df[j]):
+                if pd.notna(v):
+                    ax.text(file_pos[i], v + 0.2, f'{v:.1f}', ha='center', rotation=45, fontsize=7)
+
+
+        # ----------------------------
+        # 8. Legend
+        # ----------------------------
         equilibrium_legend = [
-            Line2D([0], [0], color=WARM_CMAP(0.8), lw=4, label='Round avg Before Eq. (Warm Tones)'),
-            Line2D([0], [0], color=COOL_CMAP(0.8), lw=4, label='Round avg After Eq. (Cool Tones)'),
+            Line2D([0], [0], color=WARM_CMAP(0.8), lw=4, label='Epoch avg Before Eq. (Warm)'),
+            Line2D([0], [0], color=COOL_CMAP(0.8), lw=4, label='Epoch avg After Eq. (Cool)'),
+            Line2D([0], [0], color=gray_colors[0], lw=4, label='Epoch avg Mixed (Gray)')
         ]
-        
+
         file_legend_elements = []
         hatch_legend_added = False
+
         for j in range(1, n_files + 1):
+            '''
             file_legend_elements.append(
-                Line2D([0], [0], color=warm_shades[j], lw=4, alpha=0.7, label=f'User {j} avg Before Eq.')
+                Line2D([0], [0], color=warm_shades[j], lw=4, alpha=0.7, label=f'User {j} Before Eq.')
             )
             file_legend_elements.append(
-                Line2D([0], [0], color=cool_shades[j], lw=4, alpha=0.7, label=f'User {j} avg After Eq.')
+                Line2D([0], [0], color=cool_shades[j], lw=4, alpha=0.7, label=f'User {j} After Eq.')
             )
-            if 'Is_Local' in full_df.columns and not hatch_legend_added and show_if_remote:
+            file_legend_elements.append(
+                Line2D([0], [0], color=gray_colors_file[j], lw=4, alpha=0.7, label=f'User {j} Mixed')
+            )
+            '''
+
+            if not hatch_legend_added and 'Is_Local' in full_df.columns and show_if_remote:
                 file_legend_elements.append(
-                    Rectangle((0,0),1,1, facecolor='white', edgecolor='black', hatch='//', label='Non-Local Operation Present')
+                    Rectangle((0,0), 1, 1, facecolor='white', edgecolor=gray_hatch, hatch='//',
+                              label='Non-Local Operation Present')
                 )
                 hatch_legend_added = True
 
         legend_elements = equilibrium_legend + file_legend_elements + [
-            Line2D([0], [0], color='black', lw=2, linestyle='--', label=f'Global Mean: {global_mean:.2f} ms')
+            Line2D([0], [0], color='black', lw=2, linestyle='--',
+                   label=f'Global Mean: {global_mean:.2f} ms')
         ]
-        
+
         ax.legend(
-            handles=legend_elements, 
-            loc='lower center', 
-            bbox_to_anchor=(0.5, 1.05), 
-            ncol=3, 
+            handles=legend_elements,
+            loc='lower center',
+            bbox_to_anchor=(0.5, 1.05),
+            ncol=3,
             frameon=False,
             fontsize=10
         )
 
-        # 8. Asse e ticks
-        ax.set_xlabel('Round number', fontsize=12)
+        # ----------------------------
+        # 9. Axis setup
+        # ----------------------------
+        ax.set_xlabel('Epoch number', fontsize=12)
         ax.set_ylabel('Average Time (ms)', fontsize=12)
-        ax.set_xticks(x + (bar_width * total_bars_in_group / 2) - (bar_width / 2)) 
+        ax.set_xticks(x + (bar_width * total_bars_in_group / 2) - (bar_width / 2))
         ax.set_xticklabels(all_groups, rotation=0, fontsize=10)
         plt.yticks(fontsize=10)
 
@@ -403,11 +460,13 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
             ax.spines[spine].set_visible(False)
 
         plt.tight_layout()
-        
-        # 9. Output
+
+        # ----------------------------
+        # 10. Output
+        # ----------------------------
         print(f"Analysis completed for {len(all_groups)} groups using {len(dfs)} files.")
         print(f"Global average (Aggregated): {global_mean:.2f} ms")
-        
+
         return avg_all_files
 
     except Exception as e:
@@ -481,7 +540,7 @@ def plot_heatmap_avg_latency(dfs):
         ax.grid(which='major', visible=False)
 
         plt.title(f'avg execution time heatmap per node', fontsize=16)
-        plt.xlabel('Round (Gruppo)', fontsize=14)
+        plt.xlabel('Epoch', fontsize=14)
         plt.ylabel('ExecHost', fontsize=14)
 
         plt.xticks(ticks=np.arange(len(pivot_table.columns)), labels=pivot_table.columns, rotation=90)

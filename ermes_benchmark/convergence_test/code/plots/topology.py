@@ -137,7 +137,7 @@ def plot_tree_with_sparklines(tree: dict, dfs: list[pd.DataFrame], normalization
     num_groups = len(sparkline_data.columns)
     x_group_indices = np.arange(num_groups)
 
-    x_label = "Time (Round)"
+    x_label = "Time (Epoch)"
     y_label = "N. Req per experiment"
     
     for node in G.nodes():
@@ -196,7 +196,7 @@ def plot_tree_with_sparklines(tree: dict, dfs: list[pd.DataFrame], normalization
 
         spark_ax.set_xticks([0, num_groups - 1])
         spark_ax.set_xticklabels([sparkline_data.columns.min(), sparkline_data.columns.max()])
-        spark_ax.set_xlabel("Tempo (Round)", fontsize=6 * fig_scale / 1.5, labelpad=2)
+        spark_ax.set_xlabel("Time (Epoch)", fontsize=6 * fig_scale / 1.5, labelpad=2)
 
         # Y-axis scaling: massimo tra TaskCount e indirectLoad
         local_max = max(max_tasks_in_round, max_indirect, 1)
@@ -227,7 +227,7 @@ def plot_tree_with_sparklines(tree: dict, dfs: list[pd.DataFrame], normalization
         # Etichetta Max TaskCount / indirectLoad
         spark_ax.text(
             0.5, -0.65,
-            f"Max: {max_tasks_in_round} / {max_indirect} (req/round)",
+            f"Max: {max_tasks_in_round} / {max_indirect} (req/epoch)",
             transform=spark_ax.transAxes,
             ha='center', va='center',
             fontsize=8 * fig_scale / 1.5,

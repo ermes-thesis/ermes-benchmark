@@ -1,0 +1,44 @@
+[EVAL]  2025-11-24T15:32:38.164638269Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:32:38.186269324Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:32:38.186333791Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:32:38.186350451Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:32:53.187306486Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:32:53.195046882Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:32:53.195081362Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:32:53.195111913Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:33:08.196132582Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:33:08.203781202Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:33:08.203814677Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:33:08.203835739Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:33:23.204531056Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:33:23.212101279Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:33:23.212135779Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:33:23.212156Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:33:38.213150283Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:33:38.220955258Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:33:38.220988197Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:33:38.221010038Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:33:53.221596584Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:33:53.2292116Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:33:53.229246497Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:33:53.229266484Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:34:08.229970969Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:34:08.237759127Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:34:08.237792376Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:34:08.237815509Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:34:23.238831937Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:34:23.246534267Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:34:23.246568732Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:34:23.246599974Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:34:38.247379162Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:34:38.254931902Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:34:38.254976727Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:34:38.254998694Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:34:53.255048555Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:34:53.262891131Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:34:53.262925679Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:34:53.262948088Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state
+[EVAL]  2025-11-24T15:35:08.263640443Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:105 > [DEFAULT-STRONG-POLICY], transition to gossip state
+[EVAL]  2025-11-24T15:35:08.271804051Z [MIGRATION_MANAGER] dataManager/migrationManager/migRoutesHandler.go:12 > HTTP-REQ, New gossip message received through HTTP request | remote_addr=10.10.101.56:58978
+[EVAL]  2025-11-24T15:35:08.271840797Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:129 > DEFAULT-STRONG-POLICY, transition to decision state
+[EVAL]  2025-11-24T15:35:08.27186519Z [MIGRATION_MANAGER] dataManager/migrationManager/strongPolicy/ermesPolicy.go:142 > DEFAULT-STRONG-POLICY, transition to idle state

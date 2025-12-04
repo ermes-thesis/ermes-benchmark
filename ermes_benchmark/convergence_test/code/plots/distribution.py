@@ -57,8 +57,8 @@ def local_vs_remote_number_of_executions(dfs, normalization: int):
                         ha='center', va='bottom', fontsize=9, color='#555555')
 
         # Estetica
-        ax.set_title('Local vs Remote Executions per Round')
-        ax.set_xlabel('Round Number')
+        ax.set_title('Local vs Remote Executions per Epoch')
+        ax.set_xlabel('Epoch Number')
         ax.set_ylabel('Count')
         ax.set_xticks(x)
         ax.set_xticklabels(all_groups)
@@ -149,7 +149,7 @@ def plot_heatmap_count_tasks(dfs, normalization: int):
 
         # Titoli e etichette
         plt.title(f'Tasks executed heatmap per node', fontsize=16)
-        plt.xlabel('Round (Gruppo)', fontsize=14)
+        plt.xlabel('Epoch', fontsize=14)
         plt.ylabel('ExecHost', fontsize=14)
 
         plt.xticks(ticks=np.arange(len(pivot_table.columns)), labels=pivot_table.columns, rotation=90)

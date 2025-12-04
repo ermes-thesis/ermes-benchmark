@@ -270,10 +270,12 @@ def find_equilibrium_timestamp(dfs, scenario):
     for df in dfs:
         df['StartTime'] = pd.to_datetime(df['StartTime'])
 
+        '''  
         group_max = df.groupby('Group')['StartTime'].transform('min')
         group_max_s.update(group_max)
+        '''
 
-        df['BeforeEq'] = group_max <= equilibrium_ts
+        df['BeforeEq'] = df['StartTime'] <= equilibrium_ts
 
     return dfs, equilibrium_ts
 

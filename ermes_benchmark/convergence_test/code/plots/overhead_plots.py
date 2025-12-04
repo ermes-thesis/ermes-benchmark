@@ -28,24 +28,55 @@ def plot_stacked_bar_chart(node_map):
     bottom = np.zeros(len(nodes))
     totals = np.zeros(len(nodes))
 
+    # Soglia per considerare un valore "piccolo" (in percentuale del totale)
+    MIN_PERCENTAGE = 0.30
+    OFFSET_SPACING = 75  # Spaziatura verticale per etichette sovrapposte
+    
+    # Raccogliamo tutte le posizioni delle etichette per gestire le sovrapposizioni
+    label_positions = {i: [] for i in range(len(nodes))}
+    
     for msg in message_types:
         values = np.array(data[msg])
         bars = ax.bar(x, values, bottom=bottom, label=msg, width=bar_width)
 
         for i, bar in enumerate(bars):
             if values[i] > 0:
+                total_for_node = sum(data[m][i] for m in message_types)
+                percentage = values[i] / total_for_node if total_for_node > 0 else 0
+                
+                # Posizione centrale del segmento
+                center_y = bottom[i] + values[i] / 2
+                
+                # Se il valore è piccolo, controlliamo le sovrapposizioni
+                if percentage < MIN_PERCENTAGE:
+                    
+                    # Verifica se questa posizione si sovrappone a etichette esistenti
+                    offset_multiplier = 0
+                    for existing_y in label_positions[i]:
+                        if abs(center_y - existing_y) < OFFSET_SPACING:
+                            offset_multiplier += 1
+                    
+                    if offset_multiplier > 0:
+                        # Applica offset incrementale: OFFSET_SPACING, 2*OFFSET_SPACING, 3*OFFSET_SPACING, etc.
+                        center_y = center_y + (offset_multiplier * OFFSET_SPACING)
+                
+                # Registra la posizione dell'etichetta
+                label_positions[i].append(center_y)
+                
                 ax.text(
                     bar.get_x() - 0.05,
-                    bottom[i] + values[i] / 2,
-                    str(values[i]), ha='right',
+                    center_y,
+                    str(values[i]), 
+                    ha='right',
                     va='center',
-                    fontsize=8,
+                    fontsize=5,
                     color=bar.get_facecolor()
                 )
 
         bottom += values
         totals += values
 
+    # Etichette totali in cima alle barre
     for i, total in enumerate(totals):
         ax.text(
             x[i], bottom[i] + max(totals) * 0.01,
@@ -61,8 +92,7 @@ def plot_stacked_bar_chart(node_map):
     ax.set_xticklabels(nodes, rotation=45, ha='right')
     ax.legend(title='Message Types', bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.tight_layout()
-
-
+    
 NODE_COLOR_PALETTE = 'Category10'
 ALIAS_COLOR_PALETTE = 'Category20'
 

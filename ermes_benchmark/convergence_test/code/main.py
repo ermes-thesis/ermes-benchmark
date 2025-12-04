@@ -145,11 +145,13 @@ def main():
     # ==========================================
 
     # 3.0 Overhead Analysis (Using avg_message_counter)
+    
     print("Generating overhead analysis (Average per run)...")
     overhead.plot_stacked_bar_chart(dict(avg_message_counter))
     plt.savefig(f'{output_dir}/message_counts.png', dpi=300, bbox_inches='tight')
     plt.close()
 
+   
     overhead.create_chord_diagram(dict(avg_message_counter), f'{output_dir}/messaggi_chord_diagram')
 
     # 3.1 Latency Analysis (Line Plot)
@@ -197,6 +199,7 @@ def main():
         plt.close(fig_tree)
 
     print(f"All processing complete. Outputs saved to: {output_dir}")
+
 
 if __name__ == "__main__":
     main()
