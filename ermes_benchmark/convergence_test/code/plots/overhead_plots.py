@@ -147,7 +147,6 @@ def create_chord_diagram(node_map: Dict[str, Dict[Tuple[str, str], int]], filena
     df_flows.replace(" ", "_", regex=True, inplace=True)
 
     d3 = D3Blocks(chart='Chord', frame=False, verbose='warning')
-    d3.import_example("energy")
     d3.chord(df_flows, ordering='ascending', filepath=filename + ".html", showfig=False, figsize=[1000,1000], margin=200, fontsize=12)
 
     for _, row in df_flows.iterrows():
@@ -157,4 +156,5 @@ def create_chord_diagram(node_map: Dict[str, Dict[Tuple[str, str], int]], filena
                 d3.edge_properties['target'] == row['target']), 'opacity'] = 0.9
         d3.node_properties.get(row['source'])['color'] = nodes_color_map[row['node']]
         d3.node_properties.get(row['target'])['color'] = nodes_color_map[row['node_target']]
+    d3.show()
     return None

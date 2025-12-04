@@ -1,12 +1,12 @@
-import os
-import sys
 import argparse
-from collections import Counter
-import shutil
 import inspect
-import pandas as pd
-import matplotlib.pyplot as plt
+import shutil
+import sys
+from collections import Counter
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
 
 # Disable pycache generation
 sys.dont_write_bytecode = True
@@ -15,6 +15,7 @@ sys.dont_write_bytecode = True
 import config
 import data_processor
 from plots import latency, distribution, topology, overhead_plots as overhead
+
 
 def main():
     # ==========================================
@@ -145,14 +146,13 @@ def main():
     # ==========================================
 
     # 3.0 Overhead Analysis (Using avg_message_counter)
-    
+
     print("Generating overhead analysis (Average per run)...")
-    overhead.plot_stacked_bar_chart(dict(avg_message_counter))
+    overhead.plot_stacked_bar_chart(avg_message_counter)
     plt.savefig(f'{output_dir}/message_counts.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-   
-    overhead.create_chord_diagram(dict(avg_message_counter), f'{output_dir}/messaggi_chord_diagram')
+    overhead.create_chord_diagram(avg_message_counter, f'{output_dir}/messaggi_chord_diagram')
 
     # 3.1 Latency Analysis (Line Plot)
     print("Generating execution time analysis...")
