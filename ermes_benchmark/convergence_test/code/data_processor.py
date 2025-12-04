@@ -1,17 +1,19 @@
-from collections import defaultdict
-import pandas as pd
 import os
-import zipfile
 import re
 import sys
+import zipfile
+from collections import defaultdict
 from datetime import datetime, timedelta
-import pytz
 from typing import Dict, List
+
+import pandas as pd
+import pytz
 
 # Import custom config
 import config
 
 TIMESTAMP_PATTERN = r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)'
+
 
 def processa_zip_files(zip_path):
     """
@@ -68,6 +70,7 @@ def processa_zip_files(zip_path):
 
     return dati_csv, dati_log
 
+
 def parse_log(dati_log_input):
     """
     Analizza i contenuti dei file di log, cercando una stringa specifica, 'DEFAULT-STRONG-POLICY, transition to decision state'.
@@ -98,6 +101,7 @@ def parse_log(dati_log_input):
 
     return timestamp_data
 
+
 def experiment_start_time(dataframes):
     min_times = []
     for df in dataframes:
@@ -117,10 +121,13 @@ def experiment_end_time(dataframes):
 
 
 safe_offset = 1  # seconds
+
+
 def find_message_counter_from_log(dati_log_input, message_keys, min_ts: datetime, max_ts: datetime):
     '''
     in functions exectuion time range, find how many messages were sent/received thrugh the network, classified by message_type and receivers.
     '''
+
     def extract_last_octet(ip_str):
         match = re.search(r'(\d+)$', ip_str.split(':')[0])
         return match.group(1) if match else ip_str
@@ -128,26 +135,25 @@ def find_message_counter_from_log(dati_log_input, message_keys, min_ts: datetime
     def extract_remote_addr(row):
         match = re.search(r'remote_addr=([\d\.]+:\d+)', row)
         return match.group(1) if match else None
-    
 
-    node_map = defaultdict(dict) # dict of dicts: node_map[receiver][message_type] = count
+    node_map = defaultdict(dict)  # dict of dicts: node_map[receiver][message_type] = count
     for file_name, content_log in dati_log_input.items():
 
         rows = content_log.splitlines()
 
         for row in rows:
             match = re.search(TIMESTAMP_PATTERN, row)
-            if not match: # no timestamp found, skip
+            if not match:  # no timestamp found, skip
                 continue
             timestamp_str = match.group(1)
             timestamp = parse_timestamp(timestamp_str)
-            
+
             if timestamp < min_ts - timedelta(seconds=safe_offset):
                 continue
 
             if timestamp > max_ts + timedelta(seconds=safe_offset):
                 break
-        
+
             for filter_string, alias in message_keys:
                 if filter_string in row:
                     node_label = extract_last_octet(file_name)
@@ -156,14 +162,13 @@ def find_message_counter_from_log(dati_log_input, message_keys, min_ts: datetime
 
                     node_map[node_label][key] = node_map[node_label].get(key, 0) + 1
 
-                            
     return node_map
 
+
 def parse_timestamp(ts: str) -> datetime:
-    
     if sys.version_info >= (3, 11):
         return datetime.fromisoformat(ts)
-    
+
     ts = ts.rstrip('Z')
 
     if '.' in ts:
@@ -177,6 +182,7 @@ def parse_timestamp(ts: str) -> datetime:
 
     return datetime.strptime(ts, fmt).replace(tzinfo=pytz.utc)
 
+
 def parse_dfs(dati_csv: Dict[str, pd.DataFrame], dati_timestamp_per_ip: Dict[str, List[str]]):
     """
     Elabora i DataFrame CSV assegnando a ciascuna riga un gruppo basato sui timestamp di transizione estratti dai log.
@@ -187,12 +193,12 @@ def parse_dfs(dati_csv: Dict[str, pd.DataFrame], dati_timestamp_per_ip: Dict[str
 
     for ip, timestamps in dati_timestamp_per_ip.items():
         try:
-            #print(timestamps)
+            # print(timestamps)
             sorted_dt = sorted([
                 parse_timestamp(ts)
                 for ts in timestamps
             ])
-            #print(sorted_dt)
+            # print(sorted_dt)
             ip_windows[ip] = sorted_dt
         except ValueError as e:
             print(f"Skipping IP {ip}: Errore nel parsing del formato dei timestamp di log. Errore: {e}")
@@ -247,21 +253,30 @@ def parse_dfs(dati_csv: Dict[str, pd.DataFrame], dati_timestamp_per_ip: Dict[str
         elaborated_dfs.append(current_df)
     return elaborated_dfs
 
+
 def find_equilibrium_timestamp(dfs, scenario):
     """
     Find the equilibrium timestamp across multiple DataFrames.
     """
+    seen_functions = set()
     min_timestamps = []
     for df in dfs:
         for index, row in df.iterrows():
-            if row['FuncName'] + "-" + row['EntryHost'] in config.eq_state[scenario] and row['ExecHost'] == config.eq_state[scenario][
-                row['FuncName'] + "-" + row['EntryHost']]:
+            scen = config.eq_state[scenario][row['FuncName'] + "-" + row['EntryHost']]
+            if row['FuncName'] + "-" + row['ExecHost'] in seen_functions and row['ExecHost'] == scen:
+                continue
+            if row['FuncName'] + "-" + scen in seen_functions and row['ExecHost'] != scen:
+                min_timestamps.pop()
+                seen_functions.remove(row['FuncName'] + "-" + scen)
+                continue
+            if row['FuncName'] + "-" + row['EntryHost'] in config.eq_state[scenario] and row['ExecHost'] == scen:
                 min_timestamps.append(row['StartTime'])
-                break
-
-    if not min_timestamps:
+                seen_functions.add(row['FuncName'] + "-" + row['ExecHost'])
+                print(f"Function {row['FuncName']} on {row['ExecHost']} reached equilibrium at {row['StartTime']}")
+    print(seen_functions)
+    if not min_timestamps or len(seen_functions) != len(set(config.eq_state[scenario].values())):
         for df in dfs:
-            df['BeforeEq'] = False
+            df['BeforeEq'] = True
         return dfs, None
 
     equilibrium_ts = pd.to_datetime(max(min_timestamps))
@@ -275,7 +290,8 @@ def find_equilibrium_timestamp(dfs, scenario):
         group_max_s.update(group_max)
         '''
 
-        df['BeforeEq'] = df['StartTime'] <= equilibrium_ts
+        df['BeforeEq'] = df['StartTime'] < equilibrium_ts
+        tmp = df[(df['Group'] == 5) & (df['BeforeEq'] == True)]
+        print(tmp)
 
     return dfs, equilibrium_ts
-
