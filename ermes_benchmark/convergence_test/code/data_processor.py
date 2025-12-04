@@ -272,8 +272,6 @@ def find_equilibrium_timestamp(dfs, scenario):
             if row['FuncName'] + "-" + row['EntryHost'] in config.eq_state[scenario] and row['ExecHost'] == scen:
                 min_timestamps.append(row['StartTime'])
                 seen_functions.add(row['FuncName'] + "-" + row['ExecHost'])
-                print(f"Function {row['FuncName']} on {row['ExecHost']} reached equilibrium at {row['StartTime']}")
-    print(seen_functions)
     if not min_timestamps or len(seen_functions) != len(set(config.eq_state[scenario].values())):
         for df in dfs:
             df['BeforeEq'] = True
@@ -291,7 +289,5 @@ def find_equilibrium_timestamp(dfs, scenario):
         '''
 
         df['BeforeEq'] = df['StartTime'] < equilibrium_ts
-        tmp = df[(df['Group'] == 5) & (df['BeforeEq'] == True)]
-        print(tmp)
 
     return dfs, equilibrium_ts
