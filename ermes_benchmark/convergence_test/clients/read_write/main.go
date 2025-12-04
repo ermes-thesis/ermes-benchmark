@@ -34,7 +34,7 @@ func main() {
 		geolocation = os.Args[3]
 	}
 
-	colNames := os.Args[4:]
+	colName := os.Args[4]
 
 	// Call the library setup
 
@@ -58,34 +58,32 @@ func main() {
 
 	for i := 0; i < functionsForRound*rounds; i++ {
 		go func() {
-			for _, colName := range colNames {
-				body, code, err := lib.ExecuteFunction(
-					"writeCollection",
-					"",
-					map[string]string{
-						"data": "write number " + strconv.Itoa(i) + " from client " + strconv.Itoa(clientId),
+			body, code, err := lib.ExecuteFunction(
+				"writeCollection",
+				"",
+				map[string]string{
+					"data": "write number " + strconv.Itoa(i) + " from client " + strconv.Itoa(clientId),
+				},
+				map[string]map[string]string{
+					"query": {
+						"name": colName,
 					},
-					map[string]map[string]string{
-						"query": {
-							"name": colName,
-						},
+				},
+				geolocation,
+			)
+			fmt.Println(code, string(body), err)
+			body, code, err = lib.ExecuteFunction(
+				"readCollection",
+				"",
+				map[string]string{},
+				map[string]map[string]string{
+					"query": {
+						"name": colName,
 					},
-					geolocation,
-				)
-				fmt.Println(code, string(body), err)
-				body, code, err = lib.ExecuteFunction(
-					"readCollection",
-					"",
-					map[string]string{},
-					map[string]map[string]string{
-						"query": {
-							"name": colName,
-						},
-					},
-					geolocation,
-				)
-				fmt.Println(code, string(body), err)
-			}
+				},
+				geolocation,
+			)
+			fmt.Println(code, string(body), err)
 		}()
 		time.Sleep(time.Duration((roundDuration / float64(functionsForRound)) * 1_000_000_000))
 	}

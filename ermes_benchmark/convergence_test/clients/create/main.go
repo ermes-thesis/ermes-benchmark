@@ -35,6 +35,11 @@ func main() {
 		geolocation = os.Args[4]
 	}
 
+	consistency := "sequential"
+	if len(os.Args) > 5 {
+		consistency = os.Args[5]
+	}
+
 	// Call the library setup
 
 	confFile := "config.yaml"
@@ -56,7 +61,7 @@ func main() {
 		"",
 		map[string]string{
 			"name":        collectionName,
-			"consistency": "sequential",
+			"consistency": consistency,
 			"geolocation": geolocation,
 		},
 		map[string]map[string]string{},
