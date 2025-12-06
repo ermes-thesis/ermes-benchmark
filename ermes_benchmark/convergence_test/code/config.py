@@ -34,24 +34,24 @@ default_port = ':12345'
 
 eq_state = {
     'full_traversal': {
-        'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
-        'functionReadSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
+        'writeCollection-10.10.101.51:12345': '10.10.101.51:12345',
+        'readCollection-10.10.101.54:12345': '10.10.101.54:12345',
     },
     'bottom_up': {
-        'functionUseSeqCollections-10.10.101.50:12345': '10.10.101.50:12345',
-        'functionUseSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
-        'functionUseSeqCollections-10.10.101.52:12345': '10.10.101.52:12345',
-        'functionUseSeqCollections-10.10.101.53:12345': '10.10.101.53:12345',
-        'functionUseSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
-        'functionReadSeqCollections-10.10.101.57:12345': '10.10.101.57:12345',
+        'writeCollection-10.10.101.50:12345': '10.10.101.50:12345',
+        'writeCollection-10.10.101.51:12345': '10.10.101.51:12345',
+        'writeCollection-10.10.101.52:12345': '10.10.101.52:12345',
+        'writeCollection-10.10.101.53:12345': '10.10.101.53:12345',
+        'writeCollection-10.10.101.54:12345': '10.10.101.54:12345',
+        'readCollection-10.10.101.57:12345': '10.10.101.57:12345',
     },
     'top_down': {
-        'functionUseSeqCollections-10.10.101.57:12345': '10.10.101.57:12345',
-        'functionReadSeqCollections-10.10.101.50:12345': '10.10.101.50:12345',
-        'functionReadSeqCollections-10.10.101.51:12345': '10.10.101.51:12345',
-        'functionReadSeqCollections-10.10.101.52:12345': '10.10.101.52:12345',
-        'functionReadSeqCollections-10.10.101.53:12345': '10.10.101.53:12345',
-        'functionReadSeqCollections-10.10.101.54:12345': '10.10.101.54:12345',
+        'writeCollection-10.10.101.57:12345': '10.10.101.57:12345',
+        'readCollection-10.10.101.50:12345': '10.10.101.50:12345',
+        'readCollection-10.10.101.51:12345': '10.10.101.51:12345',
+        'readCollection-10.10.101.52:12345': '10.10.101.52:12345',
+        'readCollection-10.10.101.53:12345': '10.10.101.53:12345',
+        'readCollection-10.10.101.54:12345': '10.10.101.54:12345',
     },
     'conflict_1': {
         'writeCollection-10.10.101.51:12345': '10.10.101.57:12345',
