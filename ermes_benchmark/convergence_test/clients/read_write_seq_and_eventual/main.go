@@ -71,7 +71,9 @@ func main() {
 			body, code, err = lib.ExecuteFunction(
 				"readTwoCollections",
 				"",
-				map[string]string{},
+				map[string]string{
+					"data": "write eventual number " + strconv.Itoa(i) + " from client " + strconv.Itoa(clientId),
+				},
 				map[string]map[string]string{
 					"querySequentialAndEventual": {},
 				},
