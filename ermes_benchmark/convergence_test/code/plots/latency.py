@@ -252,16 +252,17 @@ def local_vs_remote_latency_violin(dfs):
     plt.tight_layout()
     return fig
 
-def plot_logs_avg_latency(dfs, show_if_remote = True):
+def plot_logs_avg_latency(dfs, show_if_remote=True):
     """
-    Plots the overall average per round alongside the average per file for that round,
-    using WARM/COOL colors for equilibrium and different SHADES to distinguish files.
+    Plots the overall average per round alongside the average per file for that round.
+    The bar is split: the hatched portion represents the % of non-local executions.
     """
     try:
         # 1. Concatenate all files
         full_df = pd.concat(dfs, keys=range(1, len(dfs) + 1), names=['FileID', None])
         full_df = full_df.reset_index(level=0)
 
+        # Calcolo medie (Altezza totale delle barre)
         avg_all_files = full_df.groupby('Group')['Duration'].mean().rename('Avg_All')
         avg_per_file = full_df.groupby(['Group', 'FileID'])['Duration'].mean().unstack(fill_value=np.nan)
 
@@ -269,10 +270,19 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
         all_groups = plot_df.index.tolist()
 
         # ----------------------------
+        # PRE-CALCOLO RATIO NON-LOCAL
+        # ----------------------------
+        # Calcoliamo la % di righe con Is_Local=False per ogni Gruppo/File
+        if 'Is_Local' in full_df.columns:
+            # (~x).mean() calcola la percentuale di False (cioè non-local)
+            non_local_ratio = full_df.groupby(['Group', 'FileID'])['Is_Local'].apply(lambda x: (~x).mean()).unstack(fill_value=0)
+        else:
+            non_local_ratio = pd.DataFrame(0, index=plot_df.index, columns=avg_per_file.columns)
+
+        # ----------------------------
         # 2. warm / cool / mixed logic
         # ----------------------------
-        group_status = {}  # "warm", "cool", "mixed"
-
+        group_status = {}
         for g, subdf in full_df.groupby('Group')['BeforeEq']:
             if subdf.all():
                 group_status[g] = "warm"
@@ -289,14 +299,13 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
         warm_shades = WARM_CMAP(np.linspace(0.4, 1.0, n_files + 1))
         cool_shades = COOL_CMAP(np.linspace(0.4, 1.0, n_files + 1))
 
-        # NEW: gray shades for mixed groups
-        gray_shades = np.linspace(0.35, 0.75, n_files + 1)  # from dark → light
-        # convert each to RGBA
-        gray_colors = [(g, g, g, 0.9) for g in gray_shades]  # aggregate bars (higher alpha)
-        gray_colors_file = [(g, g, g, 0.7) for g in gray_shades]  # per-file bars
+        # Gray shades for mixed
+        gray_shades = np.linspace(0.35, 0.75, n_files + 1)
+        gray_colors = [(g, g, g, 0.9) for g in gray_shades]
+        gray_colors_file = [(g, g, g, 0.7) for g in gray_shades]
 
         # ----------------------------
-        # 3. Setup
+        # 3. Setup Plot
         # ----------------------------
         plt.style.use('ggplot')
         fig, ax = plt.subplots(figsize=(14, 8))
@@ -307,7 +316,7 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
         agg_pos = x - (total_bars_in_group / 2 - 0.5) * bar_width
 
         # ----------------------------
-        # 4. Aggregate bars (Avg_All)
+        # 4. Aggregate bars (Avg_All) - Nessuna modifica qui (o logica simile se volessi split anche qui)
         # ----------------------------
         agg_colors = []
         for g in all_groups:
@@ -315,8 +324,8 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
                 agg_colors.append(warm_shades[0])
             elif group_status[g] == "cool":
                 agg_colors.append(cool_shades[0])
-            else:  # mixed
-                agg_colors.append(gray_colors[0])  # darkest gray
+            else:
+                agg_colors.append(gray_colors[0])
 
         ax.bar(
             agg_pos,
@@ -330,57 +339,88 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
         )
 
         # ----------------------------
-        # 5. Per-file bars
+        # 5. Per-file bars (STACKED LOGIC)
         # ----------------------------
-        gray_hatch = (0.179, 0.179, 0.179)
+        gray_hatch_color = (0.2, 0.2, 0.2, 0.5) # Grigio scuro per le righe dell'hatch
+
         for j in range(1, n_files + 1):
             file_pos = agg_pos + j * bar_width
-            file_bar_colors = []
-            file_bar_hatches = []
-            file_bar_edgecolors = []
+
+            # Liste per i colori e le altezze di questo specifico Client (FileID j)
+            bar_colors = []
+            total_heights = []
+            ratios = []
 
             for g in all_groups:
-
+                # Determina colore base
                 if group_status[g] == "warm":
-                    file_bar_colors.append(warm_shades[j])
+                    bar_colors.append(warm_shades[j])
                 elif group_status[g] == "cool":
-                    file_bar_colors.append(cool_shades[j])
+                    bar_colors.append(cool_shades[j])
                 else:
-                    file_bar_colors.append(gray_colors_file[j])  # per-file gray shade
+                    bar_colors.append(gray_colors_file[j])
 
-                # Hatch for non-local ops
+                # Ottieni altezza totale e ratio
+                h = plot_df.loc[g, j]
+                r = non_local_ratio.loc[g, j] if j in non_local_ratio.columns else 0
 
+                # Gestione NaN
+                if pd.isna(h): h = 0
+                if pd.isna(r): r = 0
 
-                if 'Is_Local' in full_df.columns:
-                    has_non_local = full_df[
-                        (full_df['Group'] == g) &
-                        (full_df['FileID'] == j)
-                    ]['Is_Local'].apply(lambda x: not x).any()
+                total_heights.append(h)
+                ratios.append(r)
 
-                    if has_non_local and show_if_remote:
-                        file_bar_hatches.append('//')
-                        file_bar_edgecolors.append(gray_hatch)   # colore dell’hatch
-                    else:
-                        file_bar_hatches.append(None)
-                        file_bar_edgecolors.append('black')      # edge normale
-                else:
-                    file_bar_hatches.append(None)
-                    file_bar_edgecolors.append('black')
+            # Convertiamo in numpy array per calcoli vettoriali facili
+            total_heights = np.array(total_heights)
+            ratios = np.array(ratios)
 
-            bars = ax.bar(
+            # Calcolo altezze parziali
+            if show_if_remote:
+                height_hatched = total_heights * ratios       # Parte NON locale
+                height_solid = total_heights - height_hatched # Parte locale
+            else:
+                height_hatched = np.zeros_like(total_heights)
+                height_solid = total_heights
+
+            # Disegna la parte SOLIDA (Base)
+            ax.bar(
                 file_pos,
-                plot_df[j],
+                height_solid,
                 bar_width,
-                color=file_bar_colors,
-                edgecolor=file_bar_edgecolors,
+                bottom=height_hatched,
+                color=bar_colors,
+                edgecolor='black', # o None se preferisci meno bordi interni
                 alpha=0.7,
                 label='_nolegend_'
             )
 
-            # Apply hatches
-            for bar, hatch_pattern in zip(bars, file_bar_hatches):
-                if hatch_pattern:
-                    bar.set_hatch(hatch_pattern)
+            # Disegna la parte HATCHED (Top) - usa bottom=height_solid
+            # Disegniamo solo se c'è altezza > 0 per evitare warning o artefatti
+            if np.any(height_hatched > 0):
+                ax.bar(
+                    file_pos,
+                    height_hatched,
+                    bar_width,
+                    color=bar_colors,    # Stesso colore di sfondo
+                    edgecolor=gray_hatch_color, # Colore delle righe diagonali
+                    hatch='////',        # Hatch più denso
+                    linewidth=0,         # Rimuove bordo esterno del rettangolo superiore (opzionale)
+                    alpha=0.7,
+                    label='_nolegend_'
+                )
+
+            # Opzionale: ridisegnare un bordo nero attorno all'intera barra (totale)
+            # per dare un aspetto "unito"
+            ax.bar(
+                file_pos,
+                total_heights,
+                bar_width,
+                color='none', # Trasparente
+                edgecolor='black',
+                label='_nolegend_',
+                alpha=0.7,
+            )
 
         # ----------------------------
         # 6. Global mean line
@@ -391,15 +431,19 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
         # ----------------------------
         # 7. Labels over bars
         # ----------------------------
+        # Avg All Labels
         for i, v in enumerate(plot_df['Avg_All']):
-            ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', rotation=45, fontsize=7, fontweight='bold')
+            if pd.notna(v):
+                ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', rotation=45, fontsize=7, fontweight='bold')
 
+        # Per-File Labels
         for j in range(1, n_files + 1):
             file_pos = agg_pos + j * bar_width
-            for i, v in enumerate(plot_df[j]):
-                if pd.notna(v):
+            # Qui usiamo total_heights ricalcolato o preso dal df
+            series_vals = plot_df[j].values
+            for i, v in enumerate(series_vals):
+                if pd.notna(v) and v > 0:
                     ax.text(file_pos[i], v + 0.2, f'{v:.1f}', ha='center', rotation=45, fontsize=7)
-
 
         # ----------------------------
         # 8. Legend
@@ -411,27 +455,11 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
         ]
 
         file_legend_elements = []
-        hatch_legend_added = False
-
-        for j in range(1, n_files + 1):
-            '''
+        if show_if_remote and 'Is_Local' in full_df.columns:
             file_legend_elements.append(
-                Line2D([0], [0], color=warm_shades[j], lw=4, alpha=0.7, label=f'User {j} Before Eq.')
+                Rectangle((0,0), 1, 1, facecolor='white', edgecolor=gray_hatch_color, hatch='////',
+                          label='% Non-Local Execution')
             )
-            file_legend_elements.append(
-                Line2D([0], [0], color=cool_shades[j], lw=4, alpha=0.7, label=f'User {j} After Eq.')
-            )
-            file_legend_elements.append(
-                Line2D([0], [0], color=gray_colors_file[j], lw=4, alpha=0.7, label=f'User {j} Mixed')
-            )
-            '''
-
-            if not hatch_legend_added and 'Is_Local' in full_df.columns and show_if_remote:
-                file_legend_elements.append(
-                    Rectangle((0,0), 1, 1, facecolor='white', edgecolor=gray_hatch, hatch='//',
-                              label='Non-Local Operation Present')
-                )
-                hatch_legend_added = True
 
         legend_elements = equilibrium_legend + file_legend_elements + [
             Line2D([0], [0], color='black', lw=2, linestyle='--',
@@ -461,12 +489,7 @@ def plot_logs_avg_latency(dfs, show_if_remote = True):
 
         plt.tight_layout()
 
-        # ----------------------------
-        # 10. Output
-        # ----------------------------
-        print(f"Analysis completed for {len(all_groups)} groups using {len(dfs)} files.")
-        print(f"Global average (Aggregated): {global_mean:.2f} ms")
-
+        print(f"Analysis completed for {len(all_groups)} groups.")
         return avg_all_files
 
     except Exception as e:
