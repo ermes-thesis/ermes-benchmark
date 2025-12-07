@@ -48,7 +48,7 @@ def main():
         print(f"ERROR: Directory {data_dir_path} does not exist.")
         return
 
-    files = list(data_dir_path.glob("*.zip"))
+    files = [f for f in data_dir_path.glob("*.zip") if not f.name.startswith("_")]
 
     # Sort files to ensure consistent processing order (optional but recommended)
     files.sort()
@@ -86,7 +86,7 @@ def main():
         print(f"Processing file: {f.name}...")
 
         # Extract and parse logs/csv
-        csv, log = data_processor.processa_zip_files(f)
+        csv, log = data_processor.process_zip_files(f)
         parsed_log = data_processor.parse_log(log)
         print(f"  Processed {len(csv)} CSV files and {len(log)} LOG files.")
 

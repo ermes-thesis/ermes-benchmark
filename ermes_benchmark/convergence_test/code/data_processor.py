@@ -15,7 +15,7 @@ import config
 TIMESTAMP_PATTERN = r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)'
 
 
-def processa_zip_files(zip_path):
+def process_zip_files(zip_path):
     """
     Legge un file ZIP contenente file .csv e .log e restituisce due dizionari.
 
