@@ -1,8 +1,9 @@
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
+import numpy as np
+import pandas as pd
 from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
+
 
 def local_vs_remote_latency(dfs):
     """
@@ -13,39 +14,39 @@ def local_vs_remote_latency(dfs):
         import numpy as np
         from matplotlib.patches import Patch
         from matplotlib.lines import Line2D
-        
+
         plt.style.use('ggplot')
         fig, ax = plt.subplots(figsize=(12, 7))
-        
+
         n_files = len(dfs)
         x = np.arange(n_files)
         total_width = 0.8
         single_bar_width = total_width / 1
-        
+
         colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
-        file_labels = [f'User {i+1}' for i in range(n_files)]
-        
+        file_labels = [f'User {i + 1}' for i in range(n_files)]
+
         all_durations = []
         data_to_plot = []
-        
+
         for df in dfs:
             durations = df['Duration'].dropna()
             if not durations.empty:
                 all_durations.extend(durations.tolist())
-            
+
             min_overall = durations.min() if not durations.empty else np.nan
             max_overall = durations.max() if not durations.empty else np.nan
             mean_total = durations.mean() if not durations.empty else np.nan
-            
+
             local_data = df[df['Is_Local'] == True]['Duration'].dropna()
             mean_local = local_data.mean() if not local_data.empty else np.nan
-            
+
             remote_data = df[df['Is_Local'] == False]['Duration'].dropna()
             mean_remote = remote_data.mean() if not remote_data.empty else np.nan
-            
+
             lower_mean = min(mean_local, mean_remote) if not (np.isnan(mean_local) or np.isnan(mean_remote)) else np.nan
             upper_mean = max(mean_local, mean_remote) if not (np.isnan(mean_local) or np.isnan(mean_remote)) else np.nan
-            
+
             data_to_plot.append({
                 'min': min_overall,
                 'max': max_overall,
@@ -53,29 +54,29 @@ def local_vs_remote_latency(dfs):
                 'lower_mean': lower_mean,
                 'upper_mean': upper_mean
             })
-            
+
         if all_durations:
             min_all = np.nanmin(all_durations)
             max_all = np.nanmax(all_durations)
-            
-            y_min = max(0, min_all * 0.95) 
-            y_max = max_all * 1.05 
-            
+
+            y_min = max(0, min_all * 0.95)
+            y_max = max_all * 1.05
+
             ax.set_ylim(bottom=y_min, top=y_max)
-            
+
         for i, data in enumerate(data_to_plot):
             current_x = x[i]
             user_color = colors[i]
             bar_width = single_bar_width * 0.8
             stem_line_width = 1.5
-            
-            text_x_pos = current_x + bar_width * 0.25 
-            
+
+            text_x_pos = current_x + bar_width * 0.25
+
             if not np.isnan(data['min']) and not np.isnan(data['max']):
                 min_val = data['min']
                 max_val = data['max']
                 height_overall = max_val - min_val
-                
+
                 ax.bar(current_x, height_overall, bottom=min_val, width=bar_width,
                        color='grey', alpha=0.15, edgecolor=None, linewidth=0, zorder=0, label='_nolegend_')
 
@@ -83,75 +84,82 @@ def local_vs_remote_latency(dfs):
                 lower_mean = data['lower_mean']
                 upper_mean = data['upper_mean']
                 height_mean = upper_mean - lower_mean
-                
+
                 # Box
-                ax.bar(current_x, height_mean, bottom=lower_mean, width=bar_width*0.6,
+                ax.bar(current_x, height_mean, bottom=lower_mean, width=bar_width * 0.6,
                        color=user_color, alpha=0.5, edgecolor=user_color, linewidth=1, zorder=2, label='_nolegend_')
 
                 # Stelo inferiore (Min al bordo inferiore del box)
                 if not np.isnan(data['min']):
                     ax.vlines(current_x, data['min'], lower_mean,
-                            colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1, label='_nolegend_')
+                              colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1,
+                              label='_nolegend_')
 
                 # Stelo superiore (bordo superiore del box al Max)
                 if not np.isnan(data['max']):
                     ax.vlines(current_x, upper_mean, data['max'],
-                            colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1, label='_nolegend_')
+                              colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1,
+                              label='_nolegend_')
             elif not np.isnan(data['mean_total']):
                 # Stelo inferiore (Min al bordo inferiore del box)
                 if not np.isnan(data['min']):
                     ax.vlines(current_x, data['min'], data['mean_total'],
-                            colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1, label='_nolegend_')
+                              colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1,
+                              label='_nolegend_')
 
                 # Stelo superiore (bordo superiore del box al Max)
                 if not np.isnan(data['max']):
                     ax.vlines(current_x, data['mean_total'], data['max'],
-                            colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1, label='_nolegend_')
-                       
+                              colors=[user_color], alpha=0.8, linestyle=':', linewidth=stem_line_width, zorder=1,
+                              label='_nolegend_')
+
             # 3. Segni Min/Max (i "whiskers") + ETICHETTE MIN E MAX
             if not np.isnan(data['min']):
-                ax.hlines(data['min'], current_x - bar_width*0.2, current_x + bar_width*0.2,
+                ax.hlines(data['min'], current_x - bar_width * 0.2, current_x + bar_width * 0.2,
                           colors=[user_color], linewidth=2, zorder=4, label='_nolegend_')
                 # Etichetta Min
-                ax.text(text_x_pos, data['min'], f'Min: {data["min"]:.2f}', 
+                ax.text(text_x_pos, data['min'], f'Min: {data["min"]:.2f}',
                         ha='left', va='center', fontsize=8, color=user_color, weight='bold')
-                
+
             if not np.isnan(data['max']):
-                 ax.hlines(data['max'], current_x - bar_width*0.2, current_x + bar_width*0.2,
+                ax.hlines(data['max'], current_x - bar_width * 0.2, current_x + bar_width * 0.2,
                           colors=[user_color], linewidth=2, zorder=4, label='_nolegend_')
-                 ax.text(text_x_pos, data['max'], f'Max: {data["max"]:.2f}', 
+                ax.text(text_x_pos, data['max'], f'Max: {data["max"]:.2f}',
                         ha='left', va='center', fontsize=8, color=user_color, weight='bold')
 
             # 4. Linea Media Totale + ETICHETTA MEDIA
             if not np.isnan(data['mean_total']):
-                ax.hlines(data['mean_total'], current_x - bar_width*0.4, current_x + bar_width*0.4,
+                ax.hlines(data['mean_total'], current_x - bar_width * 0.4, current_x + bar_width * 0.4,
                           colors=[user_color], linewidth=2, zorder=3, label='_nolegend_')
-                ax.text(text_x_pos, data['mean_total'], f'Avg: {data["mean_total"]:.2f}', 
+                ax.text(text_x_pos, data['mean_total'], f'Avg: {data["mean_total"]:.2f}',
                         ha='left', va='center', fontsize=9, color='black', weight='bold',
                         bbox=dict(facecolor='white', alpha=0.8, edgecolor='none', boxstyle='square,pad=0.2'))
-        
+
         # --- Legenda ---
         legend_elements = [
-            Patch(facecolor='grey', alpha=0.15, edgecolor=None, linewidth=0, label=r'Overall Latency Range (Min $\leftrightarrow$ Max)'),
+            Patch(facecolor='grey', alpha=0.15, edgecolor=None, linewidth=0,
+                  label=r'Overall Latency Range (Min $\leftrightarrow$ Max)'),
             Line2D([0], [0], color=colors[0], lw=stem_line_width, label='Min/Max Whisker (Stem) (Colore per Utente)'),
-            Patch(facecolor=colors[0], alpha=0.5, edgecolor=colors[0], label=r'Mean Range (Local Mean $\leftrightarrow$ Remote Mean)'),
+            Patch(facecolor=colors[0], alpha=0.5, edgecolor=colors[0],
+                  label=r'Mean Range (Local Mean $\leftrightarrow$ Remote Mean)'),
             Line2D([0], [0], color='black', lw=1.5, label='Overall User Mean (Linea Mediana)')
         ]
-        
-        ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=2, frameon=False, fontsize=10)
-        
+
+        ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=2, frameon=False,
+                  fontsize=10)
+
         # --- Etichette e Titolo ---
-        #ax.set_title('User Latency Analysis: Custom Boxplot con Valori Etichettati')
+        # ax.set_title('User Latency Analysis: Custom Boxplot con Valori Etichettati')
         ax.set_xlabel('User')
         ax.set_ylabel('Latency (ms)')
         ax.set_xticks(x)
         ax.set_xticklabels(file_labels)
-        
+
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        
+
         plt.tight_layout()
-        
+
         return fig
 
     except Exception as e:
@@ -159,6 +167,7 @@ def local_vs_remote_latency(dfs):
         import traceback
         traceback.print_exc()
         return None
+
 
 def local_vs_remote_latency_violin(dfs):
     """
@@ -173,7 +182,7 @@ def local_vs_remote_latency_violin(dfs):
     n_files = len(dfs)
     x = np.arange(n_files)
     colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
-    file_labels = [f'User {i+1}' for i in range(n_files)]
+    file_labels = [f'User {i + 1}' for i in range(n_files)]
 
     data_list = []
     stats = []
@@ -223,7 +232,7 @@ def local_vs_remote_latency_violin(dfs):
         if not np.isnan(stat['avg_local']):
             if int(stat['avg_local']) != int(stat['avg']):
                 ax.hlines(stat['avg_local'], current_x - 0.12, current_x + 0.12,
-                        color=user_color, linestyle='--', linewidth=2)
+                          color=user_color, linestyle='--', linewidth=2)
                 ax.text(current_x + 0.2, stat['avg_local'], f'Loc: {stat["avg_local"]:.2f}',
                         fontsize=8, color=user_color)
 
@@ -231,7 +240,7 @@ def local_vs_remote_latency_violin(dfs):
         if not np.isnan(stat['avg_remote']):
             if int(stat['avg_remote']) != int(stat['avg']):
                 ax.hlines(stat['avg_remote'], current_x - 0.12, current_x + 0.12,
-                        color=user_color, linestyle='-.', linewidth=2)
+                          color=user_color, linestyle='-.', linewidth=2)
                 ax.text(current_x + 0.2, stat['avg_remote'], f'Rem: {stat["avg_remote"]:.2f}',
                         fontsize=8, color=user_color)
 
@@ -239,11 +248,12 @@ def local_vs_remote_latency_violin(dfs):
         Line2D([0], [0], color='black', lw=2, label='Avg Totale'),
         Line2D([0], [0], color='grey', lw=2, linestyle='--', label='Avg Local'),
         Line2D([0], [0], color='grey', lw=2, linestyle='-.', label='Avg Remote'),
-        #Line2D([0], [0], color='grey', lw=1.5, linestyle=':', label='Min/Max (Vertical Line)'),
+        # Line2D([0], [0], color='grey', lw=1.5, linestyle=':', label='Min/Max (Vertical Line)'),
     ]
-    ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=4, frameon=False, fontsize=10)
+    ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=4, frameon=False,
+              fontsize=10)
 
-    #ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
+    # ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
     ax.set_xlabel('User')
     ax.set_ylabel('Latency (ms)')
     ax.set_xticks(x)
@@ -251,6 +261,7 @@ def local_vs_remote_latency_violin(dfs):
 
     plt.tight_layout()
     return fig
+
 
 def plot_logs_avg_latency(dfs, show_if_remote=True):
     """
@@ -275,7 +286,8 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
         # Calcoliamo la % di righe con Is_Local=False per ogni Gruppo/File
         if 'Is_Local' in full_df.columns:
             # (~x).mean() calcola la percentuale di False (cioè non-local)
-            non_local_ratio = full_df.groupby(['Group', 'FileID'])['Is_Local'].apply(lambda x: (~x).mean()).unstack(fill_value=0)
+            non_local_ratio = full_df.groupby(['Group', 'FileID'])['Is_Local'].apply(lambda x: (~x).mean()).unstack(
+                fill_value=0)
         else:
             non_local_ratio = pd.DataFrame(0, index=plot_df.index, columns=avg_per_file.columns)
 
@@ -341,7 +353,7 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
         # ----------------------------
         # 5. Per-file bars (STACKED LOGIC)
         # ----------------------------
-        gray_hatch_color = (0.2, 0.2, 0.2, 0.5) # Grigio scuro per le righe dell'hatch
+        gray_hatch_color = (0.2, 0.2, 0.2, 0.5)  # Grigio scuro per le righe dell'hatch
 
         for j in range(1, n_files + 1):
             file_pos = agg_pos + j * bar_width
@@ -377,8 +389,8 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
 
             # Calcolo altezze parziali
             if show_if_remote:
-                height_hatched = total_heights * ratios       # Parte NON locale
-                height_solid = total_heights - height_hatched # Parte locale
+                height_hatched = total_heights * ratios  # Parte NON locale
+                height_solid = total_heights - height_hatched  # Parte locale
             else:
                 height_hatched = np.zeros_like(total_heights)
                 height_solid = total_heights
@@ -390,7 +402,7 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
                 bar_width,
                 bottom=height_hatched,
                 color=bar_colors,
-                edgecolor='black', # o None se preferisci meno bordi interni
+                edgecolor='black',  # o None se preferisci meno bordi interni
                 alpha=0.7,
                 label='_nolegend_'
             )
@@ -402,10 +414,10 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
                     file_pos,
                     height_hatched,
                     bar_width,
-                    color=bar_colors,    # Stesso colore di sfondo
-                    edgecolor=gray_hatch_color, # Colore delle righe diagonali
-                    hatch='////',        # Hatch più denso
-                    linewidth=0,         # Rimuove bordo esterno del rettangolo superiore (opzionale)
+                    color=bar_colors,  # Stesso colore di sfondo
+                    edgecolor=gray_hatch_color,  # Colore delle righe diagonali
+                    hatch='////',  # Hatch più denso
+                    linewidth=0,  # Rimuove bordo esterno del rettangolo superiore (opzionale)
                     alpha=0.7,
                     label='_nolegend_'
                 )
@@ -416,11 +428,16 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
                 file_pos,
                 total_heights,
                 bar_width,
-                color='none', # Trasparente
+                color='none',  # Trasparente
                 edgecolor='black',
                 label='_nolegend_',
                 alpha=0.7,
             )
+
+        max_data_height = plot_df.max().max()
+
+        if pd.notna(max_data_height):
+            ax.set_ylim(0, max_data_height * 1.1)
 
         # ----------------------------
         # 6. Global mean line
@@ -457,7 +474,7 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
         file_legend_elements = []
         if show_if_remote and 'Is_Local' in full_df.columns:
             file_legend_elements.append(
-                Rectangle((0,0), 1, 1, facecolor='white', edgecolor=gray_hatch_color, hatch='////',
+                Rectangle((0, 0), 1, 1, facecolor='white', edgecolor=gray_hatch_color, hatch='////',
                           label='% Non-Local Execution')
             )
 
@@ -497,6 +514,7 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
         import traceback
         traceback.print_exc()
         return None
+
 
 def plot_heatmap_avg_latency(dfs):
     """
