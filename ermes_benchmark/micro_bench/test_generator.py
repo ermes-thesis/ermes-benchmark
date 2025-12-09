@@ -1,6 +1,7 @@
 import numpy as np
 import json
 import os
+import argparse
 
 
 def sample_collection_positions(tree, mu=0, sigma=1.0, n_collections=1, seed=None):
@@ -118,7 +119,7 @@ def assign_user_collections(user_assignments, collection_positions, write_prob=0
         rights = []
         for col in chosen:
             right = "write" if np.random.rand() < write_prob else "read"
-            rights.append((str(col), right))
+            rights.append({str(col): right})
 
         user_collection_map[user] = rights
 
@@ -126,45 +127,68 @@ def assign_user_collections(user_assignments, collection_positions, write_prob=0
 
 
 # ---------------- main ----------------
-seed = 42   #change  seed to generate different experiments
+# python3 test_generator.py --seed 123 --n_collections 50 --n_users 10
 
-n_collections = 20
-n_users = 1
+if __name__ == "__main__":
 
-tree = {
-    57: [56, 55],
-    56: [52, 53, 54],
-    55: [50, 51],
-}
+    parser = argparse.ArgumentParser(description="Setup experiment generator")
 
-write_prob = 0.2
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Random seed")
+    parser.add_argument("--n_collections", type=int, default=20,
+                        help="Number of collections")
+    parser.add_argument("--n_users", type=int, default=1,
+                        help="Number of users")
 
-collection_positions = sample_collection_positions(tree, mu=0, sigma=1.0,
-                                                   n_collections=n_collections, seed=seed)
-print(len(collection_positions), "collections placed.")
+    args = parser.parse_args()
 
-user_assignments, leafs = assign_users_to_leaf(n_users, tree, seed=seed)
-print(len(user_assignments), "users assigned.")
+    seed = args.seed
+    n_collections = args.n_collections
+    n_users = args.n_users
 
-user_collection_map = assign_user_collections(
-    user_assignments,
-    collection_positions,
-    write_prob=write_prob,
-    seed=seed
-)
+    tree = {
+        57: [56, 55],
+        56: [52, 53, 54],
+        55: [50, 51],
+    }
 
-# ---------------- Save to JSON ----------------
+    write_prob = 0.2
 
-os.makedirs("tests", exist_ok=True)
-output = {
-    "collection_positions": collection_positions,
-    "user_assignments": user_assignments,
-    "user_collection_map": user_collection_map
-}
+    collection_positions = sample_collection_positions(
+        tree,
+        mu=0,
+        sigma=1.0,
+        n_collections=n_collections,
+        seed=seed
+    )
+    print(len(collection_positions), "collections placed.")
 
-filename = f"tests/setup_experiment_{seed}.json"
+    user_assignments, leafs = assign_users_to_leaf(
+        n_users,
+        tree,
+        seed=seed
+    )
+    print(len(user_assignments), "users assigned.")
 
-with open(filename, "w") as f:
-    json.dump(output, f, indent=4)
+    user_collection_map = assign_user_collections(
+        user_assignments,
+        collection_positions,
+        write_prob=write_prob,
+        seed=seed
+    )
 
-print(f"File saved: {filename}")
+    # ---------------- Save to JSON ----------------
+    os.makedirs("tests", exist_ok=True)
+
+    output = {
+        "collection_positions": collection_positions,
+        "user_assignments": user_assignments,
+        "user_collection_map": user_collection_map
+    }
+
+    filename = f"tests/setup_experiment_{seed}_users_{n_users}_collections_{n_collections}.json"
+
+    with open(filename, "w") as f:
+        json.dump(output, f, indent=4)
+
+    print(f"File saved: {filename}")
