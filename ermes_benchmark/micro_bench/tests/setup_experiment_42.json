@@ -27,55 +27,7 @@
     "user_collection_map": {
         "user_0": [
             [
-                "collection_0",
-                "write"
-            ],
-            [
-                "collection_17",
-                "read"
-            ],
-            [
-                "collection_15",
-                "read"
-            ],
-            [
-                "collection_1",
-                "read"
-            ],
-            [
-                "collection_8",
-                "write"
-            ],
-            [
-                "collection_5",
-                "write"
-            ],
-            [
-                "collection_11",
-                "read"
-            ],
-            [
-                "collection_3",
-                "read"
-            ],
-            [
-                "collection_18",
-                "write"
-            ],
-            [
-                "collection_16",
-                "read"
-            ],
-            [
-                "collection_13",
-                "read"
-            ],
-            [
-                "collection_2",
-                "write"
-            ],
-            [
-                "collection_9",
+                "collection_6",
                 "read"
             ],
             [
@@ -83,11 +35,35 @@
                 "read"
             ],
             [
-                "collection_4",
+                "collection_14",
                 "read"
             ],
             [
-                "collection_12",
+                "collection_10",
+                "read"
+            ],
+            [
+                "collection_7",
+                "write"
+            ],
+            [
+                "collection_6",
+                "read"
+            ],
+            [
+                "collection_18",
+                "read"
+            ],
+            [
+                "collection_10",
+                "read"
+            ],
+            [
+                "collection_10",
+                "read"
+            ],
+            [
+                "collection_3",
                 "read"
             ],
             [
@@ -95,7 +71,119 @@
                 "read"
             ],
             [
-                "collection_10",
+                "collection_2",
+                "write"
+            ],
+            [
+                "collection_1",
+                "write"
+            ],
+            [
+                "collection_11",
+                "write"
+            ],
+            [
+                "collection_5",
+                "read"
+            ],
+            [
+                "collection_1",
+                "read"
+            ],
+            [
+                "collection_0",
+                "read"
+            ],
+            [
+                "collection_11",
+                "read"
+            ],
+            [
+                "collection_11",
+                "read"
+            ],
+            [
+                "collection_16",
+                "read"
+            ],
+            [
+                "collection_9",
+                "read"
+            ],
+            [
+                "collection_15",
+                "write"
+            ],
+            [
+                "collection_14",
+                "read"
+            ],
+            [
+                "collection_14",
+                "write"
+            ],
+            [
+                "collection_18",
+                "read"
+            ],
+            [
+                "collection_11",
+                "read"
+            ],
+            [
+                "collection_19",
+                "write"
+            ],
+            [
+                "collection_2",
+                "write"
+            ],
+            [
+                "collection_4",
+                "read"
+            ],
+            [
+                "collection_18",
+                "read"
+            ],
+            [
+                "collection_6",
+                "read"
+            ],
+            [
+                "collection_8",
+                "read"
+            ],
+            [
+                "collection_6",
+                "write"
+            ],
+            [
+                "collection_17",
+                "read"
+            ],
+            [
+                "collection_3",
+                "write"
+            ],
+            [
+                "collection_13",
+                "read"
+            ],
+            [
+                "collection_17",
+                "read"
+            ],
+            [
+                "collection_8",
+                "read"
+            ],
+            [
+                "collection_1",
+                "write"
+            ],
+            [
+                "collection_19",
                 "read"
             ],
             [
@@ -104,7 +192,39 @@
             ],
             [
                 "collection_6",
+                "read"
+            ],
+            [
+                "collection_11",
+                "read"
+            ],
+            [
+                "collection_7",
+                "read"
+            ],
+            [
+                "collection_14",
+                "read"
+            ],
+            [
+                "collection_2",
                 "write"
+            ],
+            [
+                "collection_13",
+                "read"
+            ],
+            [
+                "collection_16",
+                "read"
+            ],
+            [
+                "collection_3",
+                "read"
+            ],
+            [
+                "collection_17",
+                "read"
             ]
         ]
     }

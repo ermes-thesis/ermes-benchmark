@@ -101,7 +101,7 @@ def assign_user_collections(user_assignments, collection_positions, write_prob=0
     users = list(user_assignments.keys())
     collections = list(collection_positions.keys())
 
-    max_per_user = min(function_per_round, len(collections))
+    max_per_user = function_per_round
 
     user_collection_map = {}
 
@@ -111,7 +111,7 @@ def assign_user_collections(user_assignments, collection_positions, write_prob=0
         chosen = np.random.choice(
             collections,
             size=max_per_user,
-            replace=False  # così non ripeti una collection
+            replace= True if len(collections) < max_per_user else False
         )
 
         # Step 2: assign rights (read/write)
