@@ -1,0 +1,111 @@
+{
+    "collection_positions": {
+        "collection_0": 56,
+        "collection_1": 50,
+        "collection_2": 55,
+        "collection_3": 52,
+        "collection_4": 57,
+        "collection_5": 57,
+        "collection_6": 57,
+        "collection_7": 55,
+        "collection_8": 52,
+        "collection_9": 55,
+        "collection_10": 57,
+        "collection_11": 51,
+        "collection_12": 55,
+        "collection_13": 57,
+        "collection_14": 57,
+        "collection_15": 57,
+        "collection_16": 57,
+        "collection_17": 56,
+        "collection_18": 56,
+        "collection_19": 57
+    },
+    "user_assignments": {
+        "user_0": 50
+    },
+    "user_collection_map": {
+        "user_0": [
+            [
+                "collection_0",
+                "write"
+            ],
+            [
+                "collection_17",
+                "read"
+            ],
+            [
+                "collection_15",
+                "read"
+            ],
+            [
+                "collection_1",
+                "read"
+            ],
+            [
+                "collection_8",
+                "write"
+            ],
+            [
+                "collection_5",
+                "write"
+            ],
+            [
+                "collection_11",
+                "read"
+            ],
+            [
+                "collection_3",
+                "read"
+            ],
+            [
+                "collection_18",
+                "write"
+            ],
+            [
+                "collection_16",
+                "read"
+            ],
+            [
+                "collection_13",
+                "read"
+            ],
+            [
+                "collection_2",
+                "write"
+            ],
+            [
+                "collection_9",
+                "read"
+            ],
+            [
+                "collection_19",
+                "read"
+            ],
+            [
+                "collection_4",
+                "read"
+            ],
+            [
+                "collection_12",
+                "read"
+            ],
+            [
+                "collection_7",
+                "read"
+            ],
+            [
+                "collection_10",
+                "read"
+            ],
+            [
+                "collection_14",
+                "read"
+            ],
+            [
+                "collection_6",
+                "write"
+            ]
+        ]
+    }
+}
