@@ -1,0 +1,3 @@
+AverageLatency,MedianLatency,VarianceLatency,Q1,Q2,Q3,Q4,TotalRequests,CorrectRequests,FailedRequests
+43.46,39.0,638.4167346938775,22.25,39.0,58.0,144.0,50,50,0
+48.06,39.0,641.1187755102042,35.0,39.0,53.0,129.0,50,50,0

@@ -13,7 +13,7 @@ def aggregate_csv_files(input_path: str, output_file: str, columns: List[str] = 
     - output_file: str - The path to the output CSV file.
     - columns: List[str] - Optional list of columns to include in the output. If None, all columns are included.
     """
-    all_files = [os.path.join(input_path, f) for f in os.listdir(input_path) if f.endswith('.csv')]
+    all_files = [os.path.join(input_path, f) for f in os.listdir(input_path) if f.endswith('.csv') and f.startswith("results_log_")]
     
     if not all_files:
         print("No CSV files found in the specified directory.")
