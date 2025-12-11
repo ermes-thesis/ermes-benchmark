@@ -38,10 +38,10 @@ def aggregate_csv_files(input_path: str, output_file: str, columns: List[str] = 
     Q3 = df['FuncDuration'].quantile(0.75)
     Q4 = df['FuncDuration'].quantile(1.0)
 
-    # The failed requests contain in the column "ExecHost" an empty string
+    # The failed requests contain a status code different from 200
     total_requests = len(df)
-    correct_requests = len(df[df['ExecHost'] != ""])
-    failed_requests = total_requests-correct_requests
+    correct_requests = len(df[df['StatusCode'] == 200])
+    failed_requests = total_requests - correct_requests
 
     metrics = {
         'AverageLatency': avg_latency,
