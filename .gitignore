@@ -4,6 +4,7 @@ benchmark_results*
 .venv*
 results
 logs
+ermes_benchmark/convergence_test/output_img/*/pdf
 
 old_scripts/benchmark_results/*
 !old_scripts/benchmark_results/

@@ -263,7 +263,7 @@ def local_vs_remote_latency_violin(dfs):
     return fig
 
 
-def plot_logs_avg_latency(dfs, show_if_remote=True):
+def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
     """
     Plots the overall average per round alongside the average per file for that round.
     The bar is split: the hatched portion represents the % of non-local executions.
@@ -320,7 +320,7 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
         # 3. Setup Plot
         # ----------------------------
         plt.style.use('ggplot')
-        fig, ax = plt.subplots(figsize=(14, 8))
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         total_bars_in_group = n_files + 1
         bar_width = 0.8 / total_bars_in_group
@@ -437,7 +437,7 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
         max_data_height = plot_df.max().max()
 
         if pd.notna(max_data_height):
-            ax.set_ylim(0, max_data_height * 1.1)
+            ax.set_ylim(0, max_data_height * 1.07)
 
         # ----------------------------
         # 6. Global mean line
@@ -449,9 +449,15 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
         # 7. Labels over bars
         # ----------------------------
         # Avg All Labels
+        fontsize = 7
+        if scenario == "full_traversal":
+            fontsize = 9
+        elif scenario == "top_down" or scenario == "bottom_up":
+            fontsize = 4
+
         for i, v in enumerate(plot_df['Avg_All']):
             if pd.notna(v):
-                ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', rotation=45, fontsize=7, fontweight='bold')
+                ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', rotation=45, fontsize=fontsize, fontweight='bold')
 
         # Per-File Labels
         for j in range(1, n_files + 1):
@@ -460,7 +466,7 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
             series_vals = plot_df[j].values
             for i, v in enumerate(series_vals):
                 if pd.notna(v) and v > 0:
-                    ax.text(file_pos[i], v + 0.2, f'{v:.1f}', ha='center', rotation=45, fontsize=7)
+                    ax.text(file_pos[i], v + 0.2, f'{v:.1f}', ha='center', rotation=45, fontsize=fontsize)
 
         # ----------------------------
         # 8. Legend
@@ -485,21 +491,16 @@ def plot_logs_avg_latency(dfs, show_if_remote=True):
 
         ax.legend(
             handles=legend_elements,
-            loc='lower center',
-            bbox_to_anchor=(0.5, 1.05),
-            ncol=3,
-            frameon=False,
-            fontsize=10
+            facecolor='white'
         )
 
         # ----------------------------
         # 9. Axis setup
         # ----------------------------
-        ax.set_xlabel('Epoch number', fontsize=12)
-        ax.set_ylabel('Average Time (ms)', fontsize=12)
+        ax.set_xlabel('Epoch number')
+        ax.set_ylabel('Average Time (ms)')
         ax.set_xticks(x + (bar_width * total_bars_in_group / 2) - (bar_width / 2))
-        ax.set_xticklabels(all_groups, rotation=0, fontsize=10)
-        plt.yticks(fontsize=10)
+        ax.set_xticklabels(all_groups, rotation=0)
 
         for spine in ['top', 'right']:
             ax.spines[spine].set_visible(False)

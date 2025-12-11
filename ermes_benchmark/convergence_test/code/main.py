@@ -1,5 +1,6 @@
 import argparse
 import inspect
+import os
 import shutil
 import sys
 from collections import Counter
@@ -68,6 +69,10 @@ def main():
             else:
                 item.unlink()
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    pdf_dir = output_dir / "pdf"
+    pdf_dir.mkdir(parents=True, exist_ok=True)
+
     print(f"Output directory set to: {output_dir}")
 
     # ==========================================
@@ -156,8 +161,9 @@ def main():
 
     # 3.1 Latency Analysis (Line Plot)
     print("Generating execution time analysis...")
-    latency.plot_logs_avg_latency(full_dfs)
+    latency.plot_logs_avg_latency(full_dfs, args.subfolder)
     plt.savefig(f'{output_dir}/execution_time_analysis.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{output_dir}/pdf/execution_time_analysis.pdf')
     plt.close()
 
     # 3.2 Local vs Remote Executions (Bar Chart)
