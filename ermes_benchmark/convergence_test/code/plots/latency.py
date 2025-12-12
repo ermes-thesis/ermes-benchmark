@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
+from matplotlib.patches import Patch
 
 
 def local_vs_remote_latency(dfs):
@@ -10,10 +11,6 @@ def local_vs_remote_latency(dfs):
     Custom Latency Plot with Min, Max, and Avg values displayed as text labels.
     """
     try:
-        import matplotlib.pyplot as plt
-        import numpy as np
-        from matplotlib.patches import Patch
-        from matplotlib.lines import Line2D
 
         plt.style.use('ggplot')
         fig, ax = plt.subplots(figsize=(12, 7))
