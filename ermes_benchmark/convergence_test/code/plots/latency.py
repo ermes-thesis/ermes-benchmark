@@ -497,7 +497,7 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
         # ----------------------------
         ax.set_xlabel('Epoch number')
         ax.set_ylabel('Average Time (ms)')
-        ax.set_xticks(x + (bar_width * total_bars_in_group / 2) - (bar_width / 2))
+        ax.set_xticks(x)
         ax.set_xticklabels(all_groups, rotation=0)
 
         for spine in ['top', 'right']:
