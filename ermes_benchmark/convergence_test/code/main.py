@@ -193,7 +193,7 @@ def main():
 
     # 3.6 Latency Violin Plot
     print("Generating latency violin plot...")
-    latency.local_vs_remote_latency_violin(full_dfs)
+    latency.local_vs_remote_latency_violin(full_dfs, args.subfolder)
     plt.savefig(f'{output_dir}/local_vs_remote_latency_violin.png', dpi=300, bbox_inches='tight')
     plt.savefig(f'{output_dir}/pdf/local_vs_remote_latency_violin.pdf')
     plt.close()

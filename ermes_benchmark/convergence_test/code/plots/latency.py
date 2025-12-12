@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
-from matplotlib.patches import Rectangle
 from matplotlib.patches import Patch
+from matplotlib.patches import Rectangle
 
 
 def local_vs_remote_latency(dfs):
@@ -262,7 +262,7 @@ def local_vs_remote_latency_violin_old(dfs):
     plt.tight_layout()
     return fig
 
-def local_vs_remote_latency_violin(dfs):
+def local_vs_remote_latency_violin(dfs, scenario):
     """
     Violin Plot personalizzato con Min, Max, Avg, Avg Local e Avg Remote.
     """
@@ -273,6 +273,8 @@ def local_vs_remote_latency_violin(dfs):
     x = np.arange(n_files)
     colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
     file_labels = [f'User {i + 1}' for i in range(n_files)]
+    if scenario == "full_traversal":
+        file_labels = ["Patient", "Doctor"]
 
     data_list = []
     stats = []
@@ -348,7 +350,7 @@ def local_vs_remote_latency_violin(dfs):
     ax.legend(handles=legend_elements, loc='upper left', facecolor='white')
 
     # ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
-    ax.set_xlabel('User')
+    # ax.set_xlabel('User')
     ax.set_ylabel('Latency (ms)')
     ax.set_xticks(x)
     ax.set_xticklabels(file_labels)
