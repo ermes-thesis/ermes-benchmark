@@ -22,8 +22,8 @@ ERMES_DEPLOY_PATH="../../../../ermes-deploy"
 # --- 1. COMPILAZIONE (Cross-Compilation) ---
 echo "🚧 [1/6] Compilazione per Linux/AMD64..."
 
-#env GOOS=linux GOARCH=amd64 go build -C user -ldflags="-s -w" -o ../bin/user .
-#env GOOS=linux GOARCH=amd64 go build -C create -ldflags="-s -w" -o ../bin/create .
+env GOOS=linux GOARCH=amd64 go build -C user -ldflags="-s -w" -o ../bin/user .
+env GOOS=linux GOARCH=amd64 go build -C create -ldflags="-s -w" -o ../bin/create .
 
 if [ $? -ne 0 ]; then
     echo "❌ Errore durante la compilazione. Mi fermo."
@@ -39,7 +39,7 @@ ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "sudo pkill -f create || true"
 ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "sudo pkill -f user || true"
 
 # SCP usando il file di setup dinamico
-#scp -J ubuntu@100.112.91.33 -q bin/{user,create} config.yaml ../csv_aggregator.py ../test_generator.py run_experiment.sh ubuntu@${NODE2_IP}:${REMOTE_PATH}
+scp -J ubuntu@100.112.91.33 -q bin/{user,create} config.yaml ../csv_aggregator.py ../test_generator.py run_experiment.sh ubuntu@${NODE2_IP}:${REMOTE_PATH}
 
 echo "✅ Upload completato."
 
@@ -63,7 +63,7 @@ ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "mkdir -p ${REMOTE_PATH}; cd ${RE
 # 4c. Avvio Write (Loop parallelo dinamico)
 echo "   -> Avvio ${NUM_USERS} client in parallelo..."
 
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; ./run_experiment.sh $NUM_USERS $NUM_COLLECTIONS $SETUP_FILE"
+ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; ./run_experiment.sh $NUM_USERS $NUM_COLLECTIONS $SETUP_FILE $SEED"
 
 echo "✅ Il test è terminato."
 

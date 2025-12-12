@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	lib "ermes_client_library"
+	ermes "ermes_client_library"
 	"fmt"
 	"log"
 	"os"
@@ -47,7 +47,7 @@ func main() {
 
 	fmt.Println("Hello world !")
 
-	errSetup := lib.SetupClientLibrary(uint64(0), "10.10.101.50", confFile)
+	client, errSetup := ermes.SetupClientLibrary(uint64(0), "10.10.101.50", confFile)
 
 	if errSetup != nil {
 		fmt.Fprintf(os.Stderr, "Error when setting up the client library: %v\n", errSetup)
@@ -59,10 +59,10 @@ func main() {
 
 	for collectionName, position := range conf.CollectionPositions {
 		node := "10.10.101." + fmt.Sprint(position) + ":12345"
-		lib.MoveToNewNode(node)
+		client.MoveToNewNode(node)
 		fmt.Println("Creating collection", collectionName, "at node", node)
 
-		body, code, err := lib.ExecuteFunction(
+		body, code, err := client.ExecuteFunction(
 			"createCollection",
 			"",
 			map[string]string{
@@ -75,7 +75,7 @@ func main() {
 		)
 		fmt.Println(code, string(body), err)
 
-		body, code, err = lib.ExecuteFunction(
+		body, code, err = client.ExecuteFunction(
 			"writeCollection",
 			"",
 			map[string]string{
