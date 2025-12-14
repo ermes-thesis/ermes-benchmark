@@ -139,12 +139,15 @@ if __name__ == "__main__":
                         help="Number of collections")
     parser.add_argument("--n_users", type=int, default=1,
                         help="Number of users")
+    parser.add_argument("--fn_per_round", type=int, default=50,
+                        help="Number of functions per round")
 
     args = parser.parse_args()
 
     seed = args.seed
     n_collections = args.n_collections
     n_users = args.n_users
+    fn_round = args.fn_per_round
 
     tree = {
         57: [56, 55],
@@ -174,7 +177,8 @@ if __name__ == "__main__":
         user_assignments,
         collection_positions,
         write_prob=write_prob,
-        seed=seed
+        seed=seed,
+        function_per_round=fn_round
     )
 
     # ---------------- Save to JSON ----------------

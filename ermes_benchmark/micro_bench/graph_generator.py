@@ -86,6 +86,8 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
 
     ax.set_xlabel("Users")
     ax.set_ylabel("Latency (ms)")
+    ax.set_yscale("log")
+    ax.set_xscale("log")
     ax.set_title("Interaction Plot with IQR (avg)")
     ax.legend(title="Collections")
     ax.grid(True, alpha=0.4)
@@ -135,6 +137,8 @@ def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
 
     ax.set_xlabel("Users")
     ax.set_ylabel("Latency (ms)")
+    ax.set_yscale("log")
+    ax.set_xscale("log")
     ax.set_title("Interaction Plot with IQR (median)")
     ax.legend(title="Collections")
     ax.grid(True, alpha=0.4)

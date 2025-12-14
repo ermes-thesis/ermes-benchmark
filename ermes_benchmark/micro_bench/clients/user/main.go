@@ -57,8 +57,8 @@ func main() {
 				fmt.Println("Library set up correctly!")
 			}
 
-			rounds := 1
-			roundDuration := 15.0
+			rounds := 10
+			roundDuration := 30.0
 			executions := conf.UserCollectionMap[userId]
 			for i := range rounds {
 				for j, execution := range executions {
@@ -68,7 +68,7 @@ func main() {
 							funName = "writeCollection"
 						}
 
-						go func() {
+						wg.Go(func() {
 							body, code, err := client.ExecuteFunction(
 								funName,
 								"",
@@ -83,7 +83,7 @@ func main() {
 								"IT",
 							)
 							fmt.Println(code, string(body), err)
-						}()
+						})
 						time.Sleep(time.Duration((roundDuration / float64(len(executions))) * 1_000_000_000))
 					}
 				}

@@ -1,18 +1,19 @@
 #!/bin/bash
 
 # --- CONTROLLO PARAMETRI ---
-if [ "$#" -ne 3 ]; then
+if [ "$#" -ne 4 ]; then
     echo "❌ Errore: Devi specificare il numero di utenti e di collections."
     echo "Uso: $0 <NUM_USERS> <NUM_COLLECTIONS> <SEED>"
-    echo "Esempio: $0 10 10 42"
+    echo "Esempio: $0 10 10 42 25"
     exit 1
 fi
 
 NUM_USERS=$1
 NUM_COLLECTIONS=$2
 SEED=$3
+FN_ROUND=$4
 
-echo "📋 Configurazione: ${NUM_USERS} Utenti, ${NUM_COLLECTIONS} Collections, Seed=${SEED}"
+echo "📋 Configurazione: ${NUM_USERS} Utenti, ${NUM_COLLECTIONS} Collections, Seed ${SEED}, Funzioni per round ${FN_ROUND}"
 
 # --- CONFIGURAZIONE ---
 NODE2_IP="10.10.101.59"
@@ -44,7 +45,7 @@ scp -J ubuntu@100.112.91.33 -q bin/{user,create} config.yaml ../csv_aggregator.p
 echo "✅ Upload completato."
 
 echo " Genera file di configurazione..."
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; python3 test_generator.py --seed $SEED --n_collections $NUM_COLLECTIONS --n_users $NUM_USERS"
+ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; python3 test_generator.py --seed $SEED --n_collections $NUM_COLLECTIONS --n_users $NUM_USERS --fn_per_round $FN_ROUND"
 SETUP_FILE="tests/setup_experiment_${SEED}_users_${NUM_USERS}_collections_${NUM_COLLECTIONS}.json"
 echo "🧹 [3/6] Pulisco Ermes"
 ANSIBLE_CONFIG=${ERMES_DEPLOY_PATH}/ansible.cfg ansible-playbook ${ERMES_DEPLOY_PATH}/flush-ermes-nodes.yml
