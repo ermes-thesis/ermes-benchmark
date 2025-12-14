@@ -42,7 +42,7 @@ func main() {
 
 	fmt.Println("Hello world !")
 
-	errSetup := lib.SetupClientLibrary(uint64(clientId), nodeAddress, confFile)
+	client, errSetup := lib.SetupClientLibrary(uint64(clientId), nodeAddress, confFile)
 
 	if errSetup != nil {
 		fmt.Fprintf(os.Stderr, "Error when setting up the client library: %v\n", errSetup)
@@ -58,7 +58,7 @@ func main() {
 
 	for i := 0; i < functionsForRound*rounds; i++ {
 		go func() {
-			body, code, err := lib.ExecuteFunction(
+			body, code, err := client.ExecuteFunction(
 				"writeCollection",
 				"",
 				map[string]string{
