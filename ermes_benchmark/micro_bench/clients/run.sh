@@ -1,70 +1,111 @@
 #!/bin/bash
 
-# --- CONTROLLO PARAMETRI ---
-if [ "$#" -ne 4 ]; then
-    echo "❌ Errore: Devi specificare il numero di utenti e di collections."
-    echo "Uso: $0 <NUM_USERS> <NUM_COLLECTIONS> <SEED>"
-    echo "Esempio: $0 10 10 42 25"
-    exit 1
-fi
+# --- CONFIGURAZIONE TARGET ---
+# ⚠️ INSERISCI QUI GLI IP PRIVATI DEI NODI DA FLUSHARE ⚠️
+# Esempio: ERMES_NODES=("10.10.101.60" "10.10.101.61")
+ERMES_NODES=("10.10.101.50" "10.10.101.51" "10.10.101.52" "10.10.101.53" "10.10.101.54" "10.10.101.55" "10.10.101.56" "10.10.101.57")
 
-NUM_USERS=$1
-NUM_COLLECTIONS=$2
-SEED=$3
-FN_ROUND=$4
+# --- FUNZIONE FLUSH REMOTA ---
+flush_remote_nodes() {
+    echo "🧹 [Global Flush] Avvio pulizia su ${#ERMES_NODES[@]} nodi..."
 
-echo "📋 Configurazione: ${NUM_USERS} Utenti, ${NUM_COLLECTIONS} Collections, Seed ${SEED}, Funzioni per round ${FN_ROUND}"
+    for NODE_IP in "${ERMES_NODES[@]}"; do
+        # Eseguiamo ssh passando il blocco di comandi.
+        # "sudo bash -s" esegue tutto il blocco come root sul server remoto.
+        ssh -o StrictHostKeyChecking=no ubuntu@${NODE_IP} "sudo bash -s" << 'EOF'
 
-# --- CONFIGURAZIONE ---
-NODE2_IP="10.10.101.59"
-REMOTE_PATH="micro_test"
-ERMES_DEPLOY_PATH="../../../../ermes-deploy"
+        # --- INIZIO CODICE REMOTO (Eseguito su nodo destinazione) ---
 
-# --- 1. COMPILAZIONE (Cross-Compilation) ---
-echo "🚧 [1/6] Compilazione per Linux/AMD64..."
+        # Configurazione
+        REDIS_PORT=6379
+        REDIS_PASS="very-secure-password"
+        LOG_DIR="/var/log/ermes-node/"
+        SPECIFIC_LOGS=("/var/log/ermes-node/general.log" "/var/log/ermes-node/ermes-node.err.log" "/var/log/ermes-node/dump.ndjson")
 
-env GOOS=linux GOARCH=amd64 go build -C user -ldflags="-s -w" -o ../bin/user .
-env GOOS=linux GOARCH=amd64 go build -C create -ldflags="-s -w" -o ../bin/create .
+        # Costruzione comando Redis
+        REDIS_CMD="redis-cli -p $REDIS_PORT"
+        if [ -n "$REDIS_PASS" ]; then
+            REDIS_CMD+=" -a $REDIS_PASS"
+        fi
 
-if [ $? -ne 0 ]; then
-    echo "❌ Errore durante la compilazione. Mi fermo."
-    exit 1
-fi
-echo "✅ Compilazione completata."
+        systemctl stop ermes-node || true
 
-# --- 2. COPIA DEI BINARI (SCP) ---
-echo "🚀 [2/6] Copia dei binari e config sulle VM..."
+        $REDIS_CMD FLUSHALL >/dev/null 2>&1 || true
 
-# Uccidiamo eventuali vecchi processi rimasti appesi
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "sudo pkill -f create || true"
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "sudo pkill -f user || true"
+        $REDIS_CMD FT.DROPINDEX metadata_index >/dev/null 2>&1 || true
 
-# SCP usando il file di setup dinamico
-scp -J ubuntu@100.112.91.33 -q bin/{user,create} config.yaml ../csv_aggregator.py ../test_generator.py run_experiment.sh ubuntu@${NODE2_IP}:${REMOTE_PATH}
+        if [ ! -d "$LOG_DIR" ]; then
+            mkdir -p "$LOG_DIR"
+            chmod 755 "$LOG_DIR"
+        fi
 
-echo "✅ Upload completato."
+        find "$LOG_DIR" -maxdepth 1 -name "general-*" -type f -delete || true
 
-echo " Genera file di configurazione..."
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; python3 test_generator.py --seed $SEED --n_collections $NUM_COLLECTIONS --n_users $NUM_USERS --fn_per_round $FN_ROUND"
-SETUP_FILE="tests/setup_experiment_${SEED}_users_${NUM_USERS}_collections_${NUM_COLLECTIONS}.json"
-echo "🧹 [3/6] Pulisco Ermes"
-ANSIBLE_CONFIG=${ERMES_DEPLOY_PATH}/ansible.cfg ansible-playbook ${ERMES_DEPLOY_PATH}/flush-ermes-nodes.yml
-echo "✅ Pulizia completata."
+        for log_file in "${SPECIFIC_LOGS[@]}"; do
+            if [ -f "$log_file" ]; then
+                truncate -s 0 "$log_file" || true
+            fi
+        done
 
-# --- 4. ESECUZIONE (SSH) ---
-echo "⚡ [4/6] Avvio dei processi..."
+        systemctl start ermes-node
 
-# Avvio Creazione collections (usando il file dinamico)
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; ./create ${SETUP_FILE} > create.log 2>&1"
-echo "   -> Collection creata su ${NODE2_IP}"
+        # --- FINE CODICE REMOTO ---
+EOF
+        echo "   ✅ ${NODE_IP} pulito."
+    done
 
-# Pulizia cartelle remote
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "mkdir -p ${REMOTE_PATH}; cd ${REMOTE_PATH}; rm *.log results_log_*.csv 2>/dev/null"
+    sleep 5
+}
 
-# 4c. Avvio Write (Loop parallelo dinamico)
-echo "   -> Avvio ${NUM_USERS} client in parallelo..."
+# --- CONFIGURAZIONE PARAMETRI ---
+VALUES=("1" "10" "100" "1000")
+SEEDS=("1" "42" "100" "2024" "7" "99" "1234" "5678" "91011" "121314")
+#VALUES=("1000")
+#SEEDS=("1")
+FN_ROUND=25
 
-ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} "cd ${REMOTE_PATH}; ./run_experiment.sh $NUM_USERS $NUM_COLLECTIONS $SETUP_FILE $SEED"
+# Setup cartelle locali (sulla macchina che orchestra)
+cd "$(dirname "$0")" || exit
+mkdir -p results
 
-echo "✅ Il test è terminato."
+echo "🏁 Inizio sequenza esperimenti, numero funzioni: ${FN_ROUND}..."
 
+for SEED in "${SEEDS[@]}"; do
+  for USERS in "${VALUES[@]}"; do
+    for COLLECTIONS in "${VALUES[@]}"; do
+
+        echo "=================================================="
+        echo "🚀 Avvio: Users=${USERS}, Collections=${COLLECTIONS}, Seed=${SEED}"
+        echo "=================================================="
+
+        # 1. GENERAZIONE SETUP (Locale)
+        python3 test_generator.py --seed "$SEED" --n_collections "$COLLECTIONS" --n_users "$USERS" --fn_per_round "$FN_ROUND"
+        SETUP_FILE="tests/setup_experiment_${SEED}_users_${USERS}_collections_${COLLECTIONS}.json"
+
+        # 2. PULIZIA ERMES SU NODI REMOTI
+        flush_remote_nodes
+
+        # 3. PULIZIA LOG CLIENT LOCALI
+        rm user.log create.log 2>/dev/null
+
+        # 4. CREAZIONE COLLECTIONS
+        echo "   -> Creazione dati..."
+        ./create "$SETUP_FILE" > create.log 2>&1
+
+        rm *.log results_log_*.csv
+
+        # 5. ESECUZIONE TEST
+        echo "   -> Avvio User Client..."
+        ./user "$SETUP_FILE" > user.log 2>&1
+
+        echo "⏳ Aggregazione risultati..."
+        # Nota: ho corretto $NUM_USERS in $USERS e $NUM_COLLECTIONS in $COLLECTIONS per coerenza col loop
+        python3 csv_aggregator.py . "aggregated_results_users_${USERS}_collections_${COLLECTIONS}.csv" "$SEED"
+
+        echo "✅ Completato round."
+
+    done
+  done
+done
+
+echo "🎉 TUTTI I TEST COMPLETATI."
