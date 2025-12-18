@@ -58,7 +58,7 @@ func main() {
 			}
 
 			rounds := 10
-			roundDuration := 30.0
+			roundDuration := 15.0
 			executions := conf.UserCollectionMap[userId]
 			for i := range rounds {
 				for j, execution := range executions {
