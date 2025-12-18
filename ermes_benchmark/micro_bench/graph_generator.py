@@ -7,6 +7,7 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+from scipy import stats
 
 data_dir = 'data'
 output_dir_name = 'output_img'
@@ -23,7 +24,7 @@ def process_csv_files(files):
 
         users = int(match.group(1))
         collections = int(match.group(2))
-        print(f"Processing file with {users} users and {collections} collections")
+        #print(f"Processing file with {users} users and {collections} collections")
 
         df = pd.read_csv(file)
 
@@ -33,6 +34,107 @@ def process_csv_files(files):
         data[collections][users] = df
 
     return data
+
+def compute_confidence_intervals(data, confidence=95):
+    """
+    Calcola l'intervallo di confidenza (t di Student) sulla colonna
+    AverageLatency per ogni DataFrame prodotto da process_csv_files.
+    """
+    ci_data = {}
+
+    alpha = 1 - confidence / 100.0
+
+    for collections, users_dict in data.items():
+        ci_data[collections] = {}
+
+        for users, df in users_dict.items():
+            if "AverageLatency" not in df.columns:
+                continue
+
+            values = df["AverageLatency"].dropna().to_numpy()
+            n = len(values)
+
+            if n < 2:
+                continue
+
+            mean = np.mean(values)
+            std = np.std(values, ddof=1)
+            sem = std / np.sqrt(n)
+
+            # t di Student
+            t_crit = stats.t.ppf(1 - alpha / 2, df=n - 1)
+
+            ci_lower = mean - t_crit * sem
+            ci_upper = mean + t_crit * sem
+
+            ci_data[collections][users] = {
+                "mean": mean,
+                f"ci_lower_{confidence}": ci_lower,
+                f"ci_upper_{confidence}": ci_upper,
+                "n_samples": n
+            }
+
+    return ci_data
+
+
+def print_confidence_intervals(
+    ci_data,
+    confidence=95,
+    unit="ms",
+    max_rel_error_ok=0.25,
+    max_rel_error_weak=0.50
+):
+    """
+    Stampa gli intervalli di confidenza segnalando visivamente
+    quelli problematici, senza imporre un numero minimo di sample.
+    """
+
+    print("\n" + "=" * 80)
+    print(f" Intervalli di confidenza al {confidence}% su AverageLatency")
+    print("=" * 80)
+    print("Legenda: ✅ OK   ⚠️ WEAK   ❌ INVALID\n")
+
+    for collections in sorted(ci_data.keys()):
+        print(f"▶ Collections: {collections}")
+
+        for users in sorted(ci_data[collections].keys()):
+            r = ci_data[collections][users]
+
+            mean = r["mean"]
+            lower = r[f"ci_lower_{confidence}"]
+            upper = r[f"ci_upper_{confidence}"]
+            n = r["n_samples"]
+
+            rel_error = (upper - lower) / (2 * mean)
+
+            # Classificazione (NO vincoli su n)
+            if lower < 0 or rel_error > max_rel_error_weak:
+                status = "❌ INVALID"
+            elif rel_error > max_rel_error_ok:
+                status = "⚠️ WEAK"
+            else:
+                status = "✅ OK"
+
+            half_width = (upper - lower) / 2
+
+            print(
+                f"  Users: {users:>5} | "
+                f"mean = {mean:8.3f} {unit} | "
+                f"CI{confidence}% = "
+                f"[{lower:8.3f}, {upper:8.3f}] {unit} | "
+                f"±{half_width:7.3f} | "
+                f"rel.err = {rel_error*100:6.1f}% | "
+                f"n = {n:>2} | "
+                f"{status}"
+            )
+        print()
+
+    print(
+        "Note:\n"
+        " - OK     : CI plausibile e sufficientemente stretto\n"
+        " - WEAK   : alta incertezza, usare con cautela\n"
+        " - INVALID: CI non interpretabile o fisicamente implausibile\n"
+    )
 
 def aggregate_experiments(data):
     aggregated = {}
@@ -95,7 +197,7 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
 
     if save_path:
         fig.savefig(save_path, dpi=300)
-        print(f"Saved figure to {save_path}")
+        #print(f"Saved figure to {save_path}")
 
     plt.close(fig)
     return fig, ax
@@ -146,7 +248,7 @@ def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
 
     if save_path:
         fig.savefig(save_path, dpi=300)
-        print(f"Saved figure to {save_path}")
+        #print(f"Saved figure to {save_path}")
 
     plt.close(fig)
     return fig, ax
@@ -186,7 +288,7 @@ def plot_failed_requests_bar(aggregated_data, save_path=None):
 
     if save_path:
         fig.savefig(save_path, dpi=300)
-        print(f"Saved figure to {save_path}")
+        #print(f"Saved figure to {save_path}")
 
     plt.close(fig)
     return fig, ax
@@ -244,6 +346,8 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     data = process_csv_files(files)
+    ci_95 = compute_confidence_intervals(data)
+    print_confidence_intervals(ci_95)
     aggregated_data = aggregate_experiments(data)
 
     plot_interaction_with_iqr_avg(aggregated_data, save_path=output_dir / "latency_avg.png")
