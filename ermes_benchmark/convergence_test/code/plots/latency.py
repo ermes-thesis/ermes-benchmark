@@ -165,6 +165,102 @@ def local_vs_remote_latency(dfs):
         traceback.print_exc()
         return None
 
+def local_vs_remote_latency_violin_old(dfs):
+    """
+    Violin Plot personalizzato con Min, Max, Avg, Avg Local e Avg Remote.
+    """
+    plt.style.use('ggplot')
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    n_files = len(dfs)
+    x = np.arange(n_files)
+    colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
+    file_labels = [f'User {i + 1}' for i in range(n_files)]
+
+    data_list = []
+    stats = []
+
+    for df in dfs:
+        durations = df['Duration'].dropna()
+        local_data = df[df['Is_Local'] == True]['Duration'].dropna()
+        remote_data = df[df['Is_Local'] == False]['Duration'].dropna()
+
+        data_list.append(durations.values)
+
+        stats.append({
+            'min': durations.min(),
+            'max': durations.max(),
+            'avg': durations.mean(),
+            'avg_local': local_data.mean() if not local_data.empty else np.nan,
+            'avg_remote': remote_data.mean() if not remote_data.empty else np.nan,
+        })
+
+    vp = ax.violinplot(
+        data_list,
+        positions=x,
+
+        showmeans=False,
+        showmedians=False,
+        showextrema=False
+    )
+
+    for i, b in enumerate(vp['bodies']):
+        b.set_facecolor(colors[i])
+        b.set_alpha(0.4)
+
+    for i, stat in enumerate(stats):
+        current_x = x[i]
+        user_color = colors[i]
+
+        # Min e Max
+        ax.vlines(current_x, stat['min'], stat['max'], color=user_color, linestyle=':', linewidth=1.5)
+        ax.hlines(stat['min'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=2)
+        ax.hlines(stat['max'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=2)
+
+
+
+
+
+
+
+        # Avg totale
+        ax.hlines(stat['avg'], current_x - 0.15, current_x + 0.15, color='black', linewidth=2)
+        ax.text(current_x + 0.2, stat['avg'], f'Avg: {stat["avg"]:.2f}', fontsize=9, color='black',
+                bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+        # Avg Local
+        if not np.isnan(stat['avg_local']):
+            if int(stat['avg_local']) != int(stat['avg']):
+                ax.hlines(stat['avg_local'], current_x - 0.12, current_x + 0.12,
+                          color=user_color, linestyle='--', linewidth=2)
+                ax.text(current_x + 0.2, stat['avg_local'], f'Loc: {stat["avg_local"]:.2f}',
+                        fontsize=8, color=user_color)
+
+        # Avg Remote
+        if not np.isnan(stat['avg_remote']):
+            if int(stat['avg_remote']) != int(stat['avg']):
+                ax.hlines(stat['avg_remote'], current_x - 0.12, current_x + 0.12,
+                          color=user_color, linestyle='-.', linewidth=2)
+                ax.text(current_x + 0.2, stat['avg_remote'], f'Rem: {stat["avg_remote"]:.2f}',
+                        fontsize=8, color=user_color)
+
+    legend_elements = [
+        Line2D([0], [0], color='black', lw=2, label='Avg Totale'),
+        Line2D([0], [0], color='grey', lw=2, linestyle='--', label='Avg Local'),
+        Line2D([0], [0], color='grey', lw=2, linestyle='-.', label='Avg Remote'),
+        # Line2D([0], [0], color='grey', lw=1.5, linestyle=':', label='Min/Max (Vertical Line)'),
+    ]
+    ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, 1.05), ncol=4, frameon=False,
+              fontsize=10)
+
+    # ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
+    ax.set_xlabel('User')
+    ax.set_ylabel('Latency (ms)')
+    ax.set_xticks(x)
+    ax.set_xticklabels(file_labels)
+
+    plt.tight_layout()
+    return fig
 
 def local_vs_remote_latency_violin(dfs):
     """
