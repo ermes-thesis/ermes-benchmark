@@ -139,15 +139,16 @@ def print_confidence_intervals(
 def aggregate_experiments(data):
     aggregated = {}
 
-    for users, collections_dict in data.items():
-        aggregated[users] = {}
+    for collections, users_dict in data.items():
+        for users, df in users_dict.items():
+            if users not in aggregated:
+                aggregated[users] = {}
 
-        for collections, df in collections_dict.items():
-            # Calcolo la media su tutte le iterazioni (righe)
-            aggregated_df = df.mean(numeric_only=True).to_frame().T
+            # Calcolo la media su tutte le righe del CSV
+            mean_values = df.mean(numeric_only=True).to_dict()
 
-            # Salvo nel nuovo dizionario
-            aggregated[users][collections] = aggregated_df
+            # Salvo come dizionario semplice (non DataFrame)
+            aggregated[users][collections] = {k: float(v) for k, v in mean_values.items()}
 
     return aggregated
 
@@ -168,9 +169,9 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
         for users in users_list:
             if collections in aggregated_data[users]:
                 df = aggregated_data[users][collections]
-                avg_vals.append(float(df["AverageLatency"].iloc[0]))
-                q1_vals.append(float(df["Q1"].iloc[0]))
-                q3_vals.append(float(df["Q3"].iloc[0]))
+                avg_vals.append(float(df["AverageLatency"]))
+                q1_vals.append(float(df["Q1"]))
+                q3_vals.append(float(df["Q3"]))
                 xs.append(users)
 
         if xs:
@@ -183,8 +184,9 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
             line, = ax.plot(xs_arr, avg_arr, marker="o", linewidth=2, label=f"{collections} collections")
             color = line.get_color()
             half_width = 0.1
-            ax.hlines(q1_arr, xs_arr - half_width, xs_arr + half_width, linewidth=2, color=color)
-            ax.hlines(q3_arr, xs_arr - half_width, xs_arr + half_width, linewidth=2, color=color)
+            factor = 1.05
+            ax.hlines(q1_arr, xs_arr / factor, xs_arr * factor, linewidth=2, color=color)
+            ax.hlines(q3_arr, xs_arr / factor, xs_arr * factor, linewidth=2, color=color)
 
     ax.set_xlabel("Users")
     ax.set_ylabel("Latency (ms)")
@@ -219,9 +221,9 @@ def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
         for users in users_list:
             if collections in aggregated_data[users]:
                 df = aggregated_data[users][collections]
-                median_vals.append(float(df["MedianLatency"].iloc[0]))
-                q1_vals.append(float(df["Q1"].iloc[0]))
-                q3_vals.append(float(df["Q3"].iloc[0]))
+                median_vals.append(float(df["MedianLatency"]))
+                q1_vals.append(float(df["Q1"]))
+                q3_vals.append(float(df["Q3"]))
                 xs.append(users)
 
         if xs:
@@ -233,9 +235,9 @@ def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
             ax.fill_between(xs_arr, q1_arr, q3_arr, alpha=0.18)
             line, = ax.plot(xs_arr, median_arr, marker="o", linewidth=2, label=f"{collections} collections")
             color = line.get_color()
-            half_width = 0.1
-            ax.hlines(q1_arr, xs_arr - half_width, xs_arr + half_width, linewidth=2, color=color)
-            ax.hlines(q3_arr, xs_arr - half_width, xs_arr + half_width, linewidth=2, color=color)
+            factor = 1.05
+            ax.hlines(q1_arr, xs_arr / factor, xs_arr * factor, linewidth=2, color=color)
+            ax.hlines(q3_arr, xs_arr / factor, xs_arr * factor, linewidth=2, color=color)
 
     ax.set_xlabel("Users")
     ax.set_ylabel("Latency (ms)")
@@ -271,7 +273,7 @@ def plot_failed_requests_bar(aggregated_data, save_path=None):
         for users in users_list:
             if collections in aggregated_data[users]:
                 df = aggregated_data[users][collections]
-                failed_vals.append(float(df["FailedRequests"].iloc[0]))
+                failed_vals.append(float(df["FailedRequests"]))
                 xs.append(users)
 
         if xs:
@@ -349,6 +351,9 @@ def main():
     ci_95 = compute_confidence_intervals(data)
     print_confidence_intervals(ci_95)
     aggregated_data = aggregate_experiments(data)
+
+    #from pprint import pprint
+    #pprint(aggregated_data)
 
     plot_interaction_with_iqr_avg(aggregated_data, save_path=output_dir / "latency_avg.png")
     plot_interaction_with_iqr_q2(aggregated_data, save_path=output_dir / "latency_median.png")
