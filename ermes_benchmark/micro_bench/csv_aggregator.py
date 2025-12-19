@@ -7,6 +7,9 @@ from typing import List
 
 import pytz
 
+# Store in an array all the HTTP error codes which can be produced
+HTTP_ERROR_CODES = [404, 423, 500, 503, 508]
+
 def parse_timestamp(ts: str) -> datetime:
     if sys.version_info >= (3, 11):
         return datetime.fromisoformat(ts)
@@ -128,6 +131,9 @@ def aggregate_csv_files(input_path: str, output_file: str, seed: int = 0, time_i
     total_requests = len(df)
     correct_requests = len(df[df['StatusCode'] == 200])
     failed_requests = total_requests - correct_requests
+    # Also create one column for each HTTP error code, plus one for other errors
+    error_code_counts = {code: len(df[df['StatusCode'] == code]) for code in HTTP_ERROR_CODES}
+    other_errors = len(df[(df['StatusCode'] != 200) & (~df['StatusCode'].isin(HTTP_ERROR_CODES))])
 
     metrics = {
         'Seed': seed,
@@ -140,7 +146,9 @@ def aggregate_csv_files(input_path: str, output_file: str, seed: int = 0, time_i
         'Q4': Q4,
         'TotalRequests': total_requests,
         'CorrectRequests': correct_requests,
-        'FailedRequests': failed_requests
+        'FailedRequests': failed_requests,
+        **error_code_counts,
+        'OtherErrors': other_errors
     }
     metrics_df = pd.DataFrame([metrics])
 
@@ -153,9 +161,9 @@ def aggregate_csv_files(input_path: str, output_file: str, seed: int = 0, time_i
 
 if __name__ == "__main__":
     # Take the input path, output file, number of subdivisions, number of clients, number of collections, and seed from command line arguments
-    out_dir = sys.argv[1] if len(sys.argv) > 1 else "ermes_benchmark/micro_bench/results/csv_results/"
+    in_dir = sys.argv[1] if len(sys.argv) > 1 else "ermes_benchmark/micro_bench/results/csv_results/"
     out_file = sys.argv[2] if len(sys.argv) > 2 else "ermes_benchmark/micro_bench/results/aggregated_results.csv"
     seed = int(sys.argv[3]) if len(sys.argv) > 3 else 0
     time_interval = int(sys.argv[4]) if len(sys.argv) > 4 else 10
     # Call the aggregation function
-    aggregate_csv_files(out_dir, out_file, seed, time_interval)
+    aggregate_csv_files(in_dir, out_file, seed, time_interval)
