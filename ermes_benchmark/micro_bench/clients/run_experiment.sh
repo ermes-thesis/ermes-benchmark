@@ -38,7 +38,7 @@ ssh -J ubuntu@${JUMP_HOST} ubuntu@${NODE2_IP} "
     tmux kill-session -t experiment 2>/dev/null;
     cd ${REMOTE_PATH};
     chmod +x *.sh;
-    tmux new-session -d -s experiment './run.sh; echo \"\n✅ Esperimento terminato. Premi Invio per chiudere.\"; read'
+    tmux new-session -d -s experiment './run.sh; echo \"Premi Invio per chiudere.\"; read'
 "
 
 echo "✅ Esperimento avviato su TMUX!"

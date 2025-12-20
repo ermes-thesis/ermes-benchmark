@@ -1,8 +1,6 @@
 #!/bin/bash
 
 # --- CONFIGURAZIONE TARGET ---
-# ⚠️ INSERISCI QUI GLI IP PRIVATI DEI NODI DA FLUSHARE ⚠️
-# Esempio: ERMES_NODES=("10.10.101.60" "10.10.101.61")
 ERMES_NODES=("10.10.101.50" "10.10.101.51" "10.10.101.52" "10.10.101.53" "10.10.101.54" "10.10.101.55" "10.10.101.56" "10.10.101.57")
 
 # --- FUNZIONE FLUSH REMOTA ---
@@ -89,17 +87,18 @@ for SEED in "${SEEDS[@]}"; do
         rm user.log create.log 2>/dev/null
 
         # 4. CREAZIONE COLLECTIONS
-        echo "   -> Creazione dati..."
+        echo "⏳ Creazione dati in corso..."
         ./create "$SETUP_FILE" > create.log 2>&1
+        echo "✅ Creazione dati completata."
 
-        rm *.log results_log_*.csv
+        rm create.log results_log_*.csv
 
         # 5. ESECUZIONE TEST
-        echo "   -> Avvio User Client..."
+        echo "⏳ Esperimento in corso..."
         ./user "$SETUP_FILE" > user.log 2>&1
+        echo "✅ Esperimento completato."
 
         echo "⏳ Aggregazione risultati..."
-        # Nota: ho corretto $NUM_USERS in $USERS e $NUM_COLLECTIONS in $COLLECTIONS per coerenza col loop
         python3 csv_aggregator.py . "aggregated_results_users_${USERS}_collections_${COLLECTIONS}.csv" "$SEED"
 
         echo "✅ Completato round."
