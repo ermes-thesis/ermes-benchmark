@@ -257,33 +257,39 @@ def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
 
 
 def plot_failed_requests_bar(aggregated_data, save_path=None):
-    users_list = sorted(aggregated_data.keys())
+    users_list = sorted(aggregated_data.keys()) # Es: [10, 100, 1000]
+
     collections_list = set()
     for u in aggregated_data:
         collections_list.update(aggregated_data[u].keys())
     collections_list = sorted(collections_list)
 
-    width = 0.8 / len(collections_list)
+    x_indexes = np.arange(len(users_list))
+    total_width = 0.5
+    bar_width = total_width / len(collections_list)
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    for i, collections in enumerate(collections_list):
-        xs, failed_vals = [], []
+    for i, collection in enumerate(collections_list):
+        failed_vals = []
 
-        for users in users_list:
-            if collections in aggregated_data[users]:
-                df = aggregated_data[users][collections]
-                failed_vals.append(float(df["FailedRequests"]))
-                xs.append(users)
+        for user in users_list:
+            if collection in aggregated_data[user]:
+                val = float(aggregated_data[user][collection]["FailedRequests"])
+            else:
+                val = 0
+            failed_vals.append(val)
 
-        if xs:
-            xs_offset = np.array(xs) - 0.4 + i * width + width / 2
-            ax.bar(xs_offset, failed_vals, width=width, label=f"{collections} collections")
+        offset = (i - (len(collections_list) - 1) / 2) * bar_width
+        ax.bar(x_indexes + offset, failed_vals, width=bar_width, label=f"{collection} collections")
 
     ax.set_xlabel("Users (Workload)")
     ax.set_ylabel("Average Failed Requests")
     ax.set_title("Average Failed Requests vs Workload")
-    ax.set_xticks(users_list)
+
+    ax.set_xticks(x_indexes)
+    ax.set_xticklabels(users_list)
+
     ax.legend(title="Collections")
     ax.grid(axis='y', alpha=0.3)
     fig.tight_layout()
@@ -294,7 +300,6 @@ def plot_failed_requests_bar(aggregated_data, save_path=None):
 
     plt.close(fig)
     return fig, ax
-
 
 # Disable pycache generation
 sys.dont_write_bytecode = True
