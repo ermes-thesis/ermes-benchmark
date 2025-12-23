@@ -26,7 +26,7 @@ var geolocations = map[int]string{
 }
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		log.Fatal("Missing config file argument")
 	}
 
@@ -40,6 +40,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error unmarshalling config file: %v", err)
 	}
+
+	consistency := os.Args[2]
 
 	// Call the library setup
 
@@ -67,7 +69,7 @@ func main() {
 			"",
 			map[string]string{
 				"name":        collectionName,
-				"consistency": "sequential",
+				"consistency": consistency,
 				"geolocation": geolocations[position],
 			},
 			map[string]map[string]string{},
