@@ -132,7 +132,7 @@ func TestMemoryGeneric(t *testing.T) {
 
 	req, ctx := getTestReqAndCtx("userId", functionInput)
 	if callInvoke {
-		fmt.Println(pool.Invoke(hostFn, "entry", req, ctx))
+		fmt.Println(pool.Invoke("", hostFn, "entry", req, ctx))
 	}
 }
 
@@ -247,7 +247,7 @@ func TestMemoryTimeline(t *testing.T) {
 		req, ctx := getTestReqAndCtx("userId", input)
 
 		for j := 0; j < 50; j++ {
-			res := pool.Invoke(wasmBuffer, "entry", req, ctx)
+			res := pool.Invoke(fileToRead, wasmBuffer, "entry", req, ctx)
 			if res.HttpCode != 200 {
 				fmt.Fprintf(os.Stderr, "Error on %s: %+v\n", fileToRead, res)
 			}
