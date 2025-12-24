@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
 import os
+import argparse
 from pathlib import Path
 
 sns.set_theme(style="whitegrid", font_scale=1.2)
@@ -26,14 +27,12 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
                 print(f"Warning: Empty trace file {csv_path}", file=sys.stderr)
                 continue
 
-            # Estrai etichetta (es. "wasmedge")
+            # Estrai etichetta (es. "trace_sync_WasmEdge_interpreter_Hybrid.csv")
+            # Rimuoviamo il prefisso e l'estensione, poi puliamo
             label = Path(csv_path).stem.replace("trace_sync_", "").replace("_", " ")
-            if label == "wasmedge":
-                label = "WasmEdge"
-            elif label == "wasmtime":
-                label = "Wasmtime"
-            elif label == "wazero":
-                label = "Wazero"
+
+            # Semplificazioni opzionali per la legenda
+            label = label.replace("Hybrid", "(Hybrid)").replace("Standard", "(Standard)")
 
             # Grafico 1: RSS (Memoria Totale di Sistema)
             sns.lineplot(
@@ -41,7 +40,6 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
                 x="Execution_N",
                 y="RSS_MB",
                 label=label,
-                # linewidth=1.0,
                 alpha=0.9,
                 color=palette[i],
                 ax=ax
@@ -53,7 +51,6 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
         except Exception as e:
             print(f"Error plotting {csv_path}: {e}", file=sys.stderr)
 
-    # ax.set_title("Total System Memory (RSS) after each Function Execution", fontsize=15)
     ax.set_ylabel("RSS Memory (MB)")
     ax.set_xlabel("Number of Function Executions (Sequential)")
 
@@ -66,20 +63,17 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
     print(f"Chart saved to {output_file}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python plot_timeline.py [--pdf] file1.csv file2.csv ...", file=sys.stderr)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Plot memory timeline from CSV files.")
+    parser.add_argument("--output", default="memory_timeline.png", help="Output image filename")
+    parser.add_argument("--pdf", action="store_true", help="Save as PDF (overrides extension of --output if present)")
+    parser.add_argument("files", nargs="+", help="CSV files to plot")
 
-    output_arg = "memory_timeline.png"
-    files_to_plot = sys.argv[1:]
+    args = parser.parse_args()
 
-    if "--pdf" in files_to_plot:
-        output_arg = "memory_timeline.pdf"
-        files_to_plot.remove("--pdf")
-        print("Output format set to PDF.")
+    output_filename = args.output
+    if args.pdf:
+        base_name = os.path.splitext(output_filename)[0]
+        output_filename = base_name + ".pdf"
+        print("Output format forced to PDF.")
 
-    if not files_to_plot:
-        print("Error: No CSV files provided to plot.", file=sys.stderr)
-        sys.exit(1)
-
-    plot_timelines(files_to_plot, output_arg)
+    plot_timelines(args.files, output_filename)

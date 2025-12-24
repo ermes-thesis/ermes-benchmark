@@ -207,3 +207,96 @@ wasmtime compile "_WASM_BINARIES/lightweight/lightweight_wOpts.wasm" -o "_WASM_B
 wasmtime compile "_WASM_BINARIES/stateful/statefulFunction_wOpts.wasm" -o "_WASM_BINARIES/stateful/statefulFunction_wOpts_AOTwasmtime.wasm"
 
 echo -e "\n${GREEN}All AOT builds completed successfully.${NC}"
+
+echo -e "\n${GREEN}Building other wasm functions${NC}"n
+
+OTHER_WASM_SOURCES=(
+    "wasm/fun1.go"
+    "wasm/fun2.go"
+    "wasm/fun3.go"
+    "wasm/fun4.go"
+    "wasm/fun5.go"
+    "wasm/fun6.go"
+    "wasm/fun7.go"
+    "wasm/fun8.go"
+    "wasm/fun9.go"
+    "wasm/fun10.go"
+    "wasm/fun11.go"
+    "wasm/fun12.go"
+    "wasm/fun13.go"
+    "wasm/fun14.go"
+    "wasm/fun15.go"
+)
+
+# Collect valid source files
+VALID_SOURCES=()
+for src_file in "${OTHER_WASM_SOURCES[@]}"; do
+    if [ -f "functions/$src_file" ]; then
+        VALID_SOURCES+=("$src_file")
+    else
+        echo -e "${YELLOW}Warning: Source file '$src_file' not found. Skipping.${NC}"
+    fi
+done
+
+# Compile all valid sources in a single command if any exist
+if [ ${#VALID_SOURCES[@]} -gt 0 ]; then
+    echo "Compiling ${#VALID_SOURCES[@]} WASM functions..."
+    ermes-cli compile "${VALID_SOURCES[@]}"
+else
+    echo -e "${YELLOW}No valid WASM source files found to compile.${NC}"
+fi
+
+echo -e "\n${GREEN}Other WASM builds completed successfully.${NC}"
+
+mkdir -p "_WASM_BINARIES/others"
+
+mv "fun1/fun1@1.0.0.wasm" "_WASM_BINARIES/others/fun1_wOpts.wasm"
+mv "fun2/fun2@1.0.0.wasm" "_WASM_BINARIES/others/fun2_wOpts.wasm"
+mv "fun3/fun3@1.0.0.wasm" "_WASM_BINARIES/others/fun3_wOpts.wasm"
+mv "fun4/fun4@1.0.0.wasm" "_WASM_BINARIES/others/fun4_wOpts.wasm"
+mv "fun5/fun5@1.0.0.wasm" "_WASM_BINARIES/others/fun5_wOpts.wasm"
+mv "fun6/fun6@1.0.0.wasm" "_WASM_BINARIES/others/fun6_wOpts.wasm"
+mv "fun7/fun7@1.0.0.wasm" "_WASM_BINARIES/others/fun7_wOpts.wasm"
+mv "fun8/fun8@1.0.0.wasm" "_WASM_BINARIES/others/fun8_wOpts.wasm"
+mv "fun9/fun9@1.0.0.wasm" "_WASM_BINARIES/others/fun9_wOpts.wasm"
+mv "fun10/fun10@1.0.0.wasm" "_WASM_BINARIES/others/fun10_wOpts.wasm"
+mv "fun11/fun11@1.0.0.wasm" "_WASM_BINARIES/others/fun11_wOpts.wasm"
+mv "fun12/fun12@1.0.0.wasm" "_WASM_BINARIES/others/fun12_wOpts.wasm"
+mv "fun13/fun13@1.0.0.wasm" "_WASM_BINARIES/others/fun13_wOpts.wasm"
+mv "fun14/fun14@1.0.0.wasm" "_WASM_BINARIES/others/fun14_wOpts.wasm"
+mv "fun15/fun15@1.0.0.wasm" "_WASM_BINARIES/others/fun15_wOpts.wasm"
+
+wasmedge compile "_WASM_BINARIES/others/fun1_wOpts.wasm" "_WASM_BINARIES/others/fun1_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun2_wOpts.wasm" "_WASM_BINARIES/others/fun2_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun3_wOpts.wasm" "_WASM_BINARIES/others/fun3_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun4_wOpts.wasm" "_WASM_BINARIES/others/fun4_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun5_wOpts.wasm" "_WASM_BINARIES/others/fun5_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun6_wOpts.wasm" "_WASM_BINARIES/others/fun6_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun7_wOpts.wasm" "_WASM_BINARIES/others/fun7_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun8_wOpts.wasm" "_WASM_BINARIES/others/fun8_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun9_wOpts.wasm" "_WASM_BINARIES/others/fun9_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun10_wOpts.wasm" "_WASM_BINARIES/others/fun10_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun11_wOpts.wasm" "_WASM_BINARIES/others/fun11_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun12_wOpts.wasm" "_WASM_BINARIES/others/fun12_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun13_wOpts.wasm" "_WASM_BINARIES/others/fun13_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun14_wOpts.wasm" "_WASM_BINARIES/others/fun14_wOpts_AOTwasmedge.wasm"
+wasmedge compile "_WASM_BINARIES/others/fun15_wOpts.wasm" "_WASM_BINARIES/others/fun15_wOpts_AOTwasmedge.wasm"
+
+wasmtime compile "_WASM_BINARIES/others/fun1_wOpts.wasm" -o "_WASM_BINARIES/others/fun1_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun2_wOpts.wasm" -o "_WASM_BINARIES/others/fun2_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun3_wOpts.wasm" -o "_WASM_BINARIES/others/fun3_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun4_wOpts.wasm" -o "_WASM_BINARIES/others/fun4_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun5_wOpts.wasm" -o "_WASM_BINARIES/others/fun5_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun6_wOpts.wasm" -o "_WASM_BINARIES/others/fun6_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun7_wOpts.wasm" -o "_WASM_BINARIES/others/fun7_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun8_wOpts.wasm" -o "_WASM_BINARIES/others/fun8_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun9_wOpts.wasm" -o "_WASM_BINARIES/others/fun9_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun10_wOpts.wasm" -o "_WASM_BINARIES/others/fun10_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun11_wOpts.wasm" -o "_WASM_BINARIES/others/fun11_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun12_wOpts.wasm" -o "_WASM_BINARIES/others/fun12_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun13_wOpts.wasm" -o "_WASM_BINARIES/others/fun13_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun14_wOpts.wasm" -o "_WASM_BINARIES/others/fun14_wOpts_AOTwasmtime.wasm"
+wasmtime compile "_WASM_BINARIES/others/fun15_wOpts.wasm" -o "_WASM_BINARIES/others/fun15_wOpts_AOTwasmtime.wasm"
+
+rm -rf fun1 fun2 fun3 fun4 fun5 fun6 fun7 fun8 fun9 fun10 fun11 fun12 fun13 fun14 fun15
+echo -e "\n${GREEN}All builds completed successfully.${NC}"

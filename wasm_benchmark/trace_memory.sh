@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # Script per tracciare la memoria (RSS) SINCRONIZZATA
-# Esegue 'TestMemoryTimeline' (che stampa "SYNC_POINT")
-# e lo passa a 'memory_tracer.py' (che ascolta).
+# Esegue 'TestMemoryTimeline' per Hybrid e Standard Cache separatamente.
 
 set -eEuo pipefail
 trap 'echo -e "\n${RED}❌ ERROR: Command failed at line $LINENO: $BASH_COMMAND${NC}\n"' ERR
@@ -46,7 +45,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Main ---
-print_header "Avvio Tracing Memoria Sincronizzato (RSS)"
+print_header "Avvio Tracing Memoria (Hybrid vs Standard)"
 
 # Controlli essenziali
 if ! command -v python3 &> /dev/null; then echo -e "${RED}ERRORE: python3 non trovato.${NC}"; exit 1; fi
@@ -57,43 +56,69 @@ if [ ! -f "$TEST_COMPILED_PATH" ]; then echo -e "${RED}ERRORE: Binario di test $
 mkdir -p "$RESULTS_DIR"
 echo "I file CSV di trace verranno salvati in: $RESULTS_DIR"
 
-declare -a csv_files=()
 declare -a runtimes_to_test=("WasmEdge_interpreter" "WasmEdge_AOT" "Wasmtime_JIT" "Wasmtime_AOT" "Wazero_AOT" "Wazero_interpreter")
+declare -a cache_types=("Hybrid" "Standard")
+
+declare -a hybrid_csvs=()
+declare -a standard_csvs=()
 
 # --- Esecuzione Test ---
 for runtime in "${runtimes_to_test[@]}"; do
-    echo "-> Tracing: $runtime (sincronizzato)"
-    csv_file="$RESULTS_DIR/trace_sync_${runtime}.csv"
+    for cache in "${cache_types[@]}"; do
+        echo "-> Tracing: $runtime [Cache: $cache]"
+        csv_file="$RESULTS_DIR/trace_sync_${runtime}_${cache}.csv"
 
-    # Esegui il TRACER, che a sua volta ESEGUE il test Go
-    python3 "$TRACER_SCRIPT_PATH" --output "$csv_file" -- \
-        "$TEST_COMPILED_PATH" -test.run ^TestMemoryTimeline$ "$runtime"
+        # Esegui il TRACER, passando anche il tipo di cache come argomento al test Go
+        python3 "$TRACER_SCRIPT_PATH" --output "$csv_file" -- \
+            "$TEST_COMPILED_PATH" -test.run ^TestMemoryTimeline$ "$runtime" "$cache"
 
-    csv_files+=("$csv_file")
+        # Separiamo le liste per generare grafici puliti
+        if [[ "$cache" == "Hybrid" ]]; then
+            hybrid_csvs+=("$csv_file")
+        else
+            standard_csvs+=("$csv_file")
+        fi
+    done
 done
 
 
-# --- 3. Generazione Grafico ---
-print_header "Generazione Grafico Timeline Sincronizzato"
+# --- 3. Generazione Grafici ---
+print_header "Generazione Grafici Timeline"
 
-if [ ${#csv_files[@]} -eq 0 ]; then
-    echo -e "${RED}Nessun file CSV generato. Impossibile creare il grafico.${NC}"
-    exit 1
-fi
+generate_plot() {
+    local label=$1
+    local output_file=$2
+    local files_ref=$3
+    local files=("${!files_ref}") # Dereference array
 
-plot_cmd_args=()
-plot_cmd_args+=("${csv_files[@]}") # Aggiungi tutti i file CSV
+    if [ ${#files[@]} -eq 0 ]; then
+        echo -e "${RED}Nessun file CSV per $label.${NC}"
+        return
+    fi
 
-timeline_output_file="memory_timeline.png"
-if [[ "$PDF_OUTPUT" == "true" ]]; then
-    plot_cmd_args+=("--pdf")
-    timeline_output_file="memory_timeline.pdf"
-fi
+    echo "Generando grafico per $label..."
 
-if python3 "$PLOTTER_SCRIPT_PATH" "${plot_cmd_args[@]}"; then
-    echo -e "${GREEN}✓ Grafico timeline salvato in: $timeline_output_file${NC}"
-else
-    echo -e "${RED}✗ Errore durante la generazione del grafico timeline.${NC}"
-fi
+    local cmd_args=("--output" "$output_file")
+    if [[ "$PDF_OUTPUT" == "true" ]]; then
+        cmd_args+=("--pdf")
+    fi
+    cmd_args+=("${files[@]}")
+
+    if python3 "$PLOTTER_SCRIPT_PATH" "${cmd_args[@]}"; then
+        echo -e "${GREEN}✓ Salvato: $output_file${NC}"
+    else
+        echo -e "${RED}✗ Errore grafico $label.${NC}"
+    fi
+}
+
+# Genera grafico Hybrid
+generate_plot "Hybrid Cache" "memory_timeline_hybrid.png" hybrid_csvs[@]
+
+# Genera grafico Standard
+generate_plot "Standard Cache" "memory_timeline_standard.png" standard_csvs[@]
+
+# Opzionale: Genera grafico combinato (tutto insieme)
+# all_csvs=("${hybrid_csvs[@]}" "${standard_csvs[@]}")
+# generate_plot "All" "memory_timeline_all.png" all_csvs[@]
 
 print_header "Tracing Completato"

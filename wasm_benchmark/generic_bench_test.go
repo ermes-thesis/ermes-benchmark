@@ -138,10 +138,27 @@ func TestMemoryGeneric(t *testing.T) {
 }
 
 func TestMemoryTimeline(t *testing.T) {
+	// Args: [0]... [3]=configuration(Runtime_AOT) [4]=cacheType(Hybrid|Standard)
+	if len(os.Args) < 5 {
+		panic("Not enough arguments. Usage: ... Runtime_AOT CacheType")
+	}
 	configuration := os.Args[3]
+	cacheTypeStr := os.Args[4]
+
 	parts := strings.Split(configuration, "_")
 	runtime := parts[0]
 	isAot := parts[1] == "AOT"
+
+	// Parse Cache Type
+	var cacheType wasm.CacheType
+	switch cacheTypeStr {
+	case "Hybrid":
+		cacheType = wasm.CacheHybrid
+	case "Standard":
+		cacheType = wasm.CacheStandard
+	default:
+		panic("Invalid cache type: " + cacheTypeStr + " (must be Hybrid or Standard)")
+	}
 
 	log, err := logger.NewLogger(logger.Config{
 		Level:         logger.FatalLevel,
@@ -155,28 +172,57 @@ func TestMemoryTimeline(t *testing.T) {
 	}
 
 	binaries := []string{
-		"_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci.wasm",
 		"_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_wOpts.wasm",
-		"_WASM_BINARIES/cpuIntensive/primeNums/primeNums.wasm",
 		"_WASM_BINARIES/cpuIntensive/primeNums/primeNums_wOpts.wasm",
-		"_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci.wasm",
 		"_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm",
-		"_WASM_BINARIES/stateful/statefulFunction.wasm",
 		"_WASM_BINARIES/stateful/statefulFunction_wOpts.wasm",
-		"_WASM_BINARIES/lightweight/lightweight.wasm",
 		"_WASM_BINARIES/lightweight/lightweight_wOpts.wasm",
+		"_WASM_BINARIES/others/fun1_wOpts.wasm",
+		"_WASM_BINARIES/others/fun2_wOpts.wasm",
+		"_WASM_BINARIES/others/fun3_wOpts.wasm",
+		"_WASM_BINARIES/others/fun4_wOpts.wasm",
+		"_WASM_BINARIES/others/fun5_wOpts.wasm",
+		"_WASM_BINARIES/others/fun6_wOpts.wasm",
+		"_WASM_BINARIES/others/fun7_wOpts.wasm",
+		"_WASM_BINARIES/others/fun8_wOpts.wasm",
+		"_WASM_BINARIES/others/fun9_wOpts.wasm",
+		"_WASM_BINARIES/others/fun10_wOpts.wasm",
+		"_WASM_BINARIES/others/fun11_wOpts.wasm",
+		"_WASM_BINARIES/others/fun12_wOpts.wasm",
+		"_WASM_BINARIES/others/fun13_wOpts.wasm",
+		"_WASM_BINARIES/others/fun14_wOpts.wasm",
+		"_WASM_BINARIES/others/fun15_wOpts.wasm",
 	}
 	inputs := []int{
 		10,
-		10,
-		100000,
 		100000,
 		20000,
+		0,
 		20000,
 		0,
 		0,
-		20000,
-		20000,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+	}
+
+	// Create Config with dynamic Cache Type
+	poolConfig := wasm.Config{
+		PoolSize:  1,
+		WithCache: cacheType, // Dynamic
+		CacheSize: 10,
+		IsAot:     isAot,
 	}
 
 	var pool wasm.ExecutorPool
@@ -191,12 +237,7 @@ func TestMemoryTimeline(t *testing.T) {
 				}
 			}
 		}
-		poolImpl := wasm.NewWasmedgeExecutorPool(wasm.Config{
-			PoolSize:  1,
-			WithCache: wasm.CacheHybrid,
-			CacheSize: 20,
-			IsAot:     isAot,
-		}, log)
+		poolImpl := wasm.NewWasmedgeExecutorPool(poolConfig, log)
 		err = createHostFns(t, log).RegisterWasmedgeHostFns(poolImpl)
 		if err != nil {
 			panic(err)
@@ -212,24 +253,14 @@ func TestMemoryTimeline(t *testing.T) {
 				}
 			}
 		}
-		poolImpl := wasm.NewWasmtimeExecutorPool(wasm.Config{
-			PoolSize:  1,
-			WithCache: wasm.CacheHybrid,
-			CacheSize: 20,
-			IsAot:     isAot,
-		}, log)
+		poolImpl := wasm.NewWasmtimeExecutorPool(poolConfig, log)
 		err = createHostFns(t, log).RegisterWasmtimeHostFns(poolImpl)
 		if err != nil {
 			panic(err)
 		}
 		pool = poolImpl
 	case "Wazero":
-		poolImpl := wasm.NewWazeroExecutorPool(wasm.Config{
-			PoolSize:  1,
-			WithCache: wasm.CacheHybrid,
-			CacheSize: 20,
-			IsAot:     isAot,
-		}, context.Background(), log)
+		poolImpl := wasm.NewWazeroExecutorPool(poolConfig, context.Background(), log)
 		err = createHostFns(t, log).RegisterWazeroHostFns(poolImpl)
 		if err != nil {
 			panic(err)
