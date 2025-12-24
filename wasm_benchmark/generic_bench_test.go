@@ -93,7 +93,8 @@ func TestMemoryGeneric(t *testing.T) {
 
 	cfg := wasm.Config{
 		PoolSize:  1,
-		WithCache: true,
+		WithCache: wasm.CacheHybrid,
+		CacheSize: 20,
 		IsAot:     isAOT,
 	}
 	var pool wasm.ExecutorPool
@@ -156,12 +157,12 @@ func TestMemoryTimeline(t *testing.T) {
 	binaries := []string{
 		"_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci.wasm",
 		"_WASM_BINARIES/cpuIntensive/fibonacci/fibonacci_wOpts.wasm",
-		"_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums.wasm",
-		"_WASM_BINARIES/cpuIntensive/primeNums/fnPrimeNums_wOpts.wasm",
+		"_WASM_BINARIES/cpuIntensive/primeNums/primeNums.wasm",
+		"_WASM_BINARIES/cpuIntensive/primeNums/primeNums_wOpts.wasm",
 		"_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci.wasm",
 		"_WASM_BINARIES/cpuIntensive/tailFibonacci/tailFibonacci_wOpts.wasm",
-		"_WASM_BINARIES/hostFns/statefulFunction.wasm",
-		"_WASM_BINARIES/hostFns/statefulFunction_wOpts.wasm",
+		"_WASM_BINARIES/stateful/statefulFunction.wasm",
+		"_WASM_BINARIES/stateful/statefulFunction_wOpts.wasm",
 		"_WASM_BINARIES/lightweight/lightweight.wasm",
 		"_WASM_BINARIES/lightweight/lightweight_wOpts.wasm",
 	}
@@ -192,7 +193,8 @@ func TestMemoryTimeline(t *testing.T) {
 		}
 		poolImpl := wasm.NewWasmedgeExecutorPool(wasm.Config{
 			PoolSize:  1,
-			WithCache: true,
+			WithCache: wasm.CacheHybrid,
+			CacheSize: 20,
 			IsAot:     isAot,
 		}, log)
 		err = createHostFns(t, log).RegisterWasmedgeHostFns(poolImpl)
@@ -212,7 +214,8 @@ func TestMemoryTimeline(t *testing.T) {
 		}
 		poolImpl := wasm.NewWasmtimeExecutorPool(wasm.Config{
 			PoolSize:  1,
-			WithCache: true,
+			WithCache: wasm.CacheHybrid,
+			CacheSize: 20,
 			IsAot:     isAot,
 		}, log)
 		err = createHostFns(t, log).RegisterWasmtimeHostFns(poolImpl)
@@ -223,7 +226,8 @@ func TestMemoryTimeline(t *testing.T) {
 	case "Wazero":
 		poolImpl := wasm.NewWazeroExecutorPool(wasm.Config{
 			PoolSize:  1,
-			WithCache: true,
+			WithCache: wasm.CacheHybrid,
+			CacheSize: 20,
 			IsAot:     isAot,
 		}, context.Background(), log)
 		err = createHostFns(t, log).RegisterWazeroHostFns(poolImpl)
