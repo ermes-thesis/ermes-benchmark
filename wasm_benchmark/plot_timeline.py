@@ -32,7 +32,7 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
             label = Path(csv_path).stem.replace("trace_sync_", "").replace("_", " ")
 
             # Semplificazioni opzionali per la legenda
-            label = label.replace("Hybrid", "(Hybrid)").replace("Standard", "(Standard)")
+            label = label.replace("Hybrid", "").replace("Standard", "")
 
             # Grafico 1: RSS (Memoria Totale di Sistema)
             sns.lineplot(
