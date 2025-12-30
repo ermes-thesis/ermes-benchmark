@@ -8,47 +8,37 @@ import re
 import numpy as np
 
 # === CONFIG ===
-# Imposta l'estensione predefinita
 file_ext = ".png"
-args = sys.argv[1:] # Copia gli argomenti
+args = sys.argv[1:]
 
-# Controlla il flag --individual
-save_individual = False
-if "--individual" in args:
-    save_individual = True
-    args.remove("--individual") # Rimuovi il flag dalla lista degli argomenti
-    print("Individual plots generation enabled.")
-
-# Controlla il flag --pdf
+# Check flags
 if "--pdf" in args:
     file_ext = ".pdf"
-    args.remove("--pdf") # Rimuovi il flag dalla lista degli argomenti
+    args.remove("--pdf")
     print("Output format set to PDF.")
 else:
     print("Output format set to PNG (default).")
 
-# Controlla il percorso del file di memoria
+if "--individual" in args:
+    args.remove("--individual")
+
 if len(args) < 1:
     print("Error: Memory file path not provided.", file=sys.stderr)
-    print("Usage: python plot.py [--pdf] [--individual] <path_to_memory_file.txt>", file=sys.stderr)
+    print("Usage: python plot.py [--pdf] <path_to_memory_file.txt>", file=sys.stderr)
     sys.exit(1)
 
 memory_path = Path(args[0])
 
-mem_summary_img = Path(f"memory-summary{file_ext}")
-
 sns.set_theme(style="whitegrid", font_scale=1.2)
-palette = "Set2"
+palette = "viridis"
 
 # ============================================================
-# PARSING FUNCTIONS FOR MEMORY DATA
+# PARSING FUNCTIONS
 # ============================================================
 
 def _parse_label(raw_label):
-    """Helper to parse labels like 'Fibonacci_Wasmedge_AOT_NoOpts' or 'Fibonacci_Native'"""
     parts = raw_label.split("_")
-    if not parts:
-        return None, None, None, None, None
+    if not parts: return None, None, None, None, None
 
     algorithm_name = parts[0]
     runtime = "Unknown"
@@ -79,134 +69,41 @@ def _parse_label(raw_label):
         algorithm_name_suffixed = algorithm_name
 
     label = f"{runtime}\n{compiler}\n{opt}"
-
     return algorithm_name_suffixed, runtime, compiler, opt, label
 
-def parse_main_benchmarks(lines):
-    """
-    Parse the main runtime + memory sections (MaxRSS) from a benchmark file.
-    Filters out "OVERHEAD" and "NET MEMORY" scenarios.
-    Returns a DataFrame with columns:
-    [Algorithm, Runtime, Compilation, Optimization, Label, MaxRSS_KB]
-    """
-    records = []
-    text = "".join(lines)
-    scenario_blocks = re.split(r"#+ SCENARIO: ", text)
-
-    for block in scenario_blocks[1:]:
-        lines_in_block = block.strip().splitlines()
-        if not lines_in_block:
-            continue
-
-        scenario_header = lines_in_block[0].strip()
-        # Filter for main scenarios only, not OVERHEAD or NET MEMORY
-        if "OVERHEAD" in scenario_header or "NET MEMORY" in scenario_header:
-            continue
-
-        content = "\n".join(lines_in_block[1:])
-
-        scenarios = re.split(r"## ", content)
-        for rblock in scenarios[1:]:
-            if not rblock.strip():
-                continue
-
-            try:
-                raw_label, *rest = rblock.strip().splitlines()
-            except ValueError:
-                print(f"Warning: Skipping block, possibly empty: '{rblock}'")
-                continue
-
-            raw_label = raw_label.strip()
-            if not raw_label:
-                continue
-
-            # Parse label
-            algorithm_name, runtime, compiler, opt, label = _parse_label(raw_label)
-            if algorithm_name is None:
-                continue
-
-            # Extract metrics from the block
-            block_text = "\n".join(rest)
-            maxrss_match = re.search(r"Mean MaxRSS:\s*([\d\.]+) KB", block_text)
-            maxrss = float(maxrss_match.group(1)) if maxrss_match else np.nan
-
-            records.append({
-                "Runtime": runtime,
-                "Compilation": compiler,
-                "Algorithm": algorithm_name,
-                "Optimization": opt,
-                "Label": label,
-                "MaxRSS_KB": maxrss,
-            })
-
-    return pd.DataFrame(records)
-
-
 def parse_memory_stats(lines):
-    """
-    Parse the NET MEMORY sections from the benchmark text file.
-    Returns a DataFrame with columns:
-    [Algorithm, Runtime, Compilation, Optimization, Label, NetMemory_MB, etc.]
-    """
     records = []
     text = "".join(lines)
     scenario_blocks = re.split(r"#+ SCENARIO: ", text)
 
     for block in scenario_blocks[1:]:
         lines_in_block = block.strip().splitlines()
-        if not lines_in_block:
-            continue
+        if not lines_in_block: continue
 
         scenario_header = lines_in_block[0].strip()
-        # Filter only for NET MEMORY scenarios
-        if "NET MEMORY" not in scenario_header:
-            continue
+        if "NET MEMORY" not in scenario_header: continue
 
-        # Extract algorithm name from header (e.g., "Fibonacci")
         algorithm_name_from_header = scenario_header.split("-")[0].strip()
         content = "\n".join(lines_in_block[1:])
-
         scenarios = re.split(r"## ", content)
-        for rblock in scenarios[1:]:
-            if not rblock.strip():
-                continue
 
+        for rblock in scenarios[1:]:
+            if not rblock.strip(): continue
             try:
                 raw_label, *rest = rblock.strip().splitlines()
-            except ValueError:
-                print(f"Warning: Skipping block, possibly empty: '{rblock}'")
-                continue
+            except ValueError: continue
 
             raw_label = raw_label.strip()
-            if not raw_label:
-                continue
+            if not raw_label: continue
 
-            # Parse label
             algorithm_name, runtime, compiler, opt, label = _parse_label(raw_label)
-            if algorithm_name is None:
-                continue
-
-            # Sanity check
-            if algorithm_name != algorithm_name_from_header:
-                # Add suffixes to header name for comparison
-                if "TailFibonacci" == algorithm_name_from_header:
-                    algorithm_name_from_header_suffixed = algorithm_name_from_header + " (20k)"
-                elif "Fibonacci" == algorithm_name_from_header:
-                    algorithm_name_from_header_suffixed = algorithm_name_from_header + " (40)"
-                else:
-                    algorithm_name_from_header_suffixed = algorithm_name_from_header
-
-                # Re-check with suffixes
-                if algorithm_name != algorithm_name_from_header_suffixed:
-                    print(f"Warning: Label algorithm '{algorithm_name}' differs from header '{algorithm_name_from_header_suffixed}'")
-
+            if algorithm_name is None: continue
 
             block_text = "\n".join(rest)
-
             tot_mem_match = re.search(r"Total Memory:\s*([\d\.]+) KB", block_text)
             tot_mem = float(tot_mem_match.group(1)) if tot_mem_match else np.nan
 
-            overhead_mem_match = re.search(r"Overhead Memory:\s*([\d\.]+|N/A)", block_text) # 'N/A' won't have 'KB'
+            overhead_mem_match = re.search(r"Overhead Memory:\s*([\d\.]+|N/A)", block_text)
             overhead_val = overhead_mem_match.group(1) if overhead_mem_match else None
             overhead_mem = float(overhead_val) if overhead_val and overhead_val != "N/A" else np.nan
 
@@ -234,167 +131,121 @@ print(f"Loading memory data from: {memory_path}")
 with open(memory_path, "r", encoding="utf-8") as f:
     lines = f.readlines()
 
-df_max_mem = parse_main_benchmarks(lines)
 df_mem = parse_memory_stats(lines)
-
-print("--- MaxRSS Memory Data (from main scenarios) ---")
-print(df_max_mem.head())
-print("------------------------------------------------\n")
-print("--- NET Memory Data (from NET MEMORY scenarios) ---")
-print(df_mem.head())
-print("---------------------------------------------------\n")
-
 
 # ============================================================
 # PLOTTING
 # ============================================================
 
-print(f"Generating combined memory summary plot ({mem_summary_img})...")
-# --- Create the figure grid ---
-fig = plt.figure(figsize=(15, 18)) # Figura alta
+print("\nGenerating individual memory plots...")
 
-# Griglia 3x1 (verticale)
-ax1 = plt.subplot2grid((3, 1), (0, 0)) # Riga 0
-ax2 = plt.subplot2grid((3, 1), (1, 0)) # Riga 1
-ax3 = plt.subplot2grid((3, 1), (2, 0)) # Riga 2
+# 1. Calc Max Y for Opts Comparison (No Native)
+max_y_total_no_native = df_mem[df_mem["Runtime"] != "Native"]["TotMemory_MB"].max()
+if pd.isna(max_y_total_no_native): max_y_total_no_native = 100
+max_y_total_no_native *= 1.1
 
-# --- Plot 1: Total Memory ---
-sns.barplot(data=df_mem, x="Label", y="TotMemory_MB", hue="Algorithm", ax=ax1, palette=palette)
-ax1.set_title("Total Memory (MB)")
-# ax1.set_yscale("log")
-ax1.set_xlabel("")
-ax1.set_ylabel("Memory (MB)")
-# ax1.set_ylim(1e3, 1e5)
-ax1.tick_params(axis="x", labelsize=12)
-handles, labels = ax1.get_legend_handles_labels()
-ax1.legend_.remove()
+# 2. Calc Max Y for Total vs Overhead (With Native support in Total)
+max_total_w_opts = df_mem[(df_mem["Optimization"] == "WithOpts") | (df_mem["Runtime"] == "Native")]["TotMemory_MB"].max()
+max_overhead_w_opts = df_mem[(df_mem["Optimization"] == "WithOpts") & (df_mem["Runtime"] != "Native")]["OverheadMemory_MB"].max()
+max_y_total_vs_overhead = max(max_total_w_opts, max_overhead_w_opts)
+if pd.isna(max_y_total_vs_overhead): max_y_total_vs_overhead = 100
+max_y_total_vs_overhead *= 1.1
 
-# --- Plot 2: Overhead Memory ---
-sns.barplot(data=df_mem, x="Label", y="OverheadMemory_MB", hue="Algorithm", ax=ax2, palette=palette)
-ax2.set_title("Overhead Memory (MB)")
-# ax2.set_yscale("log")
-ax2.set_xlabel("")
-ax2.set_ylabel("Memory (MB)")
-# ax2.set_ylim(1e3, 1e5)
-ax2.tick_params(axis="x", labelsize=12)
-ax2.legend_.remove()
+# 3. Max Y for Net Memory
+max_y_net = df_mem["NetMemory_MB"].max()
+if pd.isna(max_y_net): max_y_net = 10
+max_y_net *= 1.1
 
-# --- Plot 3: Net Memory ---
-sns.barplot(data=df_mem, x="Label", y="NetMemory_MB", hue="Algorithm", ax=ax3, palette=palette)
-ax3.set_title("Net Memory (MB)")
-ax3.set_xlabel("Runtime Configuration")
-ax3.set_ylabel("Memory (MB)")
-ax3.tick_params(axis="x", labelsize=12)
-ax3.legend_.remove()
+configs = [
+    # --- PAIR 1: Optimization Impact (No Native) ---
+    {
+        "col": "TotMemory_MB",
+        "filter": lambda df: df[(df["Optimization"] == "NoOpts") & (df["Runtime"] != "Native")],
+        "filename": f"memory-total-noopts-no-native{file_ext}",
+        "ylim": max_y_total_no_native,
+        "figsize": (7, 5),
+        "hide_ylabel": False # Show label and ticks for first chart
+    },
+    {
+        "col": "TotMemory_MB",
+        "filter": lambda df: df[(df["Optimization"] == "WithOpts") & (df["Runtime"] != "Native")],
+        "filename": f"memory-total-withopts-no-native{file_ext}",
+        "ylim": max_y_total_no_native,
+        "figsize": (7, 5),
+        "hide_ylabel": True # HIDE label and ticks for comparison
+    },
 
-# --- Layout adjustments ---
-fig.suptitle("Memory Usage Comparison across Scenarios", fontsize=16, y=0.98)
+    # --- PAIR 2: Overhead vs Total (With Native in Total) ---
+    {
+        "col": "OverheadMemory_MB",
+        "filter": lambda df: df[(df["Optimization"] == "WithOpts") & (df["Runtime"] != "Native")],
+        "filename": f"memory-overhead-withopts-no-native{file_ext}",
+        "ylim": max_y_total_vs_overhead,
+        "figsize": (7, 5),
+        "hide_ylabel": True # HIDE label and ticks
+    },
+    {
+        "col": "TotMemory_MB",
+        "filter": lambda df: df[(df["Optimization"] == "WithOpts") | (df["Runtime"] == "Native")],
+        "filename": f"memory-total-withopts-native{file_ext}",
+        "ylim": max_y_total_vs_overhead,
+        "figsize": (8, 5), # WIDER for Native
+        "hide_ylabel": False # Show label and ticks
+    },
 
-num_labels = len(labels)
-ncol = min(num_labels, 6) # Massimo 6 colonne
-fig.legend(
-    handles=handles,
-    labels=labels,
-    title="Algorithm",
-    loc='upper center',         # Posiziona in alto
-    bbox_to_anchor=(0.5, 0.96), # Appena sotto il titolo
-    borderaxespad=0.1,
-    ncol=ncol
-)
+    # --- SINGLE: Net Memory (With Native) ---
+    {
+        "col": "NetMemory_MB",
+        "filter": lambda df: df[(df["Optimization"] == "WithOpts") | (df["Runtime"] == "Native")],
+        "filename": f"memory-net-withopts-native{file_ext}",
+        # "ylim": max_y_net,
+        "figsize": (8, 5), # WIDER for Native
+        "hide_ylabel": False
+    }
+]
 
-plt.subplots_adjust(
-    top=0.90,    # Spazio per il titolo e la legenda
-    bottom=0.05, # Meno spazio in basso
-    left=0.08,   # Spazio per etichette Y
-    right=0.98,
-    hspace=0.30, # Spazio verticale ridotto
-    wspace=0.0   # Nessuno spazio orizzontale
-)
-plt.savefig(mem_summary_img)
-plt.close(fig)
+for cfg in configs:
+    filtered_data = cfg["filter"](df_mem)
 
-print(f"Plots generated and saved to {mem_summary_img}")
+    if filtered_data.empty:
+        print(f"  -> Skipping {cfg['filename']} (No data)")
+        continue
 
-# ============================================================
-# INDIVIDUAL PLOTS GENERATION
-# ============================================================
+    # Use specified figsize
+    plt.figure(figsize=cfg["figsize"])
 
-if save_individual:
-    print("\nGenerating individual plots (--individual flag detected)...")
+    ax = sns.barplot(data=filtered_data, x="Label", y=cfg["col"], hue="Algorithm", palette=palette)
 
-    # Configurazione dei 5 grafici richiesti
-    # Struttura: (Nome Colonna, Filtro (lambda), Titolo File, Titolo Grafico opzionale)
+    plt.xlabel("")
 
-    configs = [
-        # 1. Total Memory | Con Ottimizzazioni | Senza Native
-        {
-            "col": "TotMemory_MB",
-            "filter": lambda df: df[(df["Optimization"] == "WithOpts") & (df["Runtime"] != "Native")],
-            "filename": f"memory-total-withopts-no-native{file_ext}",
-            "title": "Total Memory (WithOpts - No Native)"
-        },
-        # 2. Total Memory | Senza Ottimizzazioni | Senza Native
-        {
-            "col": "TotMemory_MB",
-            "filter": lambda df: df[(df["Optimization"] == "NoOpts") & (df["Runtime"] != "Native")],
-            "filename": f"memory-total-noopts-no-native{file_ext}",
-            "title": "Total Memory (NoOpts - No Native)"
-        },
-        # 3. Total Memory | Con Ottimizzazioni | Con Native
-        {
-            "col": "TotMemory_MB",
-            "filter": lambda df: df[(df["Optimization"] == "WithOpts") | (df["Runtime"] == "Native")],
-            "filename": f"memory-total-withopts-native{file_ext}",
-            "title": "Total Memory (WithOpts + Native)"
-        },
-        # 4. Overhead Memory | Con Ottimizzazioni | Senza Native
-        {
-            "col": "OverheadMemory_MB",
-            "filter": lambda df: df[(df["Optimization"] == "WithOpts") & (df["Runtime"] != "Native")],
-            "filename": f"memory-overhead-withopts-no-native{file_ext}",
-            "title": "Overhead Memory (WithOpts - No Native)"
-        },
-        # 5. Net Memory | Con Ottimizzazioni | Con Native
-        {
-            "col": "NetMemory_MB",
-            "filter": lambda df: df[(df["Optimization"] == "WithOpts") | (df["Runtime"] == "Native")],
-            "filename": f"memory-net-withopts-native{file_ext}",
-            "title": "Net Memory (WithOpts + Native)"
-        }
-    ]
-
-    for cfg in configs:
-        # Applica il filtro
-        filtered_data = cfg["filter"](df_mem)
-
-        if filtered_data.empty:
-            print(f"  -> Skipping {cfg['filename']} (No data found matching criteria)")
-            continue
-
-        plt.figure(figsize=(8, 5))
-
-        ax = sns.barplot(data=filtered_data, x="Label", y=cfg["col"], hue="Algorithm", palette=palette)
-
-        # Se si vuole il titolo sul grafico decommentare la riga sotto:
-        # plt.title(cfg["title"], fontsize=16)
-
-        plt.xlabel("")
+    if cfg.get("hide_ylabel", False):
+        plt.ylabel("")
+        plt.tick_params(axis="y", labelleft=False) # Hide numbers
+    else:
         plt.ylabel("Memory (MB)")
-        plt.tick_params(axis="x")
-        plt.tick_params(axis="y")
-        plt.ylim(top=75)
+        plt.tick_params(axis="y", labelleft=True)
 
-        # Legenda
-        # plt.legend(
-        #     loc='upper right', # Spostato in alto a destra per evitare sovrapposizioni
-        #     bbox_to_anchor=(1.15, 1),
-        #     title="Algorithm",
-        #     borderaxespad=0
-        # )
-        plt.legend().remove()
-        plt.tight_layout()
-        plt.savefig(cfg["filename"])
-        plt.close()
-        print(f"  -> Saved {cfg['filename']}")
+    plt.tick_params(axis="x")
 
-    print("Individual plots generation complete.")
+    if "ylim" in cfg:
+        plt.ylim(0, cfg["ylim"])
+
+    plt.legend().remove()
+
+    plt.tight_layout()
+    plt.savefig(cfg["filename"], bbox_inches='tight')
+    plt.close()
+    print(f"  -> Saved {cfg['filename']}")
+
+# Legend generation (based on last plot handles)
+if not df_mem.empty:
+    handles, labels = ax.get_legend_handles_labels()
+    fig_leg = plt.figure(figsize=(len(labels) * 2.5, 1))
+    ax_leg = fig_leg.add_subplot(111)
+    ax_leg.axis('off')
+    ax_leg.legend(handles, labels, title="Algorithm", loc='center', ncol=len(labels), frameon=True, borderaxespad=0.1)
+    fig_leg.savefig(f"legend_algorithms{file_ext}", bbox_inches='tight')
+    plt.close(fig_leg)
+    print(f"  -> Saved legend_algorithms{file_ext}")
+
+print("Individual plots generation complete.")
