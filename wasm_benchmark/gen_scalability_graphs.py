@@ -43,11 +43,26 @@ def load_data(filename="scalability_results.json"):
 
     return df
 
-def plot_scalability_matrix(df):
+def move_legend_to_top(g):
+    """Sposta la legenda di un FacetGrid in alto al centro."""
+    # Rimuovi la legenda automatica laterale
+    if g._legend:
+        g._legend.remove()
+
+    # Ottieni handles e labels dal primo asse (che li contiene tutti)
+    handles, labels = g.axes.flat[0].get_legend_handles_labels()
+
+    # Se non ci sono handles (grafico vuoto?), non fare nulla
+    if not handles:
+        return
+
+    num_cols = min(len(labels), 8) # Massimo 8 colonne
+    g.fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 1),
+                 ncol=num_cols, frameon=False, title="Pool Size")
+
+def plot_scalability_matrix(df, file_ext=".png"):
     """
     Genera una matrice completa (Runtime x Workload) con SCALE INDIPENDENTI.
-    Questo permette di vedere la forma della curva anche per runtime più lenti,
-    senza che vengano 'schiacciati' dalla scala di quelli più veloci.
     """
 
     # Definiamo marker espliciti
@@ -67,15 +82,20 @@ def plot_scalability_matrix(df):
         height=3.5, aspect=1.3,
         palette="viridis",
         linewidth=2,
-        # CRUCIALE: sharey=False permette a ogni grafico di avere la sua scala Y
         facet_kws={'sharey': False, 'sharex': True}
     )
 
     g1.set_titles("{row_name} | {col_name}")
     g1.set_axis_labels("Users", "RPS")
-    g1.fig.suptitle("Scalability Matrix: RPS (Independent Scales)", y=1.02, fontsize=16)
-    g1.savefig("scalability_rps_matrix_independent.png", dpi=300, bbox_inches='tight')
-    print("Saved: scalability_rps_matrix_independent.png")
+
+    # Sposta la legenda in alto
+    move_legend_to_top(g1)
+
+    # g1.fig.suptitle("Scalability Matrix: RPS (Independent Scales)", y=1.12, fontsize=16) # Aumentato y per fare spazio
+
+    filename = f"scalability_rps_matrix_independent{file_ext}"
+    g1.savefig(filename, dpi=300, bbox_inches='tight')
+    print(f"Saved: {filename}")
 
     # --- 2. Latency Matrix (Independent Scales) ---
     print("Generating Scalability Matrix (Latency) - Independent Scales...")
@@ -89,25 +109,29 @@ def plot_scalability_matrix(df):
         height=3.5, aspect=1.3,
         palette="rocket_r",
         linewidth=2,
-        # CRUCIALE: sharey=False
         facet_kws={'sharey': False, 'sharex': True}
     )
 
     g2.set_titles("{row_name} | {col_name}")
     g2.set_axis_labels("Users", "Latency (ms)")
-    g2.fig.suptitle("Scalability Matrix: Latency (Independent Scales)", y=1.02, fontsize=16)
-    g2.savefig("scalability_latency_matrix_independent.png", dpi=300, bbox_inches='tight')
-    print("Saved: scalability_latency_matrix_independent.png")
 
-def plot_compact_scalability(df):
+    # Sposta la legenda in alto
+    move_legend_to_top(g2)
+
+    # g2.fig.suptitle("Scalability Matrix: Latency (Independent Scales)", y=1.12, fontsize=16)
+
+    filename = f"scalability_latency_matrix_independent{file_ext}"
+    g2.savefig(filename, dpi=300, bbox_inches='tight')
+    print(f"Saved: {filename}")
+
+def plot_compact_scalability(df, file_ext=".png"):
     """
     Genera grafici compatti:
-    - Colonne: Workload (Lightweight, Prime, etc.)
-    - Colore (Hue): Runtime (Wasmtime, Wazero...) -> Confronto diretto
-    - Stile (Marker): Pool Size -> Impatto risorse
+    - Colonne: Workload
+    - Colore (Hue): Runtime
+    - Stile (Marker): Pool Size
     """
 
-    # Definiamo marker espliciti per le Pool Size
     markers_list = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
     num_pool_sizes = len(df['Pool Size'].unique())
     current_markers = markers_list[:num_pool_sizes] if num_pool_sizes <= len(markers_list) else True
@@ -117,23 +141,24 @@ def plot_compact_scalability(df):
     g1 = sns.relplot(
         data=df,
         x="concurrency", y="rps",
-        col="workload",          # Una colonna per Workload
-        hue="runtime",           # Colore diverso per Runtime (CONFRONTO DIRETTO)
-        style="Pool Size",       # Stile diverso per Pool Size
+        col="workload",
+        hue="runtime",
+        style="Pool Size",
         kind="line",
         markers=current_markers, dashes=False,
         height=5, aspect=1.2,
-        palette="bright",        # Palette brillante per distinguere bene i runtime
+        palette="bright",
         linewidth=2.5,
-        facet_kws={'sharey': False, 'sharex': True} # Scala Y indipendente per workload diversi
+        facet_kws={'sharey': False, 'sharex': True}
     )
 
     g1.set_titles("{col_name}")
     g1.set_axis_labels("Concurrent Users", "Throughput (RPS)")
     g1.fig.suptitle("Scalability Comparison: Runtime Efficiency & Pool Sizing", y=1.02, fontsize=16)
 
-    g1.savefig("scalability_rps_compact.png", dpi=300, bbox_inches='tight')
-    print("Saved: scalability_rps_compact.png")
+    filename = f"scalability_rps_compact{file_ext}"
+    g1.savefig(filename, dpi=300, bbox_inches='tight')
+    print(f"Saved: {filename}")
 
     # --- 2. Latency Compact Chart ---
     print("Generating Compact Latency Chart...")
@@ -153,38 +178,28 @@ def plot_compact_scalability(df):
 
     g2.set_titles("{col_name}")
     g2.set_axis_labels("Concurrent Users", "Avg Latency (ms)")
-    # g2.set(yscale="log") # Scommenta se necessario
     g2.fig.suptitle("Scalability Latency: Runtime Stability under Load", y=1.02, fontsize=16)
 
-    g2.savefig("scalability_latency_compact.png", dpi=300, bbox_inches='tight')
-    print("Saved: scalability_latency_compact.png")
+    filename = f"scalability_latency_compact{file_ext}"
+    g2.savefig(filename, dpi=300, bbox_inches='tight')
+    print(f"Saved: {filename}")
 
-def plot_by_runtime(df):
+def plot_by_runtime(df, file_ext=".png"):
     """
-    Genera grafici separati per ogni RUNTIME:
-    - Asse X: Concorrenza
-    - Asse Y: RPS / Latency
-    - Colore (Hue): Workload (Funzioni diverse)
-    - Stile: Pool Size
+    Genera grafici separati per ogni RUNTIME.
     """
 
-    # Definiamo marker espliciti
     markers_list = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
     num_pool_sizes = len(df['Pool Size'].unique())
     current_markers = markers_list[:num_pool_sizes] if num_pool_sizes <= len(markers_list) else True
 
-    # Iteriamo su ogni Runtime presente nel dataset
     runtimes = df['runtime'].unique()
 
     for rt in runtimes:
         print(f"Generating charts for Runtime: {rt}...")
         df_rt = df[df['runtime'] == rt]
 
-        # --- 1. RPS Chart per questo Runtime ---
-        # Usiamo relplot con col="workload" per separare le funzioni, ma tutto nello stesso file
-        # Oppure un singolo plot con hue="workload".
-        # Qui facciamo un singolo plot con hue="workload" per vedere tutto insieme
-
+        # --- 1. RPS Chart ---
         plt.figure(figsize=(10, 6))
         g1 = sns.lineplot(
             data=df_rt,
@@ -200,10 +215,12 @@ def plot_by_runtime(df):
         plt.xlabel("Concurrent Users")
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.tight_layout()
-        plt.savefig(f"scalability_rps_{rt}.png", dpi=300)
+
+        filename = f"scalability_rps_{rt}{file_ext}"
+        plt.savefig(filename, dpi=300)
         plt.close()
 
-        # --- 2. Latency Chart per questo Runtime ---
+        # --- 2. Latency Chart ---
         plt.figure(figsize=(10, 6))
         g2 = sns.lineplot(
             data=df_rt,
@@ -219,15 +236,24 @@ def plot_by_runtime(df):
         plt.xlabel("Concurrent Users")
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.tight_layout()
-        plt.savefig(f"scalability_latency_{rt}.png", dpi=300)
+
+        filename = f"scalability_latency_{rt}{file_ext}"
+        plt.savefig(filename, dpi=300)
         plt.close()
 
     print(f"Generated individual charts for runtimes: {runtimes}")
 
 if __name__ == "__main__":
-    target_file = "scalability_results.json"
-    if len(sys.argv) > 1:
-        target_file = sys.argv[1]
+    args = sys.argv[1:]
+
+    # Gestione flag --pdf
+    file_ext = ".png"
+    if "--pdf" in args:
+        file_ext = ".pdf"
+        args.remove("--pdf")
+        print("Output format set to PDF.")
+
+    target_file = args[0] if args else "scalability_results.json"
 
     print(f"--- Processing {target_file} ---")
     df = load_data(target_file)
@@ -240,13 +266,13 @@ if __name__ == "__main__":
     print(f"Runtimes found: {df['runtime'].unique()}")
     print(f"Workloads found: {df['workload'].unique()}")
 
-    # 1. Matrice Completa (RPS e Latency) con scale INDIPENDENTI (Quello che hai chiesto)
-    plot_scalability_matrix(df)
+    # 1. Matrice Completa
+    plot_scalability_matrix(df, file_ext)
 
-    # 2. Grafici Compatti (Confronto diretto Runtime)
-    plot_compact_scalability(df)
+    # 2. Grafici Compatti
+    plot_compact_scalability(df, file_ext)
 
-    # 3. Grafici per Runtime (Dettaglio singolo)
-    plot_by_runtime(df)
+    # 3. Grafici per Runtime
+    plot_by_runtime(df, file_ext)
 
     print("\nDone.")

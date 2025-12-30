@@ -9,6 +9,7 @@ import (
 	"os"
 	"scheduler"
 	"server"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -25,8 +26,7 @@ import (
 var concurrencyLevels = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 20, 25, 50, 75, 100} // Utenti simultanei
 var poolSizes = []int{1, 2, 4, 8, 16, 32, 64, 128}                                        // Dimensioni pool
 
-const requestsPerWorker = 10
-const ScalabilityTimeout = 5 * time.Second
+const requestsPerWorker = 50
 
 // Runtime supportati
 var runtimesToTest = []string{"Wasmtime", "Wazero", "Wasmedge"}
@@ -74,18 +74,25 @@ func createScaleHostFns(t testing.TB, log logger.Logger) *scheduler.HostFunction
 	return scheduler.NewHostFunctions(dataManager, metadataManager, &serverInfo, log)
 }
 
-func getScaleWasmPath(workload string) string {
+func getScaleWasmPath(workload string, wasmedgeAot bool) string {
 	baseDir := "_WASM_BINARIES/"
+	var path string
 	switch workload {
 	case "PrimeNumbers":
-		return baseDir + "cpuIntensive/primeNums/primeNums.wasm"
+		path = baseDir + "cpuIntensive/primeNums/primeNums_wOpts.wasm"
 	case "Lightweight":
-		return baseDir + "lightweight/lightweight.wasm"
+		path = baseDir + "lightweight/lightweight_wOpts.wasm"
 	case "Stateful":
-		return baseDir + "stateful/statefulFunction.wasm"
+		path = baseDir + "stateful/statefulFunction_wOpts.wasm"
 	default:
 		panic("Unknown workload: " + workload)
 	}
+
+	if wasmedgeAot {
+		path = strings.ReplaceAll(path, ".wasm", "_AOTwasmedge.wasm")
+	}
+
+	return path
 }
 
 func getScaleReqAndCtx(workload string, nVal int) ([]byte, []byte) {
@@ -105,11 +112,12 @@ func getScaleReqAndCtx(workload string, nVal int) ([]byte, []byte) {
 
 func runScalabilityScenario(t *testing.T, runtime string, workload string, inputVal int) {
 	log := createScaleLogger(t)
-	path := getScaleWasmPath(workload)
+	path := getScaleWasmPath(workload, runtime == "Wasmedge")
 	binary, err := os.ReadFile(path)
 	require.NoError(t, err)
 
-	isAOT := runtime == "Wazero"
+	// Configura AOT: True per Wazero e Wasmedge, False (JIT) per Wasmtime
+	isAOT := runtime == "Wazero" || runtime == "Wasmedge"
 
 	fmt.Printf("\n=== Scalability Test: Runtime=%s | Workload=%s | AOT=%v ===\n", runtime, workload, isAOT)
 
@@ -123,7 +131,6 @@ func runScalabilityScenario(t *testing.T, runtime string, workload string, input
 		// Configurazione Pool
 		poolConfig := wasm.Config{
 			PoolSize:  pSize,
-			Timeout:   ScalabilityTimeout,
 			WithCache: wasm.CacheHybrid,
 			CacheSize: 2,
 			IsAot:     isAOT,
@@ -202,7 +209,7 @@ func runScalabilityScenario(t *testing.T, runtime string, workload string, input
 			// Salvataggio
 			res := ScalabilityResult{
 				Runtime:     runtime,
-				Workload:    workload, // Aggiungiamo dettagli AOT se serve
+				Workload:    workload,
 				PoolSize:    pSize,
 				Concurrency: workers,
 				RPS:         rps,
@@ -228,7 +235,7 @@ func TestScalability_All(t *testing.T) {
 		runScalabilityScenario(t, rt, "Lightweight", 20000)
 
 		// 2. CPU Intensive (PrimeNums)
-		runScalabilityScenario(t, rt, "PrimeNumbers", 20000)
+		runScalabilityScenario(t, rt, "PrimeNumbers", 200000)
 
 		// 3. Stateful (Test host functions & I/O simulation)
 		runScalabilityScenario(t, rt, "Stateful", 0)
