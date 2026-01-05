@@ -6,6 +6,14 @@ ERMES_NODES=("10.10.101.50" "10.10.101.51" "10.10.101.52" "10.10.101.53" "10.10.
 # Percorso del file di configurazione sul server remoto
 REMOTE_CONFIG_PATH="/etc/ermes-node/config.yaml"
 
+CONSISTENCY_MODE=$1
+
+# Se per qualche motivo è vuoto, usa un default (sicurezza)
+if [[ -z "$CONSISTENCY_MODE" ]]; then
+    echo "⚠️  Nessuna modalità specificata, uso default: eventual"
+    CONSISTENCY_MODE="eventual"
+fi
+
 show_progress() {
     local pid=$1
     local duration=$2
@@ -158,8 +166,8 @@ for SEED in "${SEEDS[@]}"; do
         rm user.log create.log 2>/dev/null
 
         # 4. CREAZIONE DATI
-        echo "⏳ Creazione dati in corso..."
-        ./create "$SETUP_FILE" sequential > create.log 2>&1
+        echo "⏳ Creazione dati in corso (Modalità: $CONSISTENCY_MODE)..."
+        ./create "$SETUP_FILE" "$CONSISTENCY_MODE" > create.log 2>&1
         echo "✅ Creazione dati completata."
 
         rm create.log results_log_*.csv

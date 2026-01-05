@@ -1,5 +1,16 @@
 #!/bin/bash
 
+MODE=$1
+
+# Verifica che l'utente abbia passato un argomento valido
+if [[ "$MODE" != "eventual" && "$MODE" != "sequential" ]]; then
+    echo "❌ Errore: Devi specificare la modalità di consistenza."
+    echo "   Uso: $0 [eventual | sequential]"
+    exit 1
+fi
+
+echo "⚙️  Modalità selezionata: $MODE"
+
 # Configurazione connessione
 NODE2_IP="10.10.101.59"
 JUMP_HOST="100.112.91.33"
@@ -38,7 +49,7 @@ ssh -J ubuntu@${JUMP_HOST} ubuntu@${NODE2_IP} "
     tmux kill-session -t experiment 2>/dev/null;
     cd ${REMOTE_PATH};
     chmod +x *.sh;
-    tmux new-session -d -s experiment './run.sh; echo \"Premi Invio per chiudere.\"; read'
+    tmux new-session -d -s experiment './run.sh $MODE; echo \"Premi Invio per chiudere.\"; read'
 "
 
 echo "✅ Esperimento avviato su TMUX!"
