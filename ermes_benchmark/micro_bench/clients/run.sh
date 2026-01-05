@@ -6,14 +6,25 @@ ERMES_NODES=("10.10.101.50" "10.10.101.51" "10.10.101.52" "10.10.101.53" "10.10.
 # Percorso del file di configurazione sul server remoto
 REMOTE_CONFIG_PATH="/etc/ermes-node/config.yaml"
 
-CONSISTENCY_MODE=$1
+# --- GESTIONE MODALITÀ (DA INPUT) ---
+INPUT_MODE=$1
 
-# Se per qualche motivo è vuoto, usa un default (sicurezza)
-if [[ -z "$CONSISTENCY_MODE" ]]; then
+# Definiamo l'array delle modalità da eseguire
+if [[ "$INPUT_MODE" == "all" ]]; then
+    TARGET_MODES=("eventual" "sequential")
+elif [[ -n "$INPUT_MODE" ]]; then
+    TARGET_MODES=("$INPUT_MODE")
+else
+    # Default se vuoto
     echo "⚠️  Nessuna modalità specificata, uso default: eventual"
-    CONSISTENCY_MODE="eventual"
+    TARGET_MODES=("eventual")
 fi
 
+echo "📋 Pianificazione esecuzione per: ${TARGET_MODES[*]}"
+
+# --- FUNZIONI UTILITÀ ---
+
+# Funzione per mostrare la barra di progresso
 show_progress() {
     local pid=$1
     local duration=$2
@@ -21,6 +32,7 @@ show_progress() {
     local elapsed=0
     local width=40
 
+    # Controlla se il processo esiste (kill -0)
     while kill -0 "$pid" 2>/dev/null; do
         # Calcolo percentuale (max 100%)
         local perc=$(( 100 * elapsed / duration ))
@@ -45,7 +57,7 @@ show_progress() {
     printf "\r✅ [%s] 100%% (%ds/%ds) - Completato!\n" "$(for ((i=0; i<width; i++)); do echo -n "#"; done)" "$elapsed" "$duration"
 }
 
-# --- FUNZIONE FLUSH REMOTA ---
+# Funzione per pulire e configurare i nodi remoti
 flush_remote_nodes() {
     local F_THRESH=$1
     local L_THRESH=$2
@@ -65,7 +77,6 @@ flush_remote_nodes() {
         REDIS_PASS="very-secure-password"
         LOG_DIR="/var/log/ermes-node/"
         SPECIFIC_LOGS=("/var/log/ermes-node/general.log" "/var/log/ermes-node/ermes-node.err.log" "/var/log/ermes-node/dump.ndjson")
-
 
         # 1. Stop servizio
         systemctl stop ermes-node || true
@@ -87,7 +98,6 @@ flush_remote_nodes() {
 
         # 4. Gestione Log
         if [ ! -d "$LOG_DIR" ]; then mkdir -p "$LOG_DIR"; chmod 755 "$LOG_DIR"; fi
-
 
         find "$LOG_DIR" -maxdepth 1 -name "general-*" -type f -delete || true
 
@@ -120,12 +130,18 @@ mkdir -p results
 
 echo "🏁 Inizio sequenza esperimenti..."
 
-for SEED in "${SEEDS[@]}"; do
-  for USERS in "${USERS_LIST[@]}"; do
-    for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
+# --- CICLO ESTERNO PER LA MODALITÀ (eventual, sequential, etc.) ---
+for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
+
+  echo "##########################################################"
+  echo "🔷 CAMBIO MODALITÀ: $CONSISTENCY_MODE"
+  echo "##########################################################"
+
+  for SEED in "${SEEDS[@]}"; do
+    for USERS in "${USERS_LIST[@]}"; do
+      for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
 
         # --- CALCOLO DINAMICO THRESHOLD ---
-
         # 1. Calcolo il divisore: min(COLLECTIONS, 25)
         if [ "$COLLECTIONS" -lt 25 ]; then
             DIVISOR=$COLLECTIONS
@@ -133,14 +149,14 @@ for SEED in "${SEEDS[@]}"; do
             DIVISOR=25
         fi
 
-        # 1. Calcolo il fattore: min(COLLECTIONS, 4)
+        # 2. Calcolo il fattore: min(COLLECTIONS, 4)
         if [ "$COLLECTIONS" -lt 4 ]; then
             FACTOR=$COLLECTIONS
         else
             FACTOR=4
         fi
 
-        # 2. Applico le formule
+        # 3. Applico le formule
         # Leader = 450 * FACTOR / DIVISOR
         L_VAL=$(( (450 * FACTOR) / DIVISOR ))
 
@@ -148,7 +164,7 @@ for SEED in "${SEEDS[@]}"; do
         F_VAL=$(( (150 * FACTOR) / DIVISOR ))
 
         echo "=================================================="
-        echo "🚀 Avvio: U=${USERS}, C=${COLLECTIONS}, Seed=${SEED}"
+        echo "🚀 Avvio: Mode=${CONSISTENCY_MODE}, U=${USERS}, C=${COLLECTIONS}, Seed=${SEED}"
         echo "🧮 Calcolo Threshold (Divisore=${DIVISOR}, Fattore=${FACTOR}):"
         echo "   -> Leader:   ${L_VAL}"
         echo "   -> Follower: ${F_VAL}"
@@ -159,33 +175,46 @@ for SEED in "${SEEDS[@]}"; do
         SETUP_FILE="tests/setup_experiment_${SEED}_users_${USERS}_collections_${COLLECTIONS}.json"
 
         # 2. AGGIORNAMENTO CONFIG E PULIZIA (Remoto)
-        # Passiamo i valori calcolati alla funzione
         flush_remote_nodes "$F_VAL" "$L_VAL"
 
         # 3. PULIZIA LOG LOCALI
         rm user.log create.log 2>/dev/null
 
         # 4. CREAZIONE DATI
-        echo "⏳ Creazione dati in corso (Modalità: $CONSISTENCY_MODE)..."
+        echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
         ./create "$SETUP_FILE" "$CONSISTENCY_MODE" > create.log 2>&1
         echo "✅ Creazione dati completata."
 
-        rm create.log results_log_*.csv
+        # Rimuove log della creazione
+        rm create.log results_log_*.csv 2>/dev/null
 
-        # 5. ESECUZIONE TEST
-        echo "⏳ Esperimento in corso..."
+        # 5. ESECUZIONE TEST (Con Progress Bar)
+        echo "⏳ Avvio esperimento (Durata stimata: 2m 30s)..."
+
+        # Esegui in background
         ./user "$SETUP_FILE" > user.log 2>&1 &
+
+        # Cattura PID
         USER_PID=$!
 
+        # Mostra barra
         show_progress $USER_PID 150
 
+        # Attendi fine reale del processo
         wait $USER_PID
 
-        echo "⏳ Aggregazione risultati..."
-        python3 csv_aggregator.py . "aggregated_results_users_${USERS}_collections_${COLLECTIONS}.csv" "$SEED"
+        echo "✅ Esperimento completato."
+
+        # 6. AGGREGAZIONE RISULTATI
+        # Il nome del file CSV include ora la modalità per evitare sovrascritture
+        OUTPUT_CSV="aggregated_results_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}.csv"
+
+        echo "⏳ Aggregazione risultati in $OUTPUT_CSV..."
+        python3 csv_aggregator.py . "$OUTPUT_CSV" "$SEED"
 
         echo "✅ Completato round."
 
+      done
     done
   done
 done

@@ -2,10 +2,9 @@
 
 MODE=$1
 
-# Verifica che l'utente abbia passato un argomento valido
-if [[ "$MODE" != "eventual" && "$MODE" != "sequential" ]]; then
-    echo "❌ Errore: Devi specificare la modalità di consistenza."
-    echo "   Uso: $0 [eventual | sequential]"
+if [[ "$MODE" != "eventual" && "$MODE" != "sequential" && "$MODE" != "all" ]]; then
+    echo "❌ Errore: Specifica la modalità."
+    echo "   Uso: $0 [ eventual | sequential | all ]"
     exit 1
 fi
 
