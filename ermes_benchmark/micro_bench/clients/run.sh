@@ -115,8 +115,21 @@ EOF
     sleep 5
 }
 
+copy_logs() {
+    local NAME_EXP=$1
+    for NODE_IP in "${ERMES_NODES[@]}"; do
+        ssh -o StrictHostKeyChecking=no ubuntu@${NODE_IP} "sudo bash -s" -- "$NAME_EXP" << 'EOF'
+        NAME_EXP=$1
+        mkdir -p "/home/ubuntu/experiments_${NAME_EXP}"
+        cp /var/log/ermes-node/* "/home/ubuntu/experiments_${NAME_EXP}"
+EOF
+    done
+    sleep 5
+}
+
+
 # --- CONFIGURAZIONE PARAMETRI ESPERIMENTO ---
-USERS_LIST=("1" "10" "100" "1000")
+USERS_LIST=("1" "4" "16" "64" "256" "512" "1024")
 COLLECTIONS_LIST=("1" "10" "100" "1000")
 SEEDS=("1" "42" "100" "2024" "7" "99" "1234" "5678" "91011" "121314")
 #USERS_LIST=("1000")
@@ -127,6 +140,9 @@ FN_ROUND=25
 # Setup cartelle locali
 cd "$(dirname "$0")" || exit
 mkdir -p results
+
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+echo "   -> Timestamp: ${TIMESTAMP}"
 
 echo "🏁 Inizio sequenza esperimenti..."
 
@@ -205,8 +221,12 @@ for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
 
         echo "✅ Esperimento completato."
 
+        # Copia log dai nodi remoti
+        echo "⏳ Copia log dai nodi remoti..."
+        copy_logs "${TIMESTAMP}_mode_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}_seed_${SEED}"
+        echo "✅ Copia log completata."
+
         # 6. AGGREGAZIONE RISULTATI
-        # Il nome del file CSV include ora la modalità per evitare sovrascritture
         OUTPUT_CSV="aggregated_results_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}.csv"
 
         echo "⏳ Aggregazione risultati in $OUTPUT_CSV..."
