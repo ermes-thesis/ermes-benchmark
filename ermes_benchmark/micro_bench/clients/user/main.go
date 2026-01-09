@@ -5,6 +5,7 @@ import (
 	ermes "ermes_client_library"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -56,6 +57,9 @@ func main() {
 			} else {
 				fmt.Println("Library set up correctly!")
 			}
+
+			sleep := rand.Intn(600)
+			time.Sleep(time.Duration(sleep) * time.Millisecond)
 
 			rounds := 10
 			roundDuration := 15.0
