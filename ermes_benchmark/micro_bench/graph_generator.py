@@ -184,14 +184,15 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
             line, = ax.plot(xs_arr, avg_arr, marker="o", linewidth=2, label=f"{collections} collections")
             color = line.get_color()
             half_width = 0.1
-            factor = 1.05
-            ax.hlines(q1_arr, xs_arr / factor, xs_arr * factor, linewidth=2, color=color)
-            ax.hlines(q3_arr, xs_arr / factor, xs_arr * factor, linewidth=2, color=color)
+            line_length = 10
+            ax.hlines(q1_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
+            ax.hlines(q3_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
 
     ax.set_xlabel("Users")
     ax.set_ylabel("Latency (ms)")
-    ax.set_yscale("log")
-    ax.set_xscale("log")
+    ax.set_ylim(top=120)
+    # ax.set_yscale("log")
+    # ax.set_xscale("log")
     ax.set_title("Interaction Plot with IQR (avg)")
     ax.legend(title="Collections")
     ax.grid(True, alpha=0.4)
@@ -235,14 +236,15 @@ def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
             ax.fill_between(xs_arr, q1_arr, q3_arr, alpha=0.18)
             line, = ax.plot(xs_arr, median_arr, marker="o", linewidth=2, label=f"{collections} collections")
             color = line.get_color()
-            factor = 1.05
-            ax.hlines(q1_arr, xs_arr / factor, xs_arr * factor, linewidth=2, color=color)
-            ax.hlines(q3_arr, xs_arr / factor, xs_arr * factor, linewidth=2, color=color)
+            line_length = 10
+            ax.hlines(q1_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
+            ax.hlines(q3_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
 
     ax.set_xlabel("Users")
     ax.set_ylabel("Latency (ms)")
-    ax.set_yscale("log")
-    ax.set_xscale("log")
+    ax.set_ylim(top=120)
+    # ax.set_yscale("log")
+    # ax.set_xscale("log")
     ax.set_title("Interaction Plot with IQR (median)")
     ax.legend(title="Collections")
     ax.grid(True, alpha=0.4)
