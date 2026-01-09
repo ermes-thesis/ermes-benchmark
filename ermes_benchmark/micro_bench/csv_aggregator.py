@@ -28,7 +28,7 @@ def parse_timestamp(ts: str) -> datetime:
     return datetime.strptime(ts, fmt).replace(tzinfo=pytz.utc)
 
 # Modify function signature to match the new requirements
-def aggregate_csv_files(input_path: str, output_file: str, seed: int = 0, time_interval: int = 10, columns: List[str] = None) -> None:
+def aggregate_csv_files(input_path: str, output_file: str, seed: int = 0, time_interval: int = 15, columns: List[str] = None) -> None:
     """
     Aggregates all CSV files in the given input path into a single CSV file.
 
