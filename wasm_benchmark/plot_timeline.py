@@ -46,7 +46,9 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
             )
 
             if not df.empty:
-                max_exec = max(max_exec, df["Execution_N"].max())
+                current_max = df["Execution_N"].max()
+                if current_max > max_exec:
+                    max_exec = current_max
 
         except Exception as e:
             print(f"Error plotting {csv_path}: {e}", file=sys.stderr)
@@ -56,6 +58,13 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
 
     if max_exec > 0:
         ax.set_xlim(0, max_exec)
+
+        # --- MODIFICA: Aggiunta righe verticali ogni 50 funzioni ---
+        # range(start, stop, step)
+        step = 50
+        for x_pos in range(step, int(max_exec) + 1, step):
+            ax.axvline(x=x_pos, color='gray', linestyle='--', linewidth=0.8, alpha=0.5)
+        # -----------------------------------------------------------
 
     plt.tight_layout()
 
