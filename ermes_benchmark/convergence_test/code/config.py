@@ -68,7 +68,18 @@ eq_state = {
 }
 
 tree = {
-    57: [56, 55],
+    57: [55, 56],
     56: [52, 53, 54],
     55: [50, 51],
+}
+
+domains = {
+    57: 'IT',
+    55: 'IT/Rome',
+    56: 'IT/Milan',
+    50: 'IT/Rome/Edge1',
+    51: 'IT/Rome/Edge2',
+    52: 'IT/Milan/Edge1',
+    53: 'IT/Milan/Edge2',
+    54: 'IT/Milan/Edge3',
 }

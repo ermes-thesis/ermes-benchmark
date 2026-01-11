@@ -17,7 +17,7 @@ def compute_path(tree: dict, start_node: int, end_node: int) -> list[int]:
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         return []
 
-def plot_tree_with_sparklines(tree: dict, dfs: list[pd.DataFrame], normalization: int):
+def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame], normalization: int):
 
     # --- 1. Pre-elaborazione Dati per Sparklines ---
     try:
@@ -125,7 +125,7 @@ def plot_tree_with_sparklines(tree: dict, dfs: list[pd.DataFrame], normalization
     fig_width = max(14, num_nodes * 0.4 * fig_scale)
     fig_height = max(6, num_nodes * 0.7 * fig_scale)
     fig_size = (fig_width, fig_height)
-    
+
     fig = plt.figure(figsize=fig_size) 
     plt.subplots_adjust(wspace=3) #spazio tra subplots
     ax = plt.gca()
@@ -196,19 +196,19 @@ def plot_tree_with_sparklines(tree: dict, dfs: list[pd.DataFrame], normalization
 
         spark_ax.set_xticks([0, num_groups - 1])
         spark_ax.set_xticklabels([sparkline_data.columns.min(), sparkline_data.columns.max()])
-        spark_ax.set_xlabel("Time (Epoch)", fontsize=6 * fig_scale / 1.5, labelpad=2)
+        spark_ax.set_xlabel("Time (Epoch)", fontsize=8 * fig_scale / 1.5, labelpad=2)
 
         # Y-axis scaling: massimo tra TaskCount e indirectLoad
         local_max = max(max_tasks_in_round, max_indirect, 1)
         spark_ax.set_yticks([0, local_max])
         spark_ax.set_yticklabels([0, local_max])
-        spark_ax.set_ylabel("N. Req", fontsize=6 * fig_scale / 1.5, rotation=90, labelpad=2)
+        spark_ax.set_ylabel("N. Req", fontsize=8 * fig_scale / 1.5, rotation=90, labelpad=2)
 
         spark_ax.spines['top'].set_visible(False)
         spark_ax.spines['right'].set_visible(False)
         spark_ax.spines['left'].set_linewidth(0.5)
         spark_ax.spines['bottom'].set_linewidth(0.5)
-        spark_ax.tick_params(axis='both', which='major', labelsize=6 * fig_scale / 1.5, pad=1)
+        spark_ax.tick_params(axis='both', which='major', labelsize=8 * fig_scale / 1.5, pad=1)
 
         spark_ax.set_ylim(0, local_max * 1.05)
         spark_ax.set_xlim(-0.5, num_groups - 0.5)
@@ -216,23 +216,23 @@ def plot_tree_with_sparklines(tree: dict, dfs: list[pd.DataFrame], normalization
         # Etichetta nodo
         spark_ax.text(
             0.5, 1.25,
-            str(node),
+            domains[node],
             transform=spark_ax.transAxes,
             ha='center', va='center',
             fontsize=12 * fig_scale / 1.5,
-            fontweight='bold',
+            # fontweight='bold',
             color='black'
         )
 
         # Etichetta Max TaskCount / indirectLoad
         spark_ax.text(
             0.5, -0.65,
-            f"Max: {max_tasks_in_round} / {max_indirect} (req/epoch)",
+            f"Max: {max_tasks_in_round} (req/epoch)\nMax offloaded: {max_indirect} (req/epoch)",
             transform=spark_ax.transAxes,
             ha='center', va='center',
             fontsize=8 * fig_scale / 1.5,
             color='darkred',
-            fontweight='bold'
+            # fontweight='bold'
         )
 
     return fig
