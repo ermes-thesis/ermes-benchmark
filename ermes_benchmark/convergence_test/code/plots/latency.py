@@ -374,6 +374,14 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
         avg_per_file = full_df.groupby(['Group', 'FileID'])['Duration'].mean().unstack(fill_value=np.nan)
 
         plot_df = pd.merge(avg_all_files, avg_per_file, left_index=True, right_index=True)
+
+        # ----------------------------
+        # MODIFICA: Filtro per bottom_up
+        # ----------------------------
+        # Se lo scenario è bottom_up o top_down, teniamo solo le prime 6 epoche (righe del df)
+        if scenario == "bottom_up" or scenario == "top_down":
+            plot_df = plot_df.iloc[:6]
+
         all_groups = plot_df.index.tolist()
 
         # ----------------------------
@@ -424,13 +432,15 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
         agg_pos = x - (total_bars_in_group / 2 - 0.5) * bar_width
 
         # ----------------------------
-        # 4. Aggregate bars (Avg_All) - Nessuna modifica qui (o logica simile se volessi split anche qui)
+        # 4. Aggregate bars (Avg_All)
         # ----------------------------
         agg_colors = []
         for g in all_groups:
-            if group_status[g] == "warm":
+            # group_status contiene tutti i gruppi, ma noi iteriamo solo su all_groups (filtrato)
+            status = group_status.get(g, "mixed")
+            if status == "warm":
                 agg_colors.append(warm_shades[0])
-            elif group_status[g] == "cool":
+            elif status == "cool":
                 agg_colors.append(cool_shades[0])
             else:
                 agg_colors.append(gray_colors[0])
@@ -460,17 +470,20 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
             ratios = []
 
             for g in all_groups:
+                status = group_status.get(g, "mixed")
                 # Determina colore base
-                if group_status[g] == "warm":
+                if status == "warm":
                     bar_colors.append(warm_shades[j])
-                elif group_status[g] == "cool":
+                elif status == "cool":
                     bar_colors.append(cool_shades[j])
                 else:
                     bar_colors.append(gray_colors_file[j])
 
                 # Ottieni altezza totale e ratio
                 h = plot_df.loc[g, j]
-                r = non_local_ratio.loc[g, j] if j in non_local_ratio.columns else 0
+                # Usa .loc con get sicuro o controlla l'indice, ma essendo filtered all_groups dovrebbe esistere
+                # Se non_local_ratio ha più righe di plot_df, non importa, prendiamo solo g
+                r = non_local_ratio.loc[g, j] if (g in non_local_ratio.index and j in non_local_ratio.columns) else 0
 
                 # Gestione NaN
                 if pd.isna(h): h = 0
@@ -548,8 +561,8 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
         fontsize = 7
         if scenario == "full_traversal":
             fontsize = 9
-        elif scenario == "top_down" or scenario == "bottom_up":
-            fontsize = 4
+        # elif scenario == "top_down" or scenario == "bottom_up":
+        #     fontsize = 4
 
         for i, v in enumerate(plot_df['Avg_All']):
             if pd.notna(v):
