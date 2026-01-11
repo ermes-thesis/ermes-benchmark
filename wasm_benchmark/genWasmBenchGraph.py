@@ -127,11 +127,11 @@ def export_legend_with_line(handles, labels, filename, ncol=None):
     if ncol is None:
         ncol = len(labels)
 
-    fig_leg = plt.figure(figsize=(len(labels) * 2.8, 1))
+    fig_leg = plt.figure(figsize=(len(labels) * 2.5, 1))
     ax_leg = fig_leg.add_subplot(111)
     ax_leg.axis('off')
 
-    ax_leg.legend(handles, labels, title="Legend", loc='center', ncol=ncol, frameon=True, borderaxespad=0.1)
+    ax_leg.legend(handles, labels, title="Algorithm", loc='center', ncol=ncol, frameon=True, borderaxespad=0.1)
 
     fig_leg.savefig(filename, bbox_inches='tight')
     plt.close(fig_leg)
