@@ -1,0 +1,10 @@
+{
+  "SELECT": "ALL",
+  "AS": "test",
+  "WHERE": {
+    "AND": [
+      { "field": "owner", "eq": "userId"},
+      { "field": "name", "eq": "<name>"}
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "SELECT": "ALL",
+  "AS": "sequentialAndEventual",
+  "WHERE": {
+    "AND": [
+      { "field": "owner", "eq": "userId"}
+    ]
+  }
+}
