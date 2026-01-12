@@ -9,6 +9,15 @@ REMOTE_CONFIG_PATH="/etc/ermes-node/config.yaml"
 # --- GESTIONE MODALITÀ (DA INPUT) ---
 INPUT_MODE=$1
 
+# --- CONFIGURAZIONE PARAMETRI ESPERIMENTO ---
+USERS_LIST=("1" "4")
+COLLECTIONS_LIST=("1" "10")
+SEEDS=("1" "42")
+#USERS_LIST=("1024")
+#COLLECTIONS_LIST=("1000")
+#SEEDS=("91011")
+FN_ROUND=25
+
 # Definiamo l'array delle modalità da eseguire
 if [[ "$INPUT_MODE" == "all" ]]; then
     TARGET_MODES=("eventual" "sequential")
@@ -127,18 +136,10 @@ EOF
     sleep 5
 }
 
-
-# --- CONFIGURAZIONE PARAMETRI ESPERIMENTO ---
-USERS_LIST=("1" "4" "16" "64" "256" "512" "1024")
-COLLECTIONS_LIST=("1" "10" "100" "1000")
-SEEDS=("1" "42" "100" "2024" "7" "99" "1234" "5678" "91011" "121314")
-#USERS_LIST=("1000")
-#COLLECTIONS_LIST=("1000")
-#SEEDS=("1")
-FN_ROUND=25
-
 # Setup cartelle locali
 cd "$(dirname "$0")" || exit
+
+rm -rf results user.log create.log
 mkdir -p results
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -153,9 +154,9 @@ for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
   echo "🔷 CAMBIO MODALITÀ: $CONSISTENCY_MODE"
   echo "##########################################################"
 
-  for SEED in "${SEEDS[@]}"; do
-    for USERS in "${USERS_LIST[@]}"; do
-      for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
+  for USERS in "${USERS_LIST[@]}"; do
+    for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
+      for SEED in "${SEEDS[@]}"; do
 
         # --- CALCOLO DINAMICO THRESHOLD ---
         # 1. Calcolo il divisore: min(COLLECTIONS, 25)
@@ -202,7 +203,7 @@ for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
         echo "✅ Creazione dati completata."
 
         # Rimuove log della creazione
-        rm create.log results_log_*.csv 2>/dev/null
+        rm create.log results/results_log_2000_*.csv 2>/dev/null
 
         # 5. ESECUZIONE TEST (Con Progress Bar)
         echo "⏳ Avvio esperimento (Durata stimata: 2m 30s)..."
@@ -226,17 +227,17 @@ for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
         copy_logs "${TIMESTAMP}_mode_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}_seed_${SEED}"
         echo "✅ Copia log completata."
 
-        # 6. AGGREGAZIONE RISULTATI
-        OUTPUT_CSV="aggregated_results_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}.csv"
-
-        echo "⏳ Aggregazione risultati in $OUTPUT_CSV..."
-        python3 csv_aggregator.py . "$OUTPUT_CSV" "$SEED"
-
         echo "✅ Completato round."
+
+        mkdir -p "results/mode_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}/seed_${SEED}/"
+        mv results/results_log_*.csv "results/mode_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}/seed_${SEED}/"
 
       done
     done
   done
 done
+
+echo "⏳ Aggregazione risultati..."
+python3 csv_aggregator.py results
 
 echo "🎉 TUTTI I TEST COMPLETATI."

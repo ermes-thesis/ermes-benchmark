@@ -27,6 +27,7 @@ func main() {
 
 	// Call the library setup
 	confFile := "config.yaml"
+	random := rand.New(rand.NewSource(0))
 
 	var conf Config
 	confBytes, err := os.ReadFile(os.Args[1])
@@ -58,7 +59,7 @@ func main() {
 				fmt.Println("Library set up correctly!")
 			}
 
-			sleep := rand.Intn(600)
+			sleep := random.Intn(600)
 			time.Sleep(time.Duration(sleep) * time.Millisecond)
 
 			rounds := 10

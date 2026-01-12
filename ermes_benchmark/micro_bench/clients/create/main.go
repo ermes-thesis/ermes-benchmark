@@ -50,7 +50,7 @@ func main() {
 
 	fmt.Println("Hello world !")
 
-	client, errSetup := ermes.SetupClientLibrary(uint64(0), "10.10.101.50", confFile)
+	client, errSetup := ermes.SetupClientLibrary(uint64(2000), "10.10.101.50", confFile)
 
 	if errSetup != nil {
 		fmt.Fprintf(os.Stderr, "Error when setting up the client library: %v\n", errSetup)
