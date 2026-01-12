@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -76,8 +77,12 @@ func main() {
 			"",
 		)
 		fmt.Println(code, string(body), err)
+	}
 
-		body, code, err = client.ExecuteFunction(
+	time.Sleep(1 * time.Second)
+
+	for collectionName, position := range conf.CollectionPositions {
+		body, code, err := client.ExecuteFunction(
 			"writeCollection",
 			"",
 			map[string]string{
@@ -92,6 +97,7 @@ func main() {
 		)
 
 		fmt.Println(code, string(body), err)
+		time.Sleep(50 * time.Millisecond)
 	}
 
 }
