@@ -82,6 +82,8 @@ func main() {
 	time.Sleep(1 * time.Second)
 
 	for collectionName, position := range conf.CollectionPositions {
+		node := "10.10.101." + fmt.Sprint(position) + ":12345"
+		client.MoveToNewNode(node)
 		body, code, err := client.ExecuteFunction(
 			"writeCollection",
 			"",
@@ -97,7 +99,7 @@ func main() {
 		)
 
 		fmt.Println(code, string(body), err)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 
 }
