@@ -10,9 +10,9 @@ REMOTE_CONFIG_PATH="/etc/ermes-node/config.yaml"
 INPUT_MODE=$1
 
 # --- CONFIGURAZIONE PARAMETRI ESPERIMENTO ---
-USERS_LIST=("1" "4")
-COLLECTIONS_LIST=("1" "10")
-SEEDS=("1" "42")
+USERS_LIST=("1" "4" "16" "64" "256" "512" "1024")
+COLLECTIONS_LIST=("1" "10" "100" "1000")
+SEEDS=("1" "42" "100" "2024" "7" "99" "1234" "5678" "91011" "121314")
 #USERS_LIST=("1024")
 #COLLECTIONS_LIST=("1000")
 #SEEDS=("91011")
@@ -133,7 +133,6 @@ copy_logs() {
         cp /var/log/ermes-node/* "/home/ubuntu/experiments_${NAME_EXP}"
 EOF
     done
-    sleep 5
 }
 
 # Setup cartelle locali
