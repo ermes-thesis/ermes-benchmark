@@ -186,6 +186,7 @@ def main():
 
                     # Legge tutti i log del seed
                     df_seed = pd.concat((pd.read_csv(f) for f in csv_files), ignore_index=True)
+                    df_seed['FuncDuration'] = df_seed['FuncDuration'] / 1000.0
 
                     # 1. Calcola ROUNDS e conserva nel listone globale della cartella
                     df_rounds = calculate_metrics_by_round(df_seed, seed=seed_val, interval=ROUND_INTERVAL_SECONDS)
