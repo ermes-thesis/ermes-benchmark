@@ -207,7 +207,7 @@ def main():
     fig_tree = topology.plot_tree_with_sparklines(config.tree, config.domains, full_dfs, num_files)
     if fig_tree:
         fig_tree.savefig(f'{output_dir}/tree_with_sparklines.png', dpi=300, bbox_inches='tight')
-        fig_tree.savefig(f'{output_dir}/pdf/tree_with_sparklines.pdf')
+        fig_tree.savefig(f'{output_dir}/pdf/tree_with_sparklines.pdf', bbox_inches='tight')
         plt.close(fig_tree)
 
     print(f"All processing complete. Outputs saved to: {output_dir}")

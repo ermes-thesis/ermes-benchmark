@@ -1,9 +1,12 @@
-import pandas as pd
-import numpy as np
-import networkx as nx
-import matplotlib.pyplot as plt
 import itertools
 from collections import defaultdict
+
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import pandas as pd
+from matplotlib.lines import Line2D
+
 
 def compute_path(tree: dict, start_node: int, end_node: int) -> list[int]:
     G = nx.Graph()  # undirected graph
@@ -17,8 +20,8 @@ def compute_path(tree: dict, start_node: int, end_node: int) -> list[int]:
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         return []
 
-def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame], normalization: int):
 
+def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame], normalization: int):
     # --- 1. Pre-elaborazione Dati per Sparklines ---
     try:
         df_combined = pd.concat(dfs, ignore_index=True)
@@ -33,7 +36,7 @@ def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame]
     except Exception as e:
         print(f"Errore nella pulizia degli host: assicurati che siano presenti etichette numeriche. {e}")
         return
-        
+
     all_nodes = df_combined['ExecHost'].str.split('.').str[-1].str.split(':').str[0].astype(int).unique()
     all_groups = df_combined['Group'].unique()
 
@@ -58,10 +61,10 @@ def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame]
 
     # Riempie i valori mancanti con 0
     task_counts['TaskCount'] = task_counts['TaskCount'].fillna(0).astype(int)
-    task_counts['TaskCount'] = task_counts['TaskCount'] / normalization # Normalizzazione
-    
-    paths = defaultdict(list)   
-    
+    task_counts['TaskCount'] = task_counts['TaskCount'] / normalization  # Normalizzazione
+
+    paths = defaultdict(list)
+
     # Calcola i percorsi unici tra nodi di Entry e nodi di Exec
     for _, row in df_combined.iterrows():
         entry_node = row['Node_Entry']
@@ -73,16 +76,16 @@ def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame]
             continue
 
         if (entry_node, exec_node) not in paths:
-            paths[(entry_node,exec_node)]= compute_path(tree, entry_node, exec_node)
+            paths[(entry_node, exec_node)] = compute_path(tree, entry_node, exec_node)
 
-        path = paths[(entry_node,exec_node)]
+        path = paths[(entry_node, exec_node)]
         for node in path:
             if node == short_exec_host:
                 continue
             mask = (task_counts['Node'] == node) & (task_counts['Group'] == group)
             task_counts.loc[mask, 'indirectLoad'] = task_counts.loc[mask, 'indirectLoad'] + 1
 
-    task_counts['indirectLoad'] = task_counts['indirectLoad'] / normalization # Normalizzazione
+    task_counts['indirectLoad'] = task_counts['indirectLoad'] / normalization  # Normalizzazione
 
     sparkline_data = task_counts.pivot_table(
         index='Node',
@@ -94,10 +97,10 @@ def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame]
     sparkline_data = sparkline_data.reindex(sorted(sparkline_data.columns), axis=1)
     max_count = sparkline_data.values.max()
     if max_count == 0:
-        max_count = 1 
-    
-    # --- 2. Creazione del Grafo e Posizionamento ---
-    
+        max_count = 1
+
+        # --- 2. Creazione del Grafo e Posizionamento ---
+
     G = nx.DiGraph()
     for parent, children in tree.items():
         for child in children:
@@ -118,28 +121,28 @@ def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame]
         pos = {node: (x, -y) for node, (x, y) in pos.items()}
 
     # --- 3. Disegno del Grafico e delle Sparklines ---
-    
+
     fig_scale = 1.3
     num_nodes = G.number_of_nodes()
-    
-    fig_width = max(14, num_nodes * 0.4 * fig_scale)
+
+    fig_width = max(12, num_nodes * 0.4 * fig_scale)
     fig_height = max(6, num_nodes * 0.7 * fig_scale)
     fig_size = (fig_width, fig_height)
 
-    fig = plt.figure(figsize=fig_size) 
-    plt.subplots_adjust(wspace=3) #spazio tra subplots
+    fig = plt.figure(figsize=fig_size)
+    plt.subplots_adjust(wspace=3)  # spazio tra subplots
     ax = plt.gca()
-    ax.set_axis_off() 
+    ax.set_axis_off()
 
     # 3.1 Disegna gli archi
     nx.draw_networkx_edges(G, pos, ax=ax, edge_color='gray', width=1, alpha=0.3)
-    
+
     num_groups = len(sparkline_data.columns)
     x_group_indices = np.arange(num_groups)
 
     x_label = "Time (Epoch)"
     y_label = "N. Req per experiment"
-    
+
     for node in G.nodes():
 
         # --- TaskCount verde ---
@@ -196,19 +199,21 @@ def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame]
 
         spark_ax.set_xticks([0, num_groups - 1])
         spark_ax.set_xticklabels([sparkline_data.columns.min(), sparkline_data.columns.max()])
-        spark_ax.set_xlabel("Time (Epoch)", fontsize=8 * fig_scale / 1.5, labelpad=2)
+        spark_ax.set_xlabel("Time (Epoch)", fontsize=9 * fig_scale / 1.5, labelpad=0)
 
         # Y-axis scaling: massimo tra TaskCount e indirectLoad
         local_max = max(max_tasks_in_round, max_indirect, 1)
         spark_ax.set_yticks([0, local_max])
-        spark_ax.set_yticklabels([0, local_max])
-        spark_ax.set_ylabel("N. Req", fontsize=8 * fig_scale / 1.5, rotation=90, labelpad=2)
+        spark_ax.set_yticklabels([0, str(int(local_max))])
+
+        if node == 57 or node == 55 or node == 50:
+            spark_ax.set_ylabel("N. Req", fontsize=9 * fig_scale / 1.5, rotation=90, labelpad=0)
 
         spark_ax.spines['top'].set_visible(False)
         spark_ax.spines['right'].set_visible(False)
         spark_ax.spines['left'].set_linewidth(0.5)
         spark_ax.spines['bottom'].set_linewidth(0.5)
-        spark_ax.tick_params(axis='both', which='major', labelsize=8 * fig_scale / 1.5, pad=1)
+        spark_ax.tick_params(axis='both', which='major', labelsize=9 * fig_scale / 1.5, pad=1)
 
         spark_ax.set_ylim(0, local_max * 1.05)
         spark_ax.set_xlim(-0.5, num_groups - 0.5)
@@ -224,15 +229,43 @@ def plot_tree_with_sparklines(tree: dict, domains: dict, dfs: list[pd.DataFrame]
             color='black'
         )
 
-        # Etichetta Max TaskCount / indirectLoad
+        # Riga 1: Executed (Verde)
         spark_ax.text(
-            0.5, -0.65,
-            f"Max: {max_tasks_in_round} (req/epoch)\nMax offloaded: {max_indirect} (req/epoch)",
+            0.5, -0.55, # Posizione verticale riga 1
+            f"Max executed: {int(max_tasks_in_round)} req/epoch",
             transform=spark_ax.transAxes,
             ha='center', va='center',
-            fontsize=8 * fig_scale / 1.5,
-            color='darkred',
-            # fontweight='bold'
+            fontsize=10 * fig_scale / 1.5,
+            color='#2E7D32', # Un verde scuro leggibile
+        )
+
+        # Riga 2: Offloaded (Azzurro scuro)
+        spark_ax.text(
+            0.5, -0.75, # Posizione verticale riga 2 (sotto la prima)
+            f"Max offloaded: {int(max_indirect)} req/epoch",
+            transform=spark_ax.transAxes,
+            ha='center', va='center',
+            fontsize=10 * fig_scale / 1.5,
+            color='#0277BD', # Un azzurro scuro leggibile
+        )
+        # --- 4. Aggiunta della Legenda Globale ---
+
+        # Creiamo handle manuali per la legenda usando i colori definiti nel loop
+        legend_elements = [
+            Line2D([0], [0], color='#4CAF50', lw=2, label='Executed functions'),
+            Line2D([0], [0], color='#03A9F4', lw=2, label='Offloaded functions')
+        ]
+
+        # Aggiungiamo la legenda all'asse principale (che è "off", ma la legenda sarà visibile)
+        # Posizioniamo la legenda in alto a sinistra (o dove preferisci, es. 'upper right')
+        ax.legend(
+            handles=legend_elements,
+            loc='upper left',
+            fontsize=10 * fig_scale / 1.3,
+            frameon=True,
+            facecolor='white',
+            edgecolor='gray',
+            framealpha=0.9
         )
 
     return fig
