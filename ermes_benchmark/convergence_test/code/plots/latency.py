@@ -281,6 +281,8 @@ def local_vs_remote_latency_violin(dfs, scenario):
         file_labels = ["Doctor", "Patient 1", "Patient 2", "Patient 3", "Patient 4", "Patient 5"]
     if scenario == "full_traversal":
         file_labels = ["Patient", "Doctor"]
+    if scenario == "conflict_1":
+        file_labels = ["Doctor 1", "Doctor 2"]
 
     data_list = []
     stats = []

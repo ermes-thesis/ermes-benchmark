@@ -163,7 +163,7 @@ def main():
     print("Generating execution time analysis...")
     latency.plot_logs_avg_latency(full_dfs, args.subfolder)
     plt.savefig(f'{output_dir}/execution_time_analysis.png', dpi=300, bbox_inches='tight')
-    plt.savefig(f'{output_dir}/pdf/execution_time_analysis.pdf')
+    plt.savefig(f'{output_dir}/pdf/execution_time_analysis.pdf', bbox_inches='tight')
     plt.close()
 
     # 3.2 Local vs Remote Executions (Bar Chart)
