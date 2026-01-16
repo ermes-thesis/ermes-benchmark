@@ -10,6 +10,146 @@ hv.extension('bokeh')
 from typing import Dict, Tuple
 from d3blocks import D3Blocks
 
+def plot_compact_grouped_bar_chart(node_map, domains: dict):
+    nodes = list(node_map.keys())
+    # Troviamo tutti i tipi di messaggi possibili per assegnare colori coerenti
+    all_message_types = sorted({alias for sub in node_map.values() for (alias, _) in sub.keys()})
+
+    # Creiamo una mappa di colori fissa per ogni tipo di messaggio
+    # Usiamo 'tab10' o 'tab20' se ci sono molte categorie
+    colormap = plt.get_cmap('tab10')
+    color_dict = {msg: colormap(i % 10) for i, msg in enumerate(all_message_types)}
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Parametri per la larghezza
+    bar_width = 0.18  # Larghezza fissa per ogni singola barra
+
+    # Iteriamo su ogni nodo (asse X)
+    for i, node in enumerate(nodes):
+        # 1. Raccogliamo solo i dati > 0 per questo nodo
+        node_data = []
+        for msg in all_message_types:
+            total_count = sum(count for (alias, _), count in node_map[node].items() if alias == msg)
+            if total_count > 0:
+                node_data.append((msg, total_count))
+
+        # Se non ci sono dati per il nodo, saltiamo
+        if not node_data:
+            continue
+
+        # 2. Calcoliamo la posizione di partenza per centrare il gruppo
+        num_bars = len(node_data)
+        total_group_width = num_bars * bar_width
+
+        # Start X: posizione del nodo (i) - metà della larghezza totale del gruppo
+        # Aggiungiamo bar_width/2 perché bar() posiziona al centro della barra
+        start_x = i - (total_group_width / 2) + (bar_width / 2)
+
+        # 3. Disegniamo le barre per questo nodo
+        for j, (msg, count) in enumerate(node_data):
+            pos_x = start_x + (j * bar_width)
+
+            bar = ax.bar(
+                pos_x,
+                count,
+                width=bar_width,
+                color=color_dict[msg],
+                align='center'
+            )
+
+            # Etichetta sopra la barra
+            # ax.text(
+            #     pos_x,
+            #     count,
+            #     str(int(count)),
+            #     ha='center',
+            #     va='bottom',
+            #     fontsize=8
+            # )
+
+    # --- Formattazione ---
+    # ax.set_xlabel('Node (last IP octet)')
+    ax.set_ylabel('Message Count')
+    # ax.set_title('Compact Grouped Bar Chart (Non-zero values only)')
+    ax.set_yscale("log")
+
+    # Imposta i ticks dell'asse X
+    ax.set_xticks(range(len(nodes)))
+    ax.set_xticklabels([domains[int(n)].replace("/Edge", "/\nEdge") for n in nodes])
+
+    # --- Legenda Manuale ---
+    # Poiché abbiamo plottato le barre singolarmente, dobbiamo creare le "patch" per la legenda
+    from matplotlib.patches import Patch
+    legend_elements = [Patch(facecolor=color_dict[msg], label=msg) for msg in all_message_types]
+
+    ax.legend(handles=legend_elements, title='Message Types', loc='lower center', bbox_to_anchor=(0.5, 1), ncol=3)
+
+    ax.yaxis.grid(True, linestyle='--', alpha=0.3)
+    plt.tight_layout()
+
+def plot_grouped_bar_chart(node_map):
+    # --- 1. Preparazione dei Dati (Invariata) ---
+    nodes = list(node_map.keys())
+    # Estraiamo i tipi di messaggi unici
+    message_types = sorted({alias for sub in node_map.values() for (alias, _) in sub.keys()})
+
+    data = {msg: [] for msg in message_types}
+    for node in nodes:
+        for msg in message_types:
+            # Somma i conteggi per quel tipo di messaggio su quel nodo
+            total_count = sum(count for (alias, _), count in node_map[node].items() if alias == msg)
+            data[msg].append(total_count)
+
+    # --- 2. Configurazione del Grafico ---
+    x = np.arange(len(nodes))  # Posizioni delle etichette sull'asse X
+    fig, ax = plt.subplots(figsize=(10, 6)) # Un po' più largo per far stare le barre affiancate
+
+    # Calcolo della larghezza dinamica delle barre
+    # Lo spazio totale per un gruppo è circa 0.8, lo dividiamo per il numero di tipi di messaggi
+    total_width = 0.8
+    n_bars = len(message_types)
+    bar_width = total_width / n_bars
+
+    # --- 3. Plotting delle barre affiancate ---
+    for i, msg in enumerate(message_types):
+        values = data[msg]
+
+        # Calcolo dell'offset per centrare il gruppo di barre sul tick dell'asse X
+        # La formula sposta ogni barra di 'i' larghezze, e poi sottrae metà della larghezza totale per centrare
+        offset = (i - n_bars / 2) * bar_width + (bar_width / 2)
+
+        bars = ax.bar(x + offset, values, bar_width, label=msg)
+
+        # Aggiunta etichette sopra le barre (senza logica complessa di sovrapposizione)
+        # for bar, value in zip(bars, values):
+        #     if value > 0:
+        #         ax.text(
+        #             bar.get_x() + bar.get_width() / 2, # Centro X della barra
+        #             bar.get_height(),                  # Altezza della barra
+        #             str(int(value)),
+        #             ha='center',
+        #             va='bottom',
+        #             fontsize=8,
+        #             rotation=0 # Puoi mettere 90 se i numeri sono lunghi
+        #         )
+
+    # --- 4. Formattazione ---
+    ax.set_xlabel('Node (last IP octet)')
+    ax.set_ylabel('Message Count')
+    ax.set_title('Grouped Bar Chart of Messages per Node')
+    ax.set_yscale("log")
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(nodes, rotation=45, ha='right')
+
+    # Legenda
+    ax.legend(title='Message Types')
+
+    # Griglia orizzontale leggera per facilitare la lettura dei livelli
+    ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+
+    plt.tight_layout()
 
 def plot_stacked_bar_chart(node_map):
     nodes = list(node_map.keys())
@@ -22,9 +162,9 @@ def plot_stacked_bar_chart(node_map):
             data[msg].append(total_count)
 
     x = np.arange(len(nodes))
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(8, 5))
 
-    bar_width = 0.6
+    bar_width = 0.3
     bottom = np.zeros(len(nodes))
     totals = np.zeros(len(nodes))
 
@@ -37,7 +177,7 @@ def plot_stacked_bar_chart(node_map):
     
     for msg in message_types:
         values = np.array(data[msg])
-        bars = ax.bar(x, values, bottom=bottom, label=msg, width=bar_width)
+        bars = ax.bar(x, values, bottom=bottom, label=msg)
 
         for i, bar in enumerate(bars):
             if values[i] > 0:
@@ -63,27 +203,26 @@ def plot_stacked_bar_chart(node_map):
                 # Registra la posizione dell'etichetta
                 label_positions[i].append(center_y)
                 
-                ax.text(
-                    bar.get_x() - 0.05,
-                    center_y,
-                    str(values[i]), 
-                    ha='right',
-                    va='center',
-                    fontsize=5,
-                    color=bar.get_facecolor()
-                )
+                # ax.text(
+                #     bar.get_x() - 0.05,
+                #     center_y,
+                #     str(values[i]),
+                #     ha='right',
+                #     va='center',
+                #     color=bar.get_facecolor()
+                # )
 
         bottom += values
         totals += values
 
     # Etichette totali in cima alle barre
-    for i, total in enumerate(totals):
-        ax.text(
-            x[i], bottom[i] + max(totals) * 0.01,
-            str(int(total)),
-            ha='center', va='bottom',
-            fontsize=10, fontweight='bold', color='black'
-        )
+    # for i, total in enumerate(totals):
+    #     ax.text(
+    #         x[i], bottom[i] + max(totals) * 0.01,
+    #         str(int(total)),
+    #         ha='center', va='bottom',
+    #         fontweight='bold', color='black'
+    #     )
 
     ax.set_xlabel('Node (last IP octet)')
     ax.set_ylabel('Message Count')

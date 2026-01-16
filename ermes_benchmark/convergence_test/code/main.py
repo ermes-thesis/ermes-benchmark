@@ -153,8 +153,9 @@ def main():
     # 3.0 Overhead Analysis (Using avg_message_counter)
 
     print("Generating overhead analysis (Average per run)...")
-    overhead.plot_stacked_bar_chart(avg_message_counter)
+    overhead.plot_compact_grouped_bar_chart(avg_message_counter, config.domains)
     plt.savefig(f'{output_dir}/message_counts.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{output_dir}/pdf/message_counts.pdf', bbox_inches='tight')
     plt.close()
 
     overhead.create_chord_diagram(avg_message_counter, f'{output_dir}/messaggi_chord_diagram')
