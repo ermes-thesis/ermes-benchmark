@@ -20,7 +20,8 @@ def local_vs_remote_latency(dfs):
         total_width = 0.8
         single_bar_width = total_width / 1
 
-        colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
+        cmap = plt.get_cmap('tab10')
+        colors = [cmap(i % 10) for i in range(n_files)]
         file_labels = [f'User {i + 1}' for i in range(n_files)]
 
         all_durations = []
@@ -174,7 +175,8 @@ def local_vs_remote_latency_violin_old(dfs):
 
     n_files = len(dfs)
     x = np.arange(n_files)
-    colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
+    cmap = plt.get_cmap('tab10')
+    colors = [cmap(i % 10) for i in range(n_files)]
     file_labels = [f'User {i + 1}' for i in range(n_files)]
 
     data_list = []
@@ -271,8 +273,12 @@ def local_vs_remote_latency_violin(dfs, scenario):
 
     n_files = len(dfs)
     x = np.arange(n_files)
-    colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
+    cmap = plt.get_cmap('tab10')
+    colors = [cmap(i % 10) for i in range(n_files)]
+
     file_labels = [f'User {i + 1}' for i in range(n_files)]
+    if scenario == "bottom_up":
+        file_labels = ["Doctor", "Patient 1", "Patient 2", "Patient 3", "Patient 4", "Patient 5"]
     if scenario == "full_traversal":
         file_labels = ["Patient", "Doctor"]
 
@@ -307,47 +313,82 @@ def local_vs_remote_latency_violin(dfs, scenario):
         b.set_facecolor(colors[i])
         b.set_alpha(0.4)
 
-    for i, stat in enumerate(stats):
-        current_x = x[i]
-        user_color = colors[i]
+    if len(stats) == 2:
+        for i, stat in enumerate(stats):
+            current_x = x[i]
+            user_color = colors[i]
 
-        # Min e Max
-        ax.vlines(current_x, stat['min'], stat['max'], color=user_color, linestyle=':', linewidth=1.5)
-        ax.hlines(stat['min'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=1)
-        ax.hlines(stat['max'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=1)
-        ax.text(current_x - 0.35, stat['min'], f'Min: {stat["min"]:.2f}',
-                ha='left', va='center', fontsize=8, color=user_color,
-                bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-        ax.text(current_x - 0.35, stat['max'], f'Max: {stat["max"]:.2f}',
-                ha='left', va='center', fontsize=8, color=user_color,
-                bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+            # Min e Max
+            ax.vlines(current_x, stat['min'], stat['max'], color=user_color, linestyle=':', linewidth=1.5)
+            ax.hlines(stat['min'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=1)
+            ax.hlines(stat['max'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=1)
+            ax.text(current_x - 0.35, stat['min'], f'Min: {stat["min"]:.2f}',
+                    ha='left', va='center', fontsize=8, color=user_color,
+                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+            ax.text(current_x - 0.35, stat['max'], f'Max: {stat["max"]:.2f}',
+                    ha='left', va='center', fontsize=8, color=user_color,
+                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
 
-        # Avg totale
-        ax.hlines(stat['avg'], current_x - 0.15, current_x + 0.15, color='black', linewidth=2)
-        ax.text(current_x + 0.17, stat['avg'], f'Avg: {stat["avg"]:.2f}', fontsize=8, color='black',
-                bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+            # Avg totale
+            ax.hlines(stat['avg'], current_x - 0.15, current_x + 0.15, color='black', linewidth=2)
+            ax.text(current_x + 0.17, stat['avg'], f'Avg: {stat["avg"]:.2f}', fontsize=8, color=user_color,
+                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
 
-        # Avg Local
-        if not np.isnan(stat['avg_local']) and int(stat['avg_local']) != int(stat['avg']):
-            ax.hlines(stat['avg_local'], current_x - 0.12, current_x + 0.12,
-                      color=user_color, linestyle='--', linewidth=2)
-            ax.text(current_x + 0.17, stat['avg_local'], f'Local: {stat["avg_local"]:.2f}',
-                    fontsize=8, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+            # Avg Local
+            if not np.isnan(stat['avg_local']) and int(stat['avg_local']) != int(stat['avg']):
+                ax.hlines(stat['avg_local'], current_x - 0.12, current_x + 0.12,
+                          color=user_color, linestyle='--', linewidth=2)
+                ax.text(current_x + 0.17, stat['avg_local'], f'Local: {stat["avg_local"]:.2f}',
+                        fontsize=8, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
 
-        # Avg Remote
-        if not np.isnan(stat['avg_remote']) and int(stat['avg_remote']) != int(stat['avg']):
-            ax.hlines(stat['avg_remote'], current_x - 0.12, current_x + 0.12,
-                      color=user_color, linestyle='-.', linewidth=2)
-            ax.text(current_x + 0.17, stat['avg_remote'], f'Remote: {stat["avg_remote"]:.2f}',
-                    fontsize=8, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+            # Avg Remote
+            if not np.isnan(stat['avg_remote']) and int(stat['avg_remote']) != int(stat['avg']):
+                ax.hlines(stat['avg_remote'], current_x - 0.12, current_x + 0.12,
+                          color=user_color, linestyle='-.', linewidth=2)
+                ax.text(current_x + 0.17, stat['avg_remote'], f'Remote: {stat["avg_remote"]:.2f}',
+                        fontsize=8, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+    else:
+        for i, stat in enumerate(stats):
+            current_x = x[i]
+            user_color = colors[i]
+
+            # Min e Max
+            ax.vlines(current_x, stat['min'], stat['max'], color=user_color, linestyle=':', linewidth=1.5)
+            ax.hlines(stat['min'], current_x - 0.15, current_x + 0.15, color=user_color, linewidth=1)
+            ax.hlines(stat['max'], current_x - 0.15, current_x + 0.15, color=user_color, linewidth=1)
+            ax.text(current_x - 0.22, stat['min'] - 3, f'Min: {stat["min"]:.2f}',
+                    ha='left', va='center', fontsize=8, color=user_color,
+                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+            ax.text(current_x - 0.28, stat['max'] + 3, f'Max: {stat["max"]:.2f}',
+                    ha='left', va='center', fontsize=8, color=user_color,
+                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+            # Avg totale
+            ax.hlines(stat['avg'], current_x - 0.15, current_x + 0.15, color='black', linewidth=1)
+            ax.text(current_x + 0.17, stat['avg'] + 4, f'Avg: {stat["avg"]:.2f}', fontsize=8, color=user_color,
+                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+            # Avg Local
+            if not np.isnan(stat['avg_local']) and int(stat['avg_local']) != int(stat['avg']):
+                ax.hlines(stat['avg_local'], current_x - 0.15, current_x + 0.15,
+                          color=user_color, linestyle='--', linewidth=1)
+                #ax.text(current_x - 0.7, stat['avg_local'], f'Local: {stat["avg_local"]:.2f}',
+                #        fontsize=7, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+
+            # Avg Remote
+            if not np.isnan(stat['avg_remote']) and int(stat['avg_remote']) != int(stat['avg']):
+                ax.hlines(stat['avg_remote'], current_x - 0.15, current_x + 0.15,
+                          color=user_color, linestyle='-.', linewidth=1)
+                #ax.text(current_x - 0.7, stat['avg_remote'], f'Remote: {stat["avg_remote"]:.2f}',
+                #        fontsize=7, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
 
     legend_elements = [
-        Line2D([0], [0], color='black', lw=2, label='Global Avg'),
-        Line2D([0], [0], color='grey', lw=2, linestyle='--', label='Local Avg'),
-        Line2D([0], [0], color='grey', lw=2, linestyle='-.', label='Remote Avg'),
+        Line2D([0], [0], color='black', lw=2, label='Global Average'),
+        Line2D([0], [0], color='grey', lw=2, linestyle='--', label='Local executions average'),
+        Line2D([0], [0], color='grey', lw=2, linestyle='-.', label='Remote executions average'),
         # Line2D([0], [0], color='grey', lw=1.5, linestyle=':', label='Min/Max (Vertical Line)'),
     ]
-    ax.legend(handles=legend_elements, loc='upper left', facecolor='white')
+    ax.legend(handles=legend_elements, loc='best', facecolor='white')
 
     # ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
     # ax.set_xlabel('User')
