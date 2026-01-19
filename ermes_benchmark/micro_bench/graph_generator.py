@@ -1,29 +1,30 @@
 import inspect
 import argparse
 from pathlib import Path
-import shutil
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from scipy import stats
 
-data_dir = 'data'
+# Configurazione cartelle base
+data_dir_name = 'data'
 output_dir_name = 'output_img'
 
-def load_summary_data(file_path):
+def build_aggregated_dict(df):
     """
-    Legge il file final_global_summary.csv e popola la struttura dati
+    Converte un DataFrame (già filtrato) nella struttura dati:
     aggregated_data[users][collections] = row_dict
     """
-    df = pd.read_csv(file_path)
-
     aggregated = {}
 
-    # Itera sulle righe del dataframe
     for _, row in df.iterrows():
-        users = int(row['Users'])
-        collections = int(row['Collections'])
+        # Gestione sicurezza tipi
+        try:
+            users = int(row['Users'])
+            collections = int(row['Collections'])
+        except ValueError:
+            continue
 
         if users not in aggregated:
             aggregated[users] = {}
@@ -32,25 +33,23 @@ def load_summary_data(file_path):
         row_dict = row.to_dict()
 
         # Assicuriamoci che i valori numerici siano float
-        # (pandas lo fa già, ma per sicurezza su colonne specifiche)
         for key in row_dict:
             if isinstance(row_dict[key], (int, float, np.number)):
                 row_dict[key] = float(row_dict[key])
 
         aggregated[users][collections] = row_dict
 
-    return aggregated, df
+    return aggregated
 
 def compute_confidence_intervals_from_summary(df, confidence=95):
     """
-    Ricalcola l'intervallo di confidenza usando Varianza e N (CorrectRequests)
-    presenti nel file summary.
+    Ricalcola l'intervallo di confidenza usando Varianza e N (CorrectRequests).
     """
     ci_data = {}
     alpha = 1 - confidence / 100.0
 
-    # Raggruppa per Collection per mantenere la struttura del vecchio script
-    # ci_data[collections][users]
+    if df.empty:
+        return {}
 
     unique_collections = df['Collections'].unique()
 
@@ -58,7 +57,6 @@ def compute_confidence_intervals_from_summary(df, confidence=95):
         collections = int(collections)
         ci_data[collections] = {}
 
-        # Filtra il df per questa collection
         subset = df[df['Collections'] == collections]
 
         for _, row in subset.iterrows():
@@ -66,17 +64,13 @@ def compute_confidence_intervals_from_summary(df, confidence=95):
 
             mean = row.get("AverageLatency", 0)
             variance = row.get("VarianceLatency", 0)
-            # Usiamo CorrectRequests come N campionario
             n = int(row.get("CorrectRequests", 0))
 
             if n < 2:
                 continue
 
-            # Calcolo standard error dalla varianza salvata
             std = np.sqrt(variance)
             sem = std / np.sqrt(n)
-
-            # t di Student
             t_crit = stats.t.ppf(1 - alpha / 2, df=n - 1)
 
             ci_lower = mean - t_crit * sem
@@ -92,20 +86,15 @@ def compute_confidence_intervals_from_summary(df, confidence=95):
     return ci_data
 
 
-def print_confidence_intervals(
-        ci_data,
-        confidence=95,
-        unit="ms",
-        max_rel_error_ok=0.25,
-        max_rel_error_weak=0.50
-):
-    """
-    Stampa gli intervalli di confidenza (invariata rispetto a prima).
-    """
-
+def print_confidence_intervals(ci_data, mode_name, confidence=95, unit="ms", max_rel_error_ok=0.25, max_rel_error_weak=0.50):
     print("\n" + "=" * 80)
-    print(f" Intervalli di confidenza al {confidence}% su AverageLatency (Ricalcolati da Summary)")
+    print(f" [{mode_name.upper()}] Intervalli di confidenza {confidence}% su AverageLatency")
     print("=" * 80)
+
+    if not ci_data:
+        print("Nessun dato sufficiente per il calcolo CI.")
+        return
+
     print("Legenda: ✅ OK   ⚠️ WEAK   ❌ INVALID\n")
 
     for collections in sorted(ci_data.keys()):
@@ -121,7 +110,6 @@ def print_confidence_intervals(
 
             rel_error = (upper - lower) / (2 * mean) if mean != 0 else 0
 
-            # Classificazione
             if lower < 0 or rel_error > max_rel_error_weak:
                 status = "❌ INVALID"
             elif rel_error > max_rel_error_ok:
@@ -146,6 +134,7 @@ def print_confidence_intervals(
 
 def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
     users_list = sorted(aggregated_data.keys())
+    if not users_list: return
 
     collections_list = set()
     for u in aggregated_data:
@@ -174,7 +163,6 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
             ax.fill_between(xs_arr, q1_arr, q3_arr, alpha=0.18)
             line, = ax.plot(xs_arr, avg_arr, marker="o", linewidth=2, label=f"{collections} collections")
             color = line.get_color()
-            # Imposta larghezza linee IQR
             line_length = (max(xs_arr) - min(xs_arr)) * 0.02 if len(xs_arr) > 1 else 1
 
             ax.hlines(q1_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
@@ -182,7 +170,7 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
 
     ax.set_xlabel("Users")
     ax.set_ylabel("Latency (ms)")
-    ax.set_ylim(bottom=0) # Solo limite inferiore a 0, superiore automatico
+    ax.set_ylim(bottom=0)
     ax.set_title("Interaction Plot with IQR (avg)")
     ax.legend(title="Collections")
     ax.grid(True, alpha=0.4)
@@ -190,13 +178,12 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
 
     if save_path:
         fig.savefig(save_path, dpi=300)
-
     plt.close(fig)
-    return fig, ax
 
 
 def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
     users_list = sorted(aggregated_data.keys())
+    if not users_list: return
 
     collections_list = set()
     for u in aggregated_data:
@@ -241,18 +228,19 @@ def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
 
     if save_path:
         fig.savefig(save_path, dpi=300)
-
     plt.close(fig)
-    return fig, ax
 
 
 def plot_failed_requests_bar(aggregated_data, save_path=None):
     users_list = sorted(aggregated_data.keys())
+    if not users_list: return
 
     collections_list = set()
     for u in aggregated_data:
         collections_list.update(aggregated_data[u].keys())
     collections_list = sorted(collections_list)
+
+    if not collections_list: return
 
     x_indexes = np.arange(len(users_list))
     total_width = 0.5
@@ -262,7 +250,6 @@ def plot_failed_requests_bar(aggregated_data, save_path=None):
 
     for i, collection in enumerate(collections_list):
         failed_vals = []
-
         for user in users_list:
             if collection in aggregated_data[user]:
                 val = float(aggregated_data[user][collection]["FailedRequests"])
@@ -286,65 +273,82 @@ def plot_failed_requests_bar(aggregated_data, save_path=None):
 
     if save_path:
         fig.savefig(save_path, dpi=300)
-
     plt.close(fig)
-    return fig, ax
 
 # Disable pycache generation
 sys.dont_write_bytecode = True
 
 def main():
-    parser = argparse.ArgumentParser(description="Process Summary CSV and generate plots.")
+    parser = argparse.ArgumentParser(description="Process Summary CSV and generate plots by Mode.")
     parser.add_argument(
-        "--data_folder",
+        "csv_filename",
         type=str,
-        default="ermes_default",
-        help="Nome della cartella dei dati all'interno di 'data'"
+        help="Nome del file CSV (incluso estensione) presente nella cartella 'data'. Es: example.csv"
     )
     args = parser.parse_args()
 
-    data_folder = args.data_folder
-
-    pd.set_option('display.max_rows', None)
-    pd.set_option('display.max_columns', None)
+    # Configurazione path
+    csv_filename = args.csv_filename
 
     current_file_path = inspect.getfile(inspect.currentframe())
     base_dir = Path(current_file_path).parent
 
-    data_dir_path = (base_dir / data_dir / data_folder).resolve()
-    summary_file = data_dir_path / "final_global_summary.csv"
+    # Path Input: base/data/filename.csv
+    input_file_path = (base_dir / data_dir_name / csv_filename).resolve()
 
-    print(f"Data directory path: {data_dir_path}")
-    print(f"Looking for summary file: {summary_file}")
+    print(f"Reading file: {input_file_path}")
 
-    if not summary_file.exists():
-        print(f"ERROR: File {summary_file} does not exist.")
+    if not input_file_path.exists():
+        print(f"ERROR: File {input_file_path} does not exist.")
         exit(1)
 
-    output_dir = (base_dir / output_dir_name / data_folder).resolve()
+    # Path Output: base/output_img/{nome_senza_estensione}
+    output_folder_name = input_file_path.stem
+    output_base_dir = (base_dir / output_dir_name / output_folder_name).resolve()
 
-    # Clean and recreate output directory
-    if output_dir.exists() and output_dir.is_dir():
-        for item in output_dir.iterdir():
-            if item.is_dir():
-                shutil.rmtree(item)
-            else:
-                item.unlink()
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # Pulizia/Creazione cartella output principale
+    output_base_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Output directory: {output_base_dir}")
 
-    # 1. Carica i dati
-    aggregated_data, df_summary = load_summary_data(summary_file)
+    # Caricamento DataFrame completo
+    df_global = pd.read_csv(input_file_path)
 
-    # 2. Calcola e stampa intervalli di confidenza (ricostruiti)
-    ci_95 = compute_confidence_intervals_from_summary(df_summary)
-    print_confidence_intervals(ci_95)
+    # Identifica le modalità uniche presenti (es. eventual, sequential)
+    if 'Mode' in df_global.columns:
+        modes = df_global['Mode'].unique()
+    else:
+        print("WARNING: Colonna 'Mode' non trovata. Tratterò tutto come 'default'.")
+        modes = ['default']
+        df_global['Mode'] = 'default'
 
-    # 3. Genera i grafici
-    plot_interaction_with_iqr_avg(aggregated_data, save_path=output_dir / "latency_avg.png")
-    plot_interaction_with_iqr_q2(aggregated_data, save_path=output_dir / "latency_median.png")
-    plot_failed_requests_bar(aggregated_data, save_path=output_dir / "failed_requests.png")
+    for mode in modes:
+        mode_str = str(mode)
+        print(f"\nProcessing mode: {mode_str}...")
 
-    print(f"Grafici salvati in: {output_dir}")
+        # Filtra il DataFrame per la modalità corrente
+        df_mode = df_global[df_global['Mode'] == mode].copy()
+
+        if df_mode.empty:
+            print(f"Skipping empty mode: {mode_str}")
+            continue
+
+        # Crea sottocartella per la modalità (es. output_img/example/eventual)
+        mode_output_dir = output_base_dir / mode_str
+        mode_output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Costruisce la struttura dati per i grafici
+        aggregated_data = build_aggregated_dict(df_mode)
+
+        # Calcola e stampa CI
+        ci_95 = compute_confidence_intervals_from_summary(df_mode)
+        print_confidence_intervals(ci_95, mode_name=mode_str)
+
+        # Genera i grafici nella sottocartella specifica
+        plot_interaction_with_iqr_avg(aggregated_data, save_path=mode_output_dir / "latency_avg.png")
+        plot_interaction_with_iqr_q2(aggregated_data, save_path=mode_output_dir / "latency_median.png")
+        plot_failed_requests_bar(aggregated_data, save_path=mode_output_dir / "failed_requests.png")
+
+    print(f"\n✅ Elaborazione completata. Grafici salvati in: {output_base_dir}")
 
 if __name__ == "__main__":
     main()
