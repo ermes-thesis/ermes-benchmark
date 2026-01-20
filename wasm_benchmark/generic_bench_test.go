@@ -1,4 +1,4 @@
-package wasm_integration
+package wasm_benchmark
 
 import (
 	"bufio"
@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func createHostFns(t *testing.T, log logger.Logger) *scheduler.HostFunctions {
+func createHostFns(t testing.TB, log logger.Logger) *scheduler.HostFunctions {
 	dataManager := datamanager_mock.NewDataManager(t)
 	dataManager.EXPECT().GetRecord("255ef4af-3a49-4382-a90d-6524bdee5ad1", []string{"test"}, "userId", "battiti").Return("72", nil).Maybe()
 	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "nuova_collection", map[string]db.RecordValue{}, []string{"test", "pippo"}, "userId", false, false).Return(nil).Maybe()

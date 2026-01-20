@@ -1,15 +1,9 @@
-package wasm_integration_test
+package wasm_benchmark
 
 import (
 	"context"
-	"db"
 	"fmt"
-	"metadataManager/propagation"
-	datamanager_mock "mocks/dataManager"
-	metadataManager_mock "mocks/metadataManager"
 	"os"
-	"scheduler"
-	"server"
 	"strconv"
 	"strings"
 	"testing"
@@ -17,7 +11,6 @@ import (
 
 	"github.com/ermes-thesis/ermes-common/logger"
 	"github.com/ermes-thesis/ermes-common/wasm-pool"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -73,39 +66,7 @@ func createNewLogger(t testing.TB) logger.Logger {
 	return log
 }
 
-func createHostFns(b *testing.B, log logger.Logger) *scheduler.HostFunctions {
-	dataManager := datamanager_mock.NewDataManager(b)
-	dataManager.EXPECT().GetRecord("255ef4af-3a49-4382-a90d-6524bdee5ad1", []string{"test"}, "userId", "battiti").Return("72", nil)
-	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "nuova_collection", map[string]db.RecordValue{}, []string{"test", "pippo"}, "userId", false, false).Return(nil)
-	dataManager.EXPECT().SetCollectionAndPropagate(mock.Anything, "multiple_get_coll", map[string]db.RecordValue{}, []string{"test", "fake"}, "userId", false, false).Return(nil)
-	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"testMGET", "testMGET2"}).Return([]any{"val1", "val2"}, nil)
-	dataManager.EXPECT().GetRecords(mock.AnythingOfType("string"), []string{"test"}, "userId", []string{"cicico"}).Return([]any{"val1"}, nil)
-	metadataManager := metadataManager_mock.NewMetadataManager(b)
-	metadataManager.
-		EXPECT().
-		CreateMetadata(mock.Anything, mock.AnythingOfType("Metadata"), propagation.FROM_LOCAL).
-		Return(nil).
-		Maybe()
-
-	serverInfo := server.ServerInfo{
-		HostName:                   "hostname",
-		Address:                    "address",
-		Port:                       "port",
-		MetadataDomain:             "domain",
-		Father:                     nil,
-		Children:                   nil,
-		Secret:                     "very secret",
-		ClientSecret:               "client secret",
-		CloudNode:                  nil,
-		ExistingDomains:            map[string]struct{}{"IT": {}, "IT/Milan": {}},
-		GroupTokenProviderHostName: "hostnameGTP",
-		Stateful:                   false,
-		IsCentralStorage:           false,
-	}
-	return scheduler.NewHostFunctions(dataManager, metadataManager, &serverInfo, log)
-}
-
-func getTestReqAndCtx(userId string, addTestColl bool, inputN int) ([]byte, []byte) {
+func getTestReqAndCtxWithTestCol(userId string, addTestColl bool, inputN int) ([]byte, []byte) {
 	req := "{\"prova\": \"ciao\", \"n\":\"" + strconv.FormatInt(int64(inputN), 10) + "\"}"
 
 	var testColl string
@@ -229,7 +190,7 @@ func runWasmBenchmark(b *testing.B, cfg BenchConfig) {
 	}
 
 	userId := "userId"
-	req, ctx := getTestReqAndCtx(userId, cfg.AddTestColl, cfg.Input)
+	req, ctx := getTestReqAndCtxWithTestCol(userId, cfg.AddTestColl, cfg.Input)
 
 	// Warmup / First execution logic
 	if cfg.Cache != wasm.CacheNone {

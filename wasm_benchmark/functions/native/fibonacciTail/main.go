@@ -1,7 +1,7 @@
 package main
 
 import (
-	"wasm_integration_test/_old_scripts/common"
+	"wasm_benchmark/_old_scripts/common"
 )
 
 func main() {

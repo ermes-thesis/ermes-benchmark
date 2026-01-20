@@ -1,4 +1,4 @@
-package wasm_integration_test
+package wasm_benchmark
 
 import (
 	"context"

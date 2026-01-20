@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Scalability Test" type="GoTestRunConfiguration" factoryName="Go Test">
+    <output_file path="$PROJECT_DIR$/wasm_benchmark/results2.json" />
+    <module name="benchmark-files" />
+    <target name="WSL - Ubuntu" />
+    <working_directory value="$PROJECT_DIR$/wasm_benchmark/" />
+    <kind value="PACKAGE" />
+    <package value="wasm_benchmark" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$" />
+    <option name="build_on_remote_target" value="true" />
+    <framework value="gotest" />
+    <pattern value="TestScalability_" />
+    <method v="2" />
+  </configuration>
+</component>
