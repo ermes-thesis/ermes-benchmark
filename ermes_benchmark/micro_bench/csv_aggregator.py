@@ -42,12 +42,32 @@ def extract_config_from_folder(folder_name):
     mode_match = re.search(r'mode_([^_]+)', folder_name)
     users_match = re.search(r'users_(\d+)', folder_name)
     coll_match = re.search(r'collections_(\d+)', folder_name)
+    acc_match = re.search(r'accesses_(\d+)', folder_name)
 
-    return {
+    config = {
         'Mode': mode_match.group(1) if mode_match else 'unknown',
-        'Users': int(users_match.group(1)) if users_match else 0,
-        'Collections': int(coll_match.group(1)) if coll_match else 0
     }
+
+    # Se ci sono utenti/collezioni (Scalability Test)
+    if users_match:
+        config['Users'] = int(users_match.group(1))
+    else:
+        config['Users'] = 64 # Default fisso se siamo in Density test
+
+    if coll_match:
+        config['Collections'] = int(coll_match.group(1))
+    else:
+        config['Collections'] = 100 # Default fisso se siamo in Density test
+
+    # Se ci sono accessi (Density Test)
+    if acc_match:
+        config['Accesses'] = int(acc_match.group(1))
+        config['TestType'] = 'Density'
+    else:
+        config['Accesses'] = 1 # Default
+        config['TestType'] = 'Scalability'
+
+    return config
 
 def calculate_metrics(df, seed=None):
     """Calcola le metriche su un DataFrame."""
@@ -74,14 +94,21 @@ def calculate_metrics(df, seed=None):
     error_code_counts = {code: len(df[df['StatusCode'] == code]) for code in HTTP_ERROR_CODES}
     other_errors = len(df[(df['StatusCode'] != 200) & (~df['StatusCode'].isin(HTTP_ERROR_CODES))])
 
+    # Calcolo Throughput (Richieste / Secondo) basato sulla durata effettiva del test nel chunk
+    try:
+        min_time = df['StartTime'].apply(parse_timestamp).min()
+        max_time = df['StartTime'].apply(parse_timestamp).max()
+        duration = (max_time - min_time).total_seconds()
+        throughput = total_requests / duration if duration > 0 else 0
+    except:
+        throughput = 0
+
     metrics = {
         'AverageLatency': avg_latency,
         'MedianLatency': median_latency,
         'VarianceLatency': variance_latency,
-        'Q1': Q1,
-        'Q2': Q2,
-        'Q3': Q3,
-        'Q4': Q4,
+        'Throughput': throughput,
+        'Q1': Q1, 'Q2': Q2, 'Q3': Q3, 'Q4': Q4,
         'TotalRequests': total_requests,
         'CorrectRequests': correct_requests,
         'FailedRequests': failed_requests,
@@ -155,10 +182,11 @@ def main():
     for root, dirs, files in os.walk(root_dir):
         folder_name = os.path.basename(root)
 
-        # Filtra le cartelle di configurazione
-        if "mode_" in folder_name and "users_" in folder_name:
-            print(f"Elaborazione configurazione: {folder_name}")
+        # Criterio di identificazione cartella di configurazione:
+        # Deve avere "mode_" E ("users_" O "accesses_")
+        if "mode_" in folder_name and ("users_" in folder_name or "accesses_" in folder_name):
 
+            print(f"Elaborazione: {folder_name}")
             seed_dirs = [d for d in dirs if d.startswith("seed_")]
 
             if not seed_dirs:
@@ -174,141 +202,63 @@ def main():
                 try:
                     seed_val = int(seed_dir.split('_')[1])
                     seed_path = os.path.join(root, seed_dir)
+                    csv_files = [os.path.join(seed_path, f) for f in os.listdir(seed_path) if f.endswith('.csv') and 'aggregated' not in f]
 
-                    csv_files = [
-                        os.path.join(seed_path, f)
-                        for f in os.listdir(seed_path)
-                        if f.endswith('.csv') and 'aggregated' not in f
-                    ]
+                    if not csv_files: continue
 
-                    if not csv_files:
-                        continue
-
-                    # Legge tutti i log del seed
                     df_seed = pd.concat((pd.read_csv(f) for f in csv_files), ignore_index=True)
-                    # Converti se necessario da ms a s (assumendo ms in input se non float piccoli)
-                    # NOTA: Assicurati che i tuoi CSV siano coerenti. Qui divido per 1000 come da script originale.
+                    # Conversione us -> ms
                     df_seed['FuncDuration'] = df_seed['FuncDuration'] / 1000.0
 
-                    # 1. Calcola ROUNDS e conserva nel listone globale della cartella (Per file B)
+                    # 1. Rounds
                     df_rounds = calculate_metrics_by_round(df_seed, seed=seed_val, interval=ROUND_INTERVAL_SECONDS)
-                    if df_rounds is not None:
-                        folder_rounds_dfs.append(df_rounds)
+                    if df_rounds is not None: folder_rounds_dfs.append(df_rounds)
 
-                    # 2. Calcola SOMMARIO SEED (Per file A)
+                    # 2. Summary Seed
                     m = calculate_metrics(df_seed, seed=seed_val)
-                    if m:
-                        folder_seed_metrics_summary.append(m)
+                    if m: folder_seed_metrics_summary.append(m)
 
-                    # 3. Conserva raw data per GLOBALE (Per file C e D)
+                    # 3. Global
                     dfs_for_global_calc.append(df_seed)
 
                 except Exception as e:
-                    print(f"  -> Errore elaborando {seed_dir}: {e}")
+                    print(f"  -> Errore seed {seed_dir}: {e}")
 
-            # === SALVATAGGIO FILE ===
-
-            # A. FILE UNICO ROUNDS (Tutti i seed insieme, ma righe separate per seed)
+            # Salvataggi intermedi (Rounds e Summary per cartella)
             if folder_rounds_dfs:
-                df_all_rounds = pd.concat(folder_rounds_dfs, ignore_index=True)
-                rounds_output = os.path.join(root, "aggregated_rounds_all_seeds.csv")
-                df_all_rounds.to_csv(rounds_output, index=False)
-                print(f"  -> Creato file rounds (dettaglio seed): {rounds_output}")
+                pd.concat(folder_rounds_dfs, ignore_index=True).to_csv(os.path.join(root, "aggregated_rounds_all_seeds.csv"), index=False)
 
-            # B. FILE SOMMARIO PER SEED (1 riga per seed)
             if folder_seed_metrics_summary:
-                df_summary = pd.DataFrame(folder_seed_metrics_summary)
-                cols = ['Seed'] + [c for c in df_summary.columns if c != 'Seed']
-                df_summary = df_summary[cols]
-                summary_output = os.path.join(root, f"aggregated_results_summary.csv")
-                df_summary.to_csv(summary_output, index=False)
-                print(f"  -> Creato sommario seeds: {summary_output}")
+                pd.DataFrame(folder_seed_metrics_summary).to_csv(os.path.join(root, "aggregated_results_summary.csv"), index=False)
 
-            # C. CALCOLO RIGA PER FILE GLOBALE (Sommario totale configurazione)
+            # Aggiunta al Global Summary
             if dfs_for_global_calc:
                 try:
                     df_global_huge = pd.concat(dfs_for_global_calc, ignore_index=True)
                     global_metrics = calculate_metrics(df_global_huge, seed=None)
                     config_info = extract_config_from_folder(folder_name)
-                    full_row = {**config_info, **global_metrics}
-                    global_aggregated_data.append(full_row)
+                    # Uniamo info config e metriche
+                    global_aggregated_data.append({**config_info, **global_metrics})
                 except Exception as e:
-                    print(f"  -> Errore calcolo globale per {folder_name}: {e}")
-
-            # D. NUOVO FILE: AGGREGAZIONE GLOBALE PER ROUND (Tutti i seed normalizzati e uniti)
-            # Questo crea il file richiesto dove ogni riga è un Round (1, 2, 3...) aggregando i dati di TUTTI i seed
-            if dfs_for_global_calc:
-                try:
-                    normalized_dfs = []
-                    col_ts = 'StartTime'
-
-                    for df_raw in dfs_for_global_calc:
-                        # Lavoriamo su una copia
-                        d = df_raw.copy()
-
-                        # Parsing sicuro del timestamp se non presente (potrebbe non essere stato parsato nel loop raw)
-                        if '_dt' not in d.columns:
-                            if col_ts in d.columns:
-                                d['_dt'] = d[col_ts].apply(parse_timestamp)
-                            else:
-                                continue
-
-                        # Normalizzazione temporale: Ogni seed inizia al secondo 0 relativo
-                        seed_start_time = d['_dt'].min()
-                        d['_rel_seconds'] = (d['_dt'] - seed_start_time).dt.total_seconds()
-                        normalized_dfs.append(d)
-
-                    if normalized_dfs:
-                        # Concatena tutti i dati di tutti i seed normalizzati
-                        df_global_rel = pd.concat(normalized_dfs, ignore_index=True)
-
-                        # Assegna il Round ID basandosi sui secondi relativi (indipendentemente dall'ora reale di esecuzione)
-                        df_global_rel['RoundIdx'] = (df_global_rel['_rel_seconds'] // ROUND_INTERVAL_SECONDS).astype(int)
-
-                        global_round_rows = []
-
-                        # Raggruppa tutti i dati per Round e calcola metriche aggregate
-                        for r_idx, group in df_global_rel.groupby('RoundIdx'):
-                            m = calculate_metrics(group)
-                            if m:
-                                m['Round'] = r_idx + 1
-                                # Aggiungiamo i riferimenti temporali relativi (es. 0-15s, 15-30s)
-                                m['TimeRelativeStart'] = r_idx * ROUND_INTERVAL_SECONDS
-                                m['TimeRelativeEnd'] = (r_idx + 1) * ROUND_INTERVAL_SECONDS
-                                global_round_rows.append(m)
-
-                        if global_round_rows:
-                            df_global_rounds = pd.DataFrame(global_round_rows)
-
-                            # Riordina colonne per leggibilità
-                            cols_order = ['Round', 'TimeRelativeStart', 'TimeRelativeEnd',
-                                          'AverageLatency', 'MedianLatency', 'TotalRequests', 'CorrectRequests', 'FailedRequests']
-                            existing_cols = [c for c in cols_order if c in df_global_rounds.columns]
-                            other_cols = [c for c in df_global_rounds.columns if c not in existing_cols]
-                            df_global_rounds = df_global_rounds[existing_cols + other_cols]
-
-                            g_rounds_out = os.path.join(root, "aggregated_rounds_global.csv")
-                            df_global_rounds.to_csv(g_rounds_out, index=False)
-                            print(f"  -> Creato file rounds globale (no seed): {g_rounds_out}")
-
-                except Exception as e:
-                    print(f"  -> Errore nel calcolo del file global rounds: {e}")
-
+                    print(f"  -> Errore globale folder: {e}")
 
     # === FILE GLOBALE FINALE ===
     if global_aggregated_data:
         df_final = pd.DataFrame(global_aggregated_data)
 
-        first_cols = ['Mode', 'Users', 'Collections']
-        other_cols = [c for c in df_final.columns if c not in first_cols]
-        df_final = df_final[first_cols + other_cols]
-        df_final = df_final.sort_values(by=['Mode', 'Users', 'Collections'])
+        # Ordinamento colonne intelligente
+        cols_prio = ['TestType', 'Mode', 'Users', 'Collections', 'Accesses', 'AverageLatency', 'Throughput']
+        final_cols = [c for c in cols_prio if c in df_final.columns] + [c for c in df_final.columns if c not in cols_prio]
+        df_final = df_final[final_cols]
+
+        # Ordina le righe
+        df_final = df_final.sort_values(by=['TestType', 'Mode', 'Users', 'Collections', 'Accesses'])
 
         global_output = os.path.join(root_dir, "final_global_summary.csv")
         df_final.to_csv(global_output, index=False)
-        print(f"\nGENERAZIONE COMPLETATA. File riassuntivo: {global_output}")
+        print(f"\n✅ GENERAZIONE COMPLETATA. Report: {global_output}")
     else:
-        print("\nNessun dato trovato.")
+        print("\n⚠️ Nessun dato trovato. Controlla che le cartelle contengano 'mode_' e 'users_'/'accesses_'.")
 
 if __name__ == "__main__":
     main()

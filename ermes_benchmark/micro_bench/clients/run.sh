@@ -2,38 +2,29 @@
 
 # --- CONFIGURAZIONE TARGET ---
 ERMES_NODES=("10.10.101.50" "10.10.101.51" "10.10.101.52" "10.10.101.53" "10.10.101.54" "10.10.101.55" "10.10.101.56" "10.10.101.57" "10.10.101.58")
-
-# Percorso del file di configurazione sul server remoto
 REMOTE_CONFIG_PATH="/etc/ermes-node/config.yaml"
 
-# --- GESTIONE MODALITÀ (DA INPUT) ---
+# --- INPUT ---
+# $1 = Modalità consistenza (eventual, sequential, all)
+# $2 = Tipo esperimento (scalability, density) - Default: scalability
 INPUT_MODE=$1
+EXP_TYPE=${2:-"scalability"}
 
-# --- CONFIGURAZIONE PARAMETRI ESPERIMENTO ---
-USERS_LIST=("1" "4" "16" "64" "256" "512" "1024")
-COLLECTIONS_LIST=("1" "10" "100" "1000")
-SEEDS=("1" "42" "100" "2024" "7" "99" "1234" "5678" "91011" "121314")
-#USERS_LIST=("1024")
-#COLLECTIONS_LIST=("1000")
-#SEEDS=("91011")
+# --- PARAMETRI GENERALI ---
 FN_ROUND=25
+SEEDS=("1" "42" "100" "2024" "7" "99" "1234" "5678" "91011" "121314")
+#SEEDS=("1") # Debug veloce
 
-# Definiamo l'array delle modalità da eseguire
 if [[ "$INPUT_MODE" == "all" ]]; then
     TARGET_MODES=("eventual" "sequential")
 elif [[ -n "$INPUT_MODE" ]]; then
     TARGET_MODES=("$INPUT_MODE")
 else
-    # Default se vuoto
     echo "⚠️  Nessuna modalità specificata, uso default: eventual"
     TARGET_MODES=("eventual")
 fi
 
-echo "📋 Pianificazione esecuzione per: ${TARGET_MODES[*]}"
-
-# --- FUNZIONI UTILITÀ ---
-
-# Funzione per mostrare la barra di progresso
+# --- FUNZIONI UTILITÀ (Show Progress, Flush, Copy Logs) ---
 show_progress() {
     local pid=$1
     local duration=$2
@@ -61,9 +52,7 @@ show_progress() {
         sleep "$interval"
         elapsed=$((elapsed + interval))
     done
-
-    # Quando finisce, stampa 100% e va a capo
-    printf "\r✅ [%s] 100%% (%ds/%ds) - Completato!\n" "$(for ((i=0; i<width; i++)); do echo -n "#"; done)" "$elapsed" "$duration"
+    printf "\r✅ [%s] 100%% (%ds/%ds) - Completato!\n" "DONE" "$elapsed" "$duration"
 }
 
 # Funzione per pulire e configurare i nodi remoti
@@ -135,108 +124,138 @@ EOF
     done
 }
 
-# Setup cartelle locali
-cd "$(dirname "$0")" || exit
+# --- FUNZIONI CORE ESPERIMENTI ---
 
-rm -rf results user.log create.log
-mkdir -p results
+# 1. ESPERIMENTO SCALABILITÀ (Varia Users/Collections, Accesses=1)
+run_scalability() {
+    echo "🏁 AVVIO TEST SCALABILITÀ (Varia User/Coll)..."
+    USERS_LIST=("1" "4" "16" "64" "256" "512" "1024")
+    COLLECTIONS_LIST=("1" "10" "100" "1000")
 
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-echo "   -> Timestamp: ${TIMESTAMP}"
+    echo "🏁 Inizio sequenza esperimenti..."
 
-echo "🏁 Inizio sequenza esperimenti..."
+    for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
 
-# --- CICLO ESTERNO PER LA MODALITÀ (eventual, sequential, etc.) ---
-for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
+      echo "##########################################################"
+      echo "🔷 CAMBIO MODALITÀ: $CONSISTENCY_MODE"
+      echo "##########################################################"
 
-  echo "##########################################################"
-  echo "🔷 CAMBIO MODALITÀ: $CONSISTENCY_MODE"
-  echo "##########################################################"
+      for USERS in "${USERS_LIST[@]}"; do
+        for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
+          for SEED in "${SEEDS[@]}"; do
 
-  for USERS in "${USERS_LIST[@]}"; do
-    for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
-      for SEED in "${SEEDS[@]}"; do
+            # Calcolo Threshold
+            if [ "$COLLECTIONS" -lt 25 ]; then DIV=$COLLECTIONS; else DIV=25; fi
+            if [ "$COLLECTIONS" -lt 4 ]; then FAC=$COLLECTIONS; else FAC=4; fi
+            L_VAL=$(( (450 * FAC) / DIV ))
+            F_VAL=$(( (150 * FAC) / DIV ))
 
-        # --- CALCOLO DINAMICO THRESHOLD ---
-        # 1. Calcolo il divisore: min(COLLECTIONS, 25)
-        if [ "$COLLECTIONS" -lt 25 ]; then
-            DIVISOR=$COLLECTIONS
-        else
-            DIVISOR=25
-        fi
+            echo "🚀 [SCALABILITY] Mode=$CONSISTENCY_MODE, U=$USERS, C=$COLLECTIONS, Seed=$SEED"
 
-        # 2. Calcolo il fattore: min(COLLECTIONS, 4)
-        if [ "$COLLECTIONS" -lt 4 ]; then
-            FACTOR=$COLLECTIONS
-        else
-            FACTOR=4
-        fi
+            # 1. GENERAZIONE SETUP (Locale)
+            python3 test_generator.py --seed "$SEED" --n_collections "$COLLECTIONS" --n_users "$USERS" --fn_per_round "$FN_ROUND"
+            SETUP_FILE="tests/setup_experiment_${SEED}_users_${USERS}_collections_${COLLECTIONS}.json"
 
-        # 3. Applico le formule
-        # Leader = 450 * FACTOR / DIVISOR
-        L_VAL=$(( (450 * FACTOR) / DIVISOR ))
+            # 2. AGGIORNAMENTO CONFIG E PULIZIA (Remoto)
+            flush_remote_nodes "$F_VAL" "$L_VAL"
 
-        # Follower = 150 * FACTOR / DIVISOR
-        F_VAL=$(( (150 * FACTOR) / DIVISOR ))
+            # 3. PULIZIA LOG LOCALI
+            rm user.log create.log 2>/dev/null
 
-        echo "=================================================="
-        echo "🚀 Avvio: Mode=${CONSISTENCY_MODE}, U=${USERS}, C=${COLLECTIONS}, Seed=${SEED}"
-        echo "🧮 Calcolo Threshold (Divisore=${DIVISOR}, Fattore=${FACTOR}):"
-        echo "   -> Leader:   ${L_VAL}"
-        echo "   -> Follower: ${F_VAL}"
-        echo "=================================================="
+            # 4. CREAZIONE DATI
+            echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
+            ./create "$SETUP_FILE" "$CONSISTENCY_MODE" > create.log 2>&1
+            echo "✅ Creazione dati completata."
 
-        # 1. GENERAZIONE SETUP (Locale)
-        python3 test_generator.py --seed "$SEED" --n_collections "$COLLECTIONS" --n_users "$USERS" --fn_per_round "$FN_ROUND"
-        SETUP_FILE="tests/setup_experiment_${SEED}_users_${USERS}_collections_${COLLECTIONS}.json"
+            # Rimuove log della creazione
+            rm create.log results/results_log_2000_*.csv 2>/dev/null
 
-        # 2. AGGIORNAMENTO CONFIG E PULIZIA (Remoto)
-        flush_remote_nodes "$F_VAL" "$L_VAL"
+            # 5. Esecuzione (Parametro Accessi fisso a 1)
+            ./user "$SETUP_FILE" "1" > user.log 2>&1 &
+            show_progress $! 150
+            wait $!
 
-        # 3. PULIZIA LOG LOCALI
-        rm user.log create.log 2>/dev/null
+            LOG_ID="scalability_mode_${CONSISTENCY_MODE}_u${USERS}_c${COLLECTIONS}_s${SEED}"
+            copy_logs "${TIMESTAMP}_${LOG_ID}"
 
-        # 4. CREAZIONE DATI
-        echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
-        ./create "$SETUP_FILE" "$CONSISTENCY_MODE" > create.log 2>&1
-        echo "✅ Creazione dati completata."
+            CONFIG_DIR="results/mode_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}"
+            SEED_DIR="${CONFIG_DIR}/seed_${SEED}"
 
-        # Rimuove log della creazione
-        rm create.log results/results_log_2000_*.csv 2>/dev/null
-
-        # 5. ESECUZIONE TEST (Con Progress Bar)
-        echo "⏳ Avvio esperimento (Durata stimata: 2m 30s)..."
-
-        # Esegui in background
-        ./user "$SETUP_FILE" > user.log 2>&1 &
-
-        # Cattura PID
-        USER_PID=$!
-
-        # Mostra barra
-        show_progress $USER_PID 150
-
-        # Attendi fine reale del processo
-        wait $USER_PID
-
-        echo "✅ Esperimento completato."
-
-        # Copia log dai nodi remoti
-        echo "⏳ Copia log dai nodi remoti..."
-        copy_logs "${TIMESTAMP}_mode_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}_seed_${SEED}"
-        echo "✅ Copia log completata."
-
-        echo "✅ Completato round."
-
-        mkdir -p "results/mode_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}/seed_${SEED}/"
-        mv results/results_log_*.csv "results/mode_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}/seed_${SEED}/"
-
+            mkdir -p "$SEED_DIR"
+            mv results/results_log_*.csv "$SEED_DIR/"
+          done
+        done
       done
     done
-  done
-done
+}
+
+# 2. ESPERIMENTO DENSITÀ (Fissi User/Coll, Varia Accesses)
+run_density() {
+    echo "🏁 AVVIO TEST DENSITÀ (Varia numero di accessi alla collection per funzione)..."
+    FIXED_USERS="64"
+    FIXED_COLLECTIONS="100"
+    ACCESSES_LIST=("1" "5" "10")
+
+    for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
+      for ACC in "${ACCESSES_LIST[@]}"; do
+        for SEED in "${SEEDS[@]}"; do
+
+            # Calcolo Threshold (Basato sui fissi)
+            COLLECTIONS=$FIXED_COLLECTIONS
+            if [ "$COLLECTIONS" -lt 25 ]; then DIV=$COLLECTIONS; else DIV=25; fi
+            if [ "$COLLECTIONS" -lt 4 ]; then FAC=$COLLECTIONS; else FAC=4; fi
+            L_VAL=$(( (450 * FAC) / DIV ))
+            F_VAL=$(( (150 * FAC) / DIV ))
+
+            echo "🚀 [DENSITY] Mode=$CONSISTENCY_MODE, Accesses=$ACC, Seed=$SEED"
+
+            python3 test_generator.py --seed "$SEED" --n_collections "$FIXED_COLLECTIONS" --n_users "$FIXED_USERS" --fn_per_round "$FN_ROUND"
+            SETUP_FILE="tests/setup_experiment_${SEED}_users_${FIXED_USERS}_collections_${FIXED_COLLECTIONS}.json"
+
+            flush_remote_nodes "$F_VAL" "$L_VAL"
+            rm user.log create.log 2>/dev/null
+
+            echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
+            ./create "$SETUP_FILE" "$CONSISTENCY_MODE" "$ACC" > create.log 2>&1
+            echo "✅ Creazione dati completata."
+
+            rm create.log results/results_log_*.csv 2>/dev/null
+
+            # Esecuzione (Passiamo $ACC)
+            ./user "$SETUP_FILE" "$ACC" > user.log 2>&1 &
+            show_progress $! 150
+            wait $!
+
+            LOG_ID="density_mode_${CONSISTENCY_MODE}_acc${ACC}_s${SEED}"
+            copy_logs "${TIMESTAMP}_${LOG_ID}"
+
+            # Salvataggio CSV Risultati
+            CONFIG_DIR="results/mode_${CONSISTENCY_MODE}_accesses_${ACC}"
+            SEED_DIR="${CONFIG_DIR}/seed_${SEED}"
+
+            mkdir -p "$SEED_DIR"
+            mv results/results_log_*.csv "$SEED_DIR/"
+          done
+      done
+    done
+}
+
+# --- MAIN ---
+
+cd "$(dirname "$0")" || exit
+rm -rf results user.log create.log
+mkdir -p results
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+if [[ "$EXP_TYPE" == "scalability" ]]; then
+    run_scalability
+elif [[ "$EXP_TYPE" == "density" ]]; then
+    run_density
+else
+    echo "❌ Tipo esperimento sconosciuto: $EXP_TYPE (usa 'scalability' o 'density')"
+    exit 1
+fi
 
 echo "⏳ Aggregazione risultati..."
 python3 csv_aggregator.py results
-
 echo "🎉 TUTTI I TEST COMPLETATI."

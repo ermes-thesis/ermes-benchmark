@@ -23,3 +23,10 @@ if [ ${#VALID_SOURCES[@]} -gt 0 ]; then
 else
     echo -e "${YELLOW}No valid WASM source files found to compile.${NC}"
 fi
+
+# Clean up intermediate files
+echo "Cleaning up intermediate files..."
+for src_file in "${VALID_SOURCES[@]}"; do
+    base_name=$(basename "$src_file" .go)
+    rm -r "${base_name}"
+done

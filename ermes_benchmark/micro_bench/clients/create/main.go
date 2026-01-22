@@ -44,6 +44,12 @@ func main() {
 
 	consistency := os.Args[2]
 
+	numAccesses := "1"
+	if len(os.Args) > 3 {
+		numAccesses = os.Args[3]
+	}
+	fmt.Printf("Passing 'accesses' parameter to function: %s\n", numAccesses)
+
 	// Call the library setup
 
 	confFile := "config.yaml"
@@ -88,7 +94,8 @@ func main() {
 			"writeCollection",
 			"",
 			map[string]string{
-				"data": "first write",
+				"data":     "first write",
+				"accesses": numAccesses,
 			},
 			map[string]map[string]string{
 				"query": {

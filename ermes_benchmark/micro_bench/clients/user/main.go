@@ -22,12 +22,18 @@ type Config struct {
 func main() {
 
 	if len(os.Args) < 2 {
-		log.Fatal("Missing required arguments")
+		log.Fatal("Missing required arguments: ./user <config_file> [accesses_param]")
 	}
 
 	// Call the library setup
 	confFile := "config.yaml"
 	random := rand.New(rand.NewSource(0))
+
+	numAccesses := "1"
+	if len(os.Args) > 2 {
+		numAccesses = os.Args[2]
+	}
+	fmt.Printf("Passing 'accesses' parameter to function: %s\n", numAccesses)
 
 	var conf Config
 	confBytes, err := os.ReadFile(os.Args[1])
@@ -78,7 +84,8 @@ func main() {
 								funName,
 								"",
 								map[string]string{
-									"data": "write number " + strconv.Itoa(j) + "of round " + strconv.Itoa(i) + " from user " + userId,
+									"data":     "write number " + strconv.Itoa(j) + " of round " + strconv.Itoa(i) + " from user " + userId,
+									"accesses": numAccesses,
 								},
 								map[string]map[string]string{
 									"query": {
