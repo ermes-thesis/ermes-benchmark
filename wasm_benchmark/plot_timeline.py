@@ -68,7 +68,7 @@ def plot_timelines(csv_files, output_file="memory_timeline.png"):
 
     plt.tight_layout()
 
-    plt.savefig(output_file)
+    plt.savefig(output_file, bbox_inches='tight')
     print(f"Chart saved to {output_file}")
 
 if __name__ == "__main__":
