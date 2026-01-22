@@ -1,5 +1,4 @@
 import inspect
-import argparse
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -8,8 +7,9 @@ import sys
 from scipy import stats
 
 # Configurazione cartelle base
-data_dir_name = 'data'
-output_dir_name = 'output_img'
+# Nota: Il percorso relativo è ora data/scalability come richiesto
+data_rel_path = 'data/scalability'
+output_dir_name = 'output_img/scalability'
 
 def build_aggregated_dict(df):
     """
@@ -86,9 +86,9 @@ def compute_confidence_intervals_from_summary(df, confidence=95):
     return ci_data
 
 
-def print_confidence_intervals(ci_data, mode_name, confidence=95, unit="ms", max_rel_error_ok=0.25, max_rel_error_weak=0.50):
+def print_confidence_intervals(ci_data, mode_name, filename, confidence=95, unit="ms", max_rel_error_ok=0.25, max_rel_error_weak=0.50):
     print("\n" + "=" * 80)
-    print(f" [{mode_name.upper()}] Intervalli di confidenza {confidence}% su AverageLatency")
+    print(f" FILE: {filename} | [{mode_name.upper()}] CI {confidence}% su AverageLatency")
     print("=" * 80)
 
     if not ci_data:
@@ -278,40 +278,28 @@ def plot_failed_requests_bar(aggregated_data, save_path=None):
 # Disable pycache generation
 sys.dont_write_bytecode = True
 
-def main():
-    parser = argparse.ArgumentParser(description="Process Summary CSV and generate plots by Mode.")
-    parser.add_argument(
-        "csv_filename",
-        type=str,
-        help="Nome del file CSV (incluso estensione) presente nella cartella 'data'. Es: example.csv"
-    )
-    args = parser.parse_args()
-
-    # Configurazione path
-    csv_filename = args.csv_filename
-
-    current_file_path = inspect.getfile(inspect.currentframe())
-    base_dir = Path(current_file_path).parent
-
-    # Path Input: base/data/filename.csv
-    input_file_path = (base_dir / data_dir_name / csv_filename).resolve()
-
+def process_single_csv(input_file_path, output_root_dir):
+    """
+    Funzione di supporto per processare un singolo file CSV.
+    """
+    print(f"\n{'#'*60}")
     print(f"Reading file: {input_file_path}")
-
-    if not input_file_path.exists():
-        print(f"ERROR: File {input_file_path} does not exist.")
-        exit(1)
+    print(f"{'#'*60}")
 
     # Path Output: base/output_img/{nome_senza_estensione}
     output_folder_name = input_file_path.stem
-    output_base_dir = (base_dir / output_dir_name / output_folder_name).resolve()
+    file_output_dir = (output_root_dir / output_folder_name).resolve()
 
-    # Pulizia/Creazione cartella output principale
-    output_base_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Output directory: {output_base_dir}")
+    # Pulizia/Creazione cartella output per questo file
+    file_output_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Output directory for this file: {file_output_dir}")
 
     # Caricamento DataFrame completo
-    df_global = pd.read_csv(input_file_path)
+    try:
+        df_global = pd.read_csv(input_file_path)
+    except Exception as e:
+        print(f"❌ Error reading {input_file_path}: {e}")
+        return
 
     # Identifica le modalità uniche presenti (es. eventual, sequential)
     if 'Mode' in df_global.columns:
@@ -333,7 +321,7 @@ def main():
             continue
 
         # Crea sottocartella per la modalità (es. output_img/example/eventual)
-        mode_output_dir = output_base_dir / mode_str
+        mode_output_dir = file_output_dir / mode_str
         mode_output_dir.mkdir(parents=True, exist_ok=True)
 
         # Costruisce la struttura dati per i grafici
@@ -341,14 +329,47 @@ def main():
 
         # Calcola e stampa CI
         ci_95 = compute_confidence_intervals_from_summary(df_mode)
-        print_confidence_intervals(ci_95, mode_name=mode_str)
+        # Passiamo anche il nome file per chiarezza nei log
+        print_confidence_intervals(ci_95, mode_name=mode_str, filename=input_file_path.name)
 
         # Genera i grafici nella sottocartella specifica
         plot_interaction_with_iqr_avg(aggregated_data, save_path=mode_output_dir / "latency_avg.png")
         plot_interaction_with_iqr_q2(aggregated_data, save_path=mode_output_dir / "latency_median.png")
         plot_failed_requests_bar(aggregated_data, save_path=mode_output_dir / "failed_requests.png")
 
-    print(f"\n✅ Elaborazione completata. Grafici salvati in: {output_base_dir}")
+    print(f"✅ Completato: {input_file_path.name}")
+
+
+def main():
+    # Configurazione path di base
+    current_file_path = inspect.getfile(inspect.currentframe())
+    base_dir = Path(current_file_path).parent
+
+    # Cartella target: base/data/scalability
+    input_dir = (base_dir / data_rel_path).resolve()
+
+    # Cartella output principale
+    output_base_dir = (base_dir / output_dir_name).resolve()
+
+    print(f"Searching for CSV files in: {input_dir}")
+
+    if not input_dir.exists():
+        print(f"ERROR: Directory {input_dir} does not exist.")
+        exit(1)
+
+    # Trova tutti i file .csv nella cartella indicata
+    csv_files = list(input_dir.glob("*.csv"))
+
+    if not csv_files:
+        print(f"WARNING: No .csv files found in {input_dir}")
+        exit(0)
+
+    print(f"Found {len(csv_files)} CSV file(s). Processing...\n")
+
+    for csv_file in csv_files:
+        process_single_csv(csv_file, output_base_dir)
+
+    print(f"\n✅✅ TUTTI I FILE ELABORATI. Grafici salvati in: {output_base_dir}")
 
 if __name__ == "__main__":
     main()
