@@ -62,6 +62,10 @@ def process_all_round_folders():
                         color = 'tab:blue'
                         marker = '^'          # Triangolo per Distributed
                         arch_name = "distributed"
+                    elif 'query_cache_disabled' in fname_lower:
+                        color = 'tab:green'
+                        marker = 's'          # Quadrato per Query Cache Disabled
+                        arch_name = "query_cache_disabled"
                     else:
                         color = 'tab:gray'
                         marker = 'd'          # Diamante per altro
