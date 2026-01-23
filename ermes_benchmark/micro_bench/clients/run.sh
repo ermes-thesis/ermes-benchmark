@@ -189,6 +189,68 @@ run_scalability() {
     done
 }
 
+run_scalability_moving_users() {
+    echo "🏁 AVVIO TEST SCALABILITÀ (Varia User/Coll)..."
+    USERS_LIST=("64")
+    COLLECTIONS_LIST=("1000")
+
+    echo "🏁 Inizio sequenza esperimenti..."
+
+    for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
+
+      echo "##########################################################"
+      echo "🔷 CAMBIO MODALITÀ: $CONSISTENCY_MODE"
+      echo "##########################################################"
+
+      for USERS in "${USERS_LIST[@]}"; do
+        for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
+          for SEED in "${SEEDS[@]}"; do
+
+            # Calcolo Threshold
+            if [ "$COLLECTIONS" -lt 25 ]; then DIV=$COLLECTIONS; else DIV=25; fi
+            if [ "$COLLECTIONS" -lt 4 ]; then FAC=$COLLECTIONS; else FAC=4; fi
+            L_VAL=$(( (450 * FAC) / DIV ))
+            F_VAL=$(( (150 * FAC) / DIV ))
+
+            echo "🚀 [SCALABILITY] Mode=$CONSISTENCY_MODE, U=$USERS, C=$COLLECTIONS, Seed=$SEED"
+
+            # 1. GENERAZIONE SETUP (Locale)
+            python3 test_generator.py --seed "$SEED" --n_collections "$COLLECTIONS" --n_users "$USERS" --fn_per_round "$FN_ROUND"
+            SETUP_FILE="tests/setup_experiment_${SEED}_users_${USERS}_collections_${COLLECTIONS}.json"
+
+            # 2. AGGIORNAMENTO CONFIG E PULIZIA (Remoto)
+            flush_remote_nodes "$F_VAL" "$L_VAL"
+
+            # 3. PULIZIA LOG LOCALI
+            rm user.log create.log 2>/dev/null
+
+            # 4. CREAZIONE DATI
+            echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
+            ./create "$SETUP_FILE" "$CONSISTENCY_MODE" > create.log 2>&1
+            echo "✅ Creazione dati completata."
+
+            # Rimuove log della creazione
+            rm create.log results/results_log_2000_*.csv 2>/dev/null
+
+            # 5. Esecuzione (Parametro Accessi fisso a 1)
+            ./moving_user "$SETUP_FILE" "1" > user.log 2>&1 &
+            show_progress $! 300
+            wait $!
+
+            LOG_ID="scalability_mode_${CONSISTENCY_MODE}_u${USERS}_c${COLLECTIONS}_s${SEED}"
+            copy_logs "${TIMESTAMP}_${LOG_ID}"
+
+            CONFIG_DIR="results/mode_${CONSISTENCY_MODE}_users_${USERS}_collections_${COLLECTIONS}"
+            SEED_DIR="${CONFIG_DIR}/seed_${SEED}"
+
+            mkdir -p "$SEED_DIR"
+            mv results/results_log_*.csv "$SEED_DIR/"
+          done
+        done
+      done
+    done
+}
+
 # 2. ESPERIMENTO DENSITÀ (Fissi User/Coll, Varia Accesses)
 run_density() {
     echo "🏁 AVVIO TEST DENSITÀ (Varia numero di accessi alla collection per funzione)..."
@@ -251,6 +313,8 @@ if [[ "$EXP_TYPE" == "scalability" ]]; then
     run_scalability
 elif [[ "$EXP_TYPE" == "density" ]]; then
     run_density
+elif [[ "$EXP_TYPE" == "moving" ]]; then
+    run_scalability_moving_users
 else
     echo "❌ Tipo esperimento sconosciuto: $EXP_TYPE (usa 'scalability' o 'density')"
     exit 1

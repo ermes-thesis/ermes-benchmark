@@ -20,6 +20,7 @@ REMOTE_PATH="micro_test"
 # 1. Compilazione
 echo "🚧 Compilazione Go..."
 env GOOS=linux GOARCH=amd64 go build -C user -ldflags="-s -w" -o ../bin/user .
+env GOOS=linux GOARCH=amd64 go build -C moving_user -ldflags="-s -w" -o ../bin/moving_user .
 env GOOS=linux GOARCH=amd64 go build -C create -ldflags="-s -w" -o ../bin/create .
 
 if [ $? -ne 0 ]; then
@@ -30,7 +31,7 @@ fi
 # 2. Upload
 echo "🚀 Upload file..."
 scp -J ubuntu@${JUMP_HOST} -q \
-    bin/{user,create} \
+    bin/{user,create,moving_user} \
     config.yaml \
     ../csv_aggregator.py \
     ../test_generator.py \

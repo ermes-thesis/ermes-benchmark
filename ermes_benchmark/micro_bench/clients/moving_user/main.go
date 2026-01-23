@@ -1,0 +1,118 @@
+package main
+
+import (
+	"encoding/json"
+	ermes "ermes_client_library"
+	"fmt"
+	"log"
+	"math/rand"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+type Config struct {
+	CollectionPositions map[string]int                 `json:"collection_positions"`
+	UserAssignments     map[string]int                 `json:"user_assignments"`
+	UserCollectionMap   map[string][]map[string]string `json:"user_collection_map"`
+}
+
+func main() {
+
+	if len(os.Args) < 2 {
+		log.Fatal("Missing required arguments: ./user <config_file> [accesses_param]")
+	}
+
+	// Call the library setup
+	confFile := "config.yaml"
+	random := rand.New(rand.NewSource(0))
+
+	numAccesses := "1"
+	if len(os.Args) > 2 {
+		numAccesses = os.Args[2]
+	}
+	fmt.Printf("Passing 'accesses' parameter to function: %s\n", numAccesses)
+
+	var conf Config
+	confBytes, err := os.ReadFile(os.Args[1])
+	if err != nil {
+		log.Fatalf("Error reading config file: %v", err)
+	}
+	err = json.Unmarshal(confBytes, &conf)
+	if err != nil {
+		log.Fatalf("Error unmarshalling config file: %v", err)
+	}
+
+	wg := sync.WaitGroup{}
+
+	for userId, position := range conf.UserAssignments {
+		wg.Go(func() {
+
+			nodeAddress := "10.10.101." + fmt.Sprint(position) + ":12345"
+
+			id, err := strconv.Atoi(strings.Split(userId, "_")[1])
+			if err != nil {
+				log.Fatalf("Error converting user id to int")
+			}
+			fmt.Printf("Node address: %s", nodeAddress)
+
+			client, errSetup := ermes.SetupClientLibrary(uint64(id), nodeAddress, confFile)
+			if errSetup != nil {
+				fmt.Fprintf(os.Stderr, "Error when setting up the client library: %v\n", errSetup)
+			} else {
+				fmt.Println("Library set up correctly!")
+			}
+
+			sleep := random.Intn(600)
+			time.Sleep(time.Duration(sleep) * time.Millisecond)
+
+			rounds := 20
+			roundDuration := 15.0
+			executions := conf.UserCollectionMap[userId]
+			for i := range rounds {
+				if i%5 == 0 {
+					position++
+					if position > 54 {
+						position = 50
+					}
+					nodeAddress = "10.10.101." + fmt.Sprint(position) + ":12345"
+					client.MoveToNewNode(nodeAddress)
+					fmt.Printf("User %s moving to node %s\n", userId, nodeAddress)
+				}
+
+				for j, execution := range executions {
+					for colName, accessType := range execution {
+						funName := "readCollection"
+						if accessType == "write" {
+							funName = "writeCollection"
+						}
+
+						wg.Go(func() {
+							body, code, err := client.ExecuteFunction(
+								funName,
+								"",
+								map[string]string{
+									"data":     "write number " + strconv.Itoa(j) + " of round " + strconv.Itoa(i) + " from user " + userId,
+									"accesses": numAccesses,
+								},
+								map[string]map[string]string{
+									"query": {
+										"name": colName,
+									},
+								},
+								"IT",
+							)
+							fmt.Println(code, string(body), err)
+						})
+						time.Sleep(time.Duration((roundDuration / float64(len(executions))) * 1_000_000_000))
+					}
+				}
+			}
+		})
+	}
+
+	wg.Wait()
+	fmt.Println("Done")
+}
