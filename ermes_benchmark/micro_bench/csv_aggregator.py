@@ -38,7 +38,7 @@ def parse_timestamp(ts: str) -> datetime:
         return datetime.now(pytz.utc)
 
 def extract_config_from_folder(folder_name):
-    """Estrae parametri dal nome della cartella principale."""
+    """Estrae parametri dal nome della cartella principale (Smart V2 Logic)."""
     mode_match = re.search(r'mode_([^_]+)', folder_name)
     users_match = re.search(r'users_(\d+)', folder_name)
     coll_match = re.search(r'collections_(\d+)', folder_name)
@@ -70,7 +70,7 @@ def extract_config_from_folder(folder_name):
     return config
 
 def calculate_metrics(df, seed=None):
-    """Calcola le metriche su un DataFrame."""
+    """Calcola le metriche su un DataFrame (V2 Logic con Throughput)."""
     if df is None or df.empty:
         return None
 
@@ -96,8 +96,16 @@ def calculate_metrics(df, seed=None):
 
     # Calcolo Throughput (Richieste / Secondo) basato sulla durata effettiva del test nel chunk
     try:
-        min_time = df['StartTime'].apply(parse_timestamp).min()
-        max_time = df['StartTime'].apply(parse_timestamp).max()
+        # Se i timestamp sono stringhe, li parsiamo al volo per calcolare la durata
+        if pd.api.types.is_string_dtype(df['StartTime']):
+            times = df['StartTime'].apply(parse_timestamp)
+            min_time = times.min()
+            max_time = times.max()
+        else:
+            # Se sono già datetime (caso aggregazione rounds)
+            min_time = df['StartTime'].min()
+            max_time = df['StartTime'].max()
+
         duration = (max_time - min_time).total_seconds()
         throughput = total_requests / duration if duration > 0 else 0
     except:
@@ -162,7 +170,7 @@ def calculate_metrics_by_round(df, seed, interval=ROUND_INTERVAL_SECONDS):
 
     desired_order = [
         'Seed', 'Round', 'StartInterval', 'EndInterval',
-        'AverageLatency', 'MedianLatency', 'VarianceLatency',
+        'AverageLatency', 'MedianLatency', 'VarianceLatency', 'Throughput',
         'Q1', 'Q2', 'Q3', 'Q4',
         'TotalRequests', 'CorrectRequests', 'FailedRequests'
     ]
@@ -182,8 +190,7 @@ def main():
     for root, dirs, files in os.walk(root_dir):
         folder_name = os.path.basename(root)
 
-        # Criterio di identificazione cartella di configurazione:
-        # Deve avere "mode_" E ("users_" O "accesses_")
+        # Criterio di identificazione cartella (Logic V2)
         if "mode_" in folder_name and ("users_" in folder_name or "accesses_" in folder_name):
 
             print(f"Elaborazione: {folder_name}")
@@ -207,10 +214,11 @@ def main():
                     if not csv_files: continue
 
                     df_seed = pd.concat((pd.read_csv(f) for f in csv_files), ignore_index=True)
-                    # Conversione us -> ms
+
+                    # Conversione ms -> s (se necessario, come da script originali)
                     df_seed['FuncDuration'] = df_seed['FuncDuration'] / 1000.0
 
-                    # 1. Rounds
+                    # 1. Rounds (per file seed specifici)
                     df_rounds = calculate_metrics_by_round(df_seed, seed=seed_val, interval=ROUND_INTERVAL_SECONDS)
                     if df_rounds is not None: folder_rounds_dfs.append(df_rounds)
 
@@ -218,26 +226,91 @@ def main():
                     m = calculate_metrics(df_seed, seed=seed_val)
                     if m: folder_seed_metrics_summary.append(m)
 
-                    # 3. Global
+                    # 3. Global Raw Data
                     dfs_for_global_calc.append(df_seed)
 
                 except Exception as e:
                     print(f"  -> Errore seed {seed_dir}: {e}")
 
-            # Salvataggi intermedi (Rounds e Summary per cartella)
+            # === SALVATAGGI ===
+
+            # A. FILE UNICO ROUNDS (Tutti i seed insieme, righe separate per seed)
             if folder_rounds_dfs:
                 pd.concat(folder_rounds_dfs, ignore_index=True).to_csv(os.path.join(root, "aggregated_rounds_all_seeds.csv"), index=False)
 
+            # B. FILE SOMMARIO PER SEED
             if folder_seed_metrics_summary:
                 pd.DataFrame(folder_seed_metrics_summary).to_csv(os.path.join(root, "aggregated_results_summary.csv"), index=False)
 
-            # Aggiunta al Global Summary
+            # C. RESTORED FROM V1: FILE AGGREGAZIONE GLOBALE PER ROUND (Tutti i seed normalizzati)
+            if dfs_for_global_calc:
+                try:
+                    normalized_dfs = []
+                    col_ts = 'StartTime'
+
+                    for df_raw in dfs_for_global_calc:
+                        d = df_raw.copy()
+
+                        # Parsing timestamp se non presente
+                        if '_dt' not in d.columns:
+                            if col_ts in d.columns:
+                                d['_dt'] = d[col_ts].apply(parse_timestamp)
+                            else:
+                                continue
+
+                        # Normalizzazione temporale: ogni seed inizia a t=0
+                        seed_start_time = d['_dt'].min()
+                        d['_rel_seconds'] = (d['_dt'] - seed_start_time).dt.total_seconds()
+                        normalized_dfs.append(d)
+
+                    if normalized_dfs:
+                        # Concatena tutti i dati normalizzati
+                        df_global_rel = pd.concat(normalized_dfs, ignore_index=True)
+
+                        # Assegna Round ID basato sui secondi relativi
+                        df_global_rel['RoundIdx'] = (df_global_rel['_rel_seconds'] // ROUND_INTERVAL_SECONDS).astype(int)
+
+                        global_round_rows = []
+
+                        # Raggruppa per Round e calcola metriche aggregate (incluso Throughput medio del round)
+                        for r_idx, group in df_global_rel.groupby('RoundIdx'):
+                            # Necessario per calculate_metrics che usa StartTime per throughput
+                            # Qui StartTime è misto (date diverse), ma per il throughput del round aggregato
+                            # ci interessa il volume nel tempo relativo, quindi usiamo gli indici relativi fittizi
+                            # o accettiamo che il throughput sia calcolato sulla durata reale del "gruppo".
+                            # Per coerenza con V2, passiamo il gruppo.
+                            m = calculate_metrics(group)
+
+                            if m:
+                                m['Round'] = r_idx + 1
+                                m['TimeRelativeStart'] = r_idx * ROUND_INTERVAL_SECONDS
+                                m['TimeRelativeEnd'] = (r_idx + 1) * ROUND_INTERVAL_SECONDS
+                                global_round_rows.append(m)
+
+                        if global_round_rows:
+                            df_global_rounds = pd.DataFrame(global_round_rows)
+
+                            # Riordina colonne
+                            cols_order = ['Round', 'TimeRelativeStart', 'TimeRelativeEnd',
+                                          'AverageLatency', 'MedianLatency', 'Throughput',
+                                          'TotalRequests', 'CorrectRequests', 'FailedRequests']
+                            existing_cols = [c for c in cols_order if c in df_global_rounds.columns]
+                            other_cols = [c for c in df_global_rounds.columns if c not in existing_cols]
+
+                            df_global_rounds = df_global_rounds[existing_cols + other_cols]
+
+                            g_rounds_out = os.path.join(root, "aggregated_rounds_global.csv")
+                            df_global_rounds.to_csv(g_rounds_out, index=False)
+
+                except Exception as e:
+                    print(f"  -> Errore nel calcolo del file global rounds: {e}")
+
+            # D. GLOBAL SUMMARY ROW (Per il file finale)
             if dfs_for_global_calc:
                 try:
                     df_global_huge = pd.concat(dfs_for_global_calc, ignore_index=True)
                     global_metrics = calculate_metrics(df_global_huge, seed=None)
                     config_info = extract_config_from_folder(folder_name)
-                    # Uniamo info config e metriche
                     global_aggregated_data.append({**config_info, **global_metrics})
                 except Exception as e:
                     print(f"  -> Errore globale folder: {e}")
@@ -246,7 +319,7 @@ def main():
     if global_aggregated_data:
         df_final = pd.DataFrame(global_aggregated_data)
 
-        # Ordinamento colonne intelligente
+        # Ordinamento colonne V2
         cols_prio = ['TestType', 'Mode', 'Users', 'Collections', 'Accesses', 'AverageLatency', 'Throughput']
         final_cols = [c for c in cols_prio if c in df_final.columns] + [c for c in df_final.columns if c not in cols_prio]
         df_final = df_final[final_cols]
