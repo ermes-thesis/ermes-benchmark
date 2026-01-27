@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 HTTP_ERROR_CODES = [404, 423, 500, 503, 508]
 # Intervallo in secondi per il calcolo dei Round
 ROUND_INTERVAL_SECONDS = 15
+# Numero di round da tagliare per il file "Steady State"
+WARMUP_ROUNDS = 5
 
 def parse_timestamp(ts: str) -> datetime:
     """Converte la stringa timestamp dei log in oggetto datetime."""
@@ -102,7 +104,7 @@ def calculate_metrics(df, seed=None):
             min_time = times.min()
             max_time = times.max()
         else:
-            # Se sono già datetime (caso aggregazione rounds)
+            # Se sono già datetime (caso aggregazione rounds o post-parsing)
             min_time = df['StartTime'].min()
             max_time = df['StartTime'].max()
 
@@ -136,7 +138,10 @@ def calculate_metrics_by_round(df, seed, interval=ROUND_INTERVAL_SECONDS):
     df_temp = df.copy()
 
     try:
-        df_temp['_dt'] = df_temp[ts_col].apply(parse_timestamp)
+        if not pd.api.types.is_datetime64_any_dtype(df_temp[ts_col]):
+            df_temp['_dt'] = df_temp[ts_col].apply(parse_timestamp)
+        else:
+            df_temp['_dt'] = df_temp[ts_col]
     except Exception:
         return None
 
@@ -183,7 +188,8 @@ def calculate_metrics_by_round(df, seed, interval=ROUND_INTERVAL_SECONDS):
 def main():
     root_dir = sys.argv[1] if len(sys.argv) > 1 else "."
 
-    global_aggregated_data = []
+    global_aggregated_data = []        # Include tutto
+    global_aggregated_data_cut = []    # Esclude i primi 5 round (Steady State)
 
     print(f"Scansione struttura cartelle in: {root_dir}")
 
@@ -215,7 +221,7 @@ def main():
 
                     df_seed = pd.concat((pd.read_csv(f) for f in csv_files), ignore_index=True)
 
-                    # Conversione ms -> s (se necessario, come da script originali)
+                    # Conversione us -> ms
                     df_seed['FuncDuration'] = df_seed['FuncDuration'] / 1000.0
 
                     # 1. Rounds (per file seed specifici)
@@ -232,9 +238,9 @@ def main():
                 except Exception as e:
                     print(f"  -> Errore seed {seed_dir}: {e}")
 
-            # === SALVATAGGI ===
+            # === SALVATAGGI LOCALI ===
 
-            # A. FILE UNICO ROUNDS (Tutti i seed insieme, righe separate per seed)
+            # A. FILE UNICO ROUNDS
             if folder_rounds_dfs:
                 pd.concat(folder_rounds_dfs, ignore_index=True).to_csv(os.path.join(root, "aggregated_rounds_all_seeds.csv"), index=False)
 
@@ -242,7 +248,7 @@ def main():
             if folder_seed_metrics_summary:
                 pd.DataFrame(folder_seed_metrics_summary).to_csv(os.path.join(root, "aggregated_results_summary.csv"), index=False)
 
-            # C. RESTORED FROM V1: FILE AGGREGAZIONE GLOBALE PER ROUND (Tutti i seed normalizzati)
+            # C. FILE AGGREGAZIONE GLOBALE PER ROUND (Tutti i seed normalizzati)
             if dfs_for_global_calc:
                 try:
                     normalized_dfs = []
@@ -250,37 +256,20 @@ def main():
 
                     for df_raw in dfs_for_global_calc:
                         d = df_raw.copy()
-
-                        # Parsing timestamp se non presente
                         if '_dt' not in d.columns:
-                            if col_ts in d.columns:
-                                d['_dt'] = d[col_ts].apply(parse_timestamp)
-                            else:
-                                continue
+                            d['_dt'] = d[col_ts].apply(parse_timestamp)
 
-                        # Normalizzazione temporale: ogni seed inizia a t=0
                         seed_start_time = d['_dt'].min()
                         d['_rel_seconds'] = (d['_dt'] - seed_start_time).dt.total_seconds()
                         normalized_dfs.append(d)
 
                     if normalized_dfs:
-                        # Concatena tutti i dati normalizzati
                         df_global_rel = pd.concat(normalized_dfs, ignore_index=True)
-
-                        # Assegna Round ID basato sui secondi relativi
                         df_global_rel['RoundIdx'] = (df_global_rel['_rel_seconds'] // ROUND_INTERVAL_SECONDS).astype(int)
 
                         global_round_rows = []
-
-                        # Raggruppa per Round e calcola metriche aggregate (incluso Throughput medio del round)
                         for r_idx, group in df_global_rel.groupby('RoundIdx'):
-                            # Necessario per calculate_metrics che usa StartTime per throughput
-                            # Qui StartTime è misto (date diverse), ma per il throughput del round aggregato
-                            # ci interessa il volume nel tempo relativo, quindi usiamo gli indici relativi fittizi
-                            # o accettiamo che il throughput sia calcolato sulla durata reale del "gruppo".
-                            # Per coerenza con V2, passiamo il gruppo.
                             m = calculate_metrics(group)
-
                             if m:
                                 m['Round'] = r_idx + 1
                                 m['TimeRelativeStart'] = r_idx * ROUND_INTERVAL_SECONDS
@@ -289,49 +278,81 @@ def main():
 
                         if global_round_rows:
                             df_global_rounds = pd.DataFrame(global_round_rows)
-
-                            # Riordina colonne
-                            cols_order = ['Round', 'TimeRelativeStart', 'TimeRelativeEnd',
-                                          'AverageLatency', 'MedianLatency', 'Throughput',
-                                          'TotalRequests', 'CorrectRequests', 'FailedRequests']
+                            cols_order = ['Round', 'TimeRelativeStart', 'TimeRelativeEnd', 'AverageLatency', 'MedianLatency', 'Throughput']
                             existing_cols = [c for c in cols_order if c in df_global_rounds.columns]
                             other_cols = [c for c in df_global_rounds.columns if c not in existing_cols]
-
-                            df_global_rounds = df_global_rounds[existing_cols + other_cols]
-
-                            g_rounds_out = os.path.join(root, "aggregated_rounds_global.csv")
-                            df_global_rounds.to_csv(g_rounds_out, index=False)
+                            df_global_rounds[existing_cols + other_cols].to_csv(os.path.join(root, "aggregated_rounds_global.csv"), index=False)
 
                 except Exception as e:
                     print(f"  -> Errore nel calcolo del file global rounds: {e}")
 
-            # D. GLOBAL SUMMARY ROW (Per il file finale)
+            # D. GLOBAL SUMMARY ROW (Standard + Steady State)
             if dfs_for_global_calc:
                 try:
+                    config_info = extract_config_from_folder(folder_name)
+
+                    # --- 1. Calcolo Completo (Standard) ---
                     df_global_huge = pd.concat(dfs_for_global_calc, ignore_index=True)
                     global_metrics = calculate_metrics(df_global_huge, seed=None)
-                    config_info = extract_config_from_folder(folder_name)
                     global_aggregated_data.append({**config_info, **global_metrics})
+
+                    # --- 2. Calcolo Steady State (Taglio primi N round) ---
+                    # Dobbiamo filtrare OGNI seed individualmente prima di concatenare,
+                    # perché ogni seed ha il suo start time relativo a 0.
+                    steady_dfs = []
+                    cut_seconds = WARMUP_ROUNDS * ROUND_INTERVAL_SECONDS
+
+                    for d_raw in dfs_for_global_calc:
+                        d_temp = d_raw.copy()
+
+                        # Assicuriamoci che sia parsed
+                        if not pd.api.types.is_datetime64_any_dtype(d_temp['StartTime']):
+                            d_temp['StartTime'] = d_temp['StartTime'].apply(parse_timestamp)
+
+                        start_t = d_temp['StartTime'].min()
+                        cutoff_t = start_t + timedelta(seconds=cut_seconds)
+
+                        # Filtro: tengo solo dati DOPO il cutoff
+                        d_cut = d_temp[d_temp['StartTime'] > cutoff_t]
+
+                        if not d_cut.empty:
+                            steady_dfs.append(d_cut)
+
+                    if steady_dfs:
+                        df_global_steady = pd.concat(steady_dfs, ignore_index=True)
+                        steady_metrics = calculate_metrics(df_global_steady, seed=None)
+                        global_aggregated_data_cut.append({**config_info, **steady_metrics})
+                    else:
+                        print(f"  -> Warning: Tutti i dati sono stati tagliati per {folder_name} (Test troppo breve?)")
+
                 except Exception as e:
                     print(f"  -> Errore globale folder: {e}")
 
-    # === FILE GLOBALE FINALE ===
-    if global_aggregated_data:
-        df_final = pd.DataFrame(global_aggregated_data)
+    # === SALVATAGGIO FILE FINALI ===
 
-        # Ordinamento colonne V2
+    # Funzione helper per salvare e ordinare
+    def save_final_summary(data_list, filename):
+        if not data_list: return
+        df_final = pd.DataFrame(data_list)
         cols_prio = ['TestType', 'Mode', 'Users', 'Collections', 'Accesses', 'AverageLatency', 'Throughput']
         final_cols = [c for c in cols_prio if c in df_final.columns] + [c for c in df_final.columns if c not in cols_prio]
         df_final = df_final[final_cols]
-
-        # Ordina le righe
         df_final = df_final.sort_values(by=['TestType', 'Mode', 'Users', 'Collections', 'Accesses'])
 
-        global_output = os.path.join(root_dir, "final_global_summary.csv")
-        df_final.to_csv(global_output, index=False)
-        print(f"\n✅ GENERAZIONE COMPLETATA. Report: {global_output}")
+        out_path = os.path.join(root_dir, filename)
+        df_final.to_csv(out_path, index=False)
+        print(f"✅ Generato: {out_path}")
+
+    print("\n--- Generazione Report Finali ---")
+    if global_aggregated_data:
+        save_final_summary(global_aggregated_data, "final_global_summary.csv")
     else:
-        print("\n⚠️ Nessun dato trovato. Controlla che le cartelle contengano 'mode_' e 'users_'/'accesses_'.")
+        print("⚠️ Nessun dato trovato per il summary completo.")
+
+    if global_aggregated_data_cut:
+        save_final_summary(global_aggregated_data_cut, "final_global_summary_steady_state.csv")
+    else:
+        print("⚠️ Nessun dato trovato per il summary steady state (cut 5 rounds).")
 
 if __name__ == "__main__":
     main()
