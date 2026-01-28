@@ -12,6 +12,14 @@ import os
 sns.set_theme(style="whitegrid", font_scale=1.2)
 PALETTE = "viridis"
 
+ALGO_ORDER = [
+    "Fibonacci (40)",
+    "Prime Numbers",
+    "Simple Loop",
+    "Tail Fibonacci (20k)",
+    "Stateful"
+]
+
 def create_simple_label(row):
     """Creates a simpler X-axis label (e.g., 'Wasmedge\nAOT')"""
     if row["Runtime"].lower() == "native":
@@ -71,7 +79,7 @@ def parse_benchmark_file(file_path):
         if "TailFibonacci" in algorithm: algorithm = "Tail Fibonacci (20k)"
         elif "Fibonacci" in algorithm: algorithm = "Fibonacci (40)"
         elif "PrimeNumbers" in algorithm: algorithm = "Prime Numbers"
-        elif "Lightweight" in algorithm: algorithm = "Lightweight"
+        elif "Lightweight" in algorithm: algorithm = "Simple Loop"
         elif "Stateful" in algorithm: algorithm = "Stateful"
 
         records.append({
@@ -157,7 +165,7 @@ def plot_standard_analysis(df, suffix, file_ext, show_ylabel=True):
         runtimes_time.remove("Native")
         runtimes_time.insert(0, "Native")
 
-    algos = sorted(df["Algorithm"].unique())
+    algos = [a for a in ALGO_ORDER if a in df["Algorithm"].unique()]
 
     # --- 1. Average Execution Time (NO Optimizations) ---
     df_no_opts = df[df["Optimization"].isin(["NoOpts", "Native"])]
@@ -252,7 +260,7 @@ def plot_speedup_compare_caches(df_cold, df_target, target_name, file_ext, show_
 
     df_merged["Speedup"] = df_merged["ns/op_cold"] / df_merged["ns/op_target"]
 
-    algos = sorted(df_merged["Algorithm"].unique())
+    algos = [a for a in ALGO_ORDER if a in df["Algorithm"].unique()]
     runtimes = sorted(df_merged[df_merged["Runtime"] != "Native"]["X_label"].unique())
 
     for opt in ["WithOpts", "NoOpts"]:
@@ -273,8 +281,7 @@ def plot_speedup_compare_caches(df_cold, df_target, target_name, file_ext, show_
             plt.ylabel("")
 
         plt.xlabel("")
-        # plt.yscale("log")
-        plt.ylim(top=10)
+        plt.yscale("log")
         plt.savefig(f"speedup_cold_vs_{target_name.lower()}_{opt.lower()}{file_ext}", bbox_inches='tight')
         plt.close()
         print(f"- Generated: speedup_cold_vs_{target_name.lower()}_{opt.lower()}{file_ext}")

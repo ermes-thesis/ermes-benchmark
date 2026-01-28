@@ -29,7 +29,7 @@ var poolSizes = []int{1, 2, 4, 8, 16, 32, 64, 128}                              
 const requestsPerWorker = 50
 
 // Runtime supportati
-var runtimesToTest = []string{"Wasmtime", "Wazero", "Wasmedge"}
+var runtimesToTest = []string{"Wasmtime_AOT"}
 
 // Struttura output JSON aggiornata con Runtime
 type ScalabilityResult struct {
@@ -74,7 +74,7 @@ func createScaleHostFns(t testing.TB, log logger.Logger) *scheduler.HostFunction
 	return scheduler.NewHostFunctions(dataManager, metadataManager, &serverInfo, log)
 }
 
-func getScaleWasmPath(workload string, wasmedgeAot bool) string {
+func getScaleWasmPath(workload string, wasmedgeAot bool, wasmtimeAot bool) string {
 	baseDir := "_WASM_BINARIES/"
 	var path string
 	switch workload {
@@ -90,6 +90,9 @@ func getScaleWasmPath(workload string, wasmedgeAot bool) string {
 
 	if wasmedgeAot {
 		path = strings.ReplaceAll(path, ".wasm", "_AOTwasmedge.wasm")
+	}
+	if wasmtimeAot {
+		path = strings.ReplaceAll(path, ".wasm", "_AOTwasmtime.wasm")
 	}
 
 	return path
@@ -112,12 +115,12 @@ func getScaleReqAndCtx(workload string, nVal int) ([]byte, []byte) {
 
 func runScalabilityScenario(t *testing.T, runtime string, workload string, inputVal int) {
 	log := createScaleLogger(t)
-	path := getScaleWasmPath(workload, runtime == "Wasmedge")
+	path := getScaleWasmPath(workload, runtime == "Wasmedge", runtime == "Wasmtime_AOT")
 	binary, err := os.ReadFile(path)
 	require.NoError(t, err)
 
-	// Configura AOT: True per Wazero e Wasmedge, False (JIT) per Wasmtime
-	isAOT := runtime == "Wazero" || runtime == "Wasmedge"
+	isAOT := runtime == "Wazero" || runtime == "Wasmedge" || strings.HasSuffix(runtime, "AOT")
+	runtime = strings.Split(runtime, "_")[0]
 
 	fmt.Printf("\n=== Scalability Test: Runtime=%s | Workload=%s | AOT=%v ===\n", runtime, workload, isAOT)
 
