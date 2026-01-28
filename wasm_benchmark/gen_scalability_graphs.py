@@ -25,6 +25,36 @@ def load_data(filename="scalability_results.json"):
 
     df = pd.DataFrame(data)
 
+    df['workload'] = df['workload'].replace("Lightweight", "SimpleLoop")
+    custom_workload_order = ["SimpleLoop", "PrimeNumbers", "Stateful"]
+
+    if 'workload' in df.columns:
+        existing_workloads = set(df['workload'].unique())
+        for w in existing_workloads:
+            if w not in custom_workload_order:
+                custom_workload_order.append(w)
+
+        df['workload'] = pd.Categorical(
+            df['workload'],
+            categories=custom_workload_order,
+            ordered=True
+        )
+
+    df['runtime'] = df['runtime'].replace("Wasmedge", "Wasmedge_AOT").replace("Wazero", "Wazero_AOT")
+    custom_runtime_order = ["Wasmtime_JIT", "Wasmtime_AOT", "Wasmedge_AOT", "Wazero_AOT"]
+
+    if 'runtime' in df.columns:
+        existing_runtime = set(df['runtime'].unique())
+        for w in existing_runtime:
+            if w not in custom_runtime_order:
+                custom_runtime_order.append(w)
+
+        df['runtime'] = pd.Categorical(
+            df['runtime'],
+            categories=custom_runtime_order,
+            ordered=True
+        )
+
     # Conversione PoolSize in stringa categorica ordinata per visualizzazione pulita
     if 'pool_size' in df.columns:
         # Troviamo i valori unici e li ordiniamo numericamente
