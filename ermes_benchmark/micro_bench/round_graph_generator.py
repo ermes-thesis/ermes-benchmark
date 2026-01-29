@@ -2,6 +2,7 @@ import os
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.ticker import MaxNLocator
 
 
 def process_scenario(scenario_name, base_input_dir, base_output_dir):
@@ -52,7 +53,7 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir):
     # Unione DataFrame
     full_df = pd.concat(all_data, ignore_index=True)
 
-    # 2. Filtro Round <= 10
+    # 2. Filtro Round
     if scenario_name == 'moving_users':
         full_df = full_df[full_df['Round'] <= 20]
     else:
@@ -80,16 +81,16 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir):
 
             # Stili
             if arch == 'Centralized':
-                color = 'tab:orange';
+                color = 'tab:orange'
                 marker = 'o'
             elif arch == 'Distributed':
-                color = 'tab:blue';
+                color = 'tab:blue'
                 marker = '^'
             elif arch == 'Query Cache Disabled':
-                color = 'tab:green';
+                color = 'tab:green'
                 marker = 's'
             else:
-                color = 'tab:gray';
+                color = 'tab:gray'
                 marker = 'd'
 
             mode_str = str(mode).lower()
@@ -113,7 +114,7 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir):
             plt.title(f'Latency vs Round (Max 10) - {scenario_name}\n(Users: {users}, Collections: {collections})')
             plt.grid(True, linestyle='--', alpha=0.3)
             plt.legend(title='Configuration', loc='best')
-            plt.xlim(0.5, 10.5)
+            plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
             plt.tight_layout()
 
             filename = f"u{users}_c{collections}.png"
