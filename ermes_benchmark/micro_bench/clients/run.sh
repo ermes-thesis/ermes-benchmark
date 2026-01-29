@@ -52,7 +52,7 @@ show_progress() {
         sleep "$interval"
         elapsed=$((elapsed + interval))
     done
-    printf "\r✅ [%s] 100%% (%ds/%ds) - Completato!\n" "DONE" "$elapsed" "$duration"
+    printf "\r✅ [%s] 100%% (%ds/%ds) - Completato!\033[K\n" "DONE" "$elapsed" "$duration"
 }
 
 # Funzione per pulire e configurare i nodi remoti
@@ -108,7 +108,7 @@ flush_remote_nodes() {
         # 5. Riavvio
         systemctl start ermes-node
 EOF
-        echo "   ✅ ${NODE_IP} configurato e riavviato."
+#        echo "   ✅ ${NODE_IP} configurato e riavviato."
     done
     sleep 5
 }
@@ -159,16 +159,13 @@ run_scalability() {
             # 2. AGGIORNAMENTO CONFIG E PULIZIA (Remoto)
             flush_remote_nodes "$F_VAL" "$L_VAL"
 
-            # 3. PULIZIA LOG LOCALI
-            rm user.log create.log 2>/dev/null
-
             # 4. CREAZIONE DATI
             echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
             ./create "$SETUP_FILE" "$CONSISTENCY_MODE" > create.log 2>&1
             echo "✅ Creazione dati completata."
 
             # Rimuove log della creazione
-            rm create.log results/results_log_2000_*.csv 2>/dev/null
+            rm results/results_log_2000_*.csv 2>/dev/null
 
             # 5. Esecuzione (Parametro Accessi fisso a 1)
             ./user "$SETUP_FILE" "1" > user.log 2>&1 &
@@ -182,7 +179,7 @@ run_scalability() {
             SEED_DIR="${CONFIG_DIR}/seed_${SEED}"
 
             mkdir -p "$SEED_DIR"
-            mv results/results_log_*.csv "$SEED_DIR/"
+            mv results/results_log_*.csv results/*.log "$SEED_DIR/"
           done
         done
       done
@@ -221,16 +218,13 @@ run_scalability_moving_users() {
             # 2. AGGIORNAMENTO CONFIG E PULIZIA (Remoto)
             flush_remote_nodes "$F_VAL" "$L_VAL"
 
-            # 3. PULIZIA LOG LOCALI
-            rm user.log create.log 2>/dev/null
-
             # 4. CREAZIONE DATI
             echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
             ./create "$SETUP_FILE" "$CONSISTENCY_MODE" > create.log 2>&1
             echo "✅ Creazione dati completata."
 
             # Rimuove log della creazione
-            rm create.log results/results_log_2000_*.csv 2>/dev/null
+            rm results/results_log_2000_*.csv 2>/dev/null
 
             # 5. Esecuzione (Parametro Accessi fisso a 1)
             ./moving_user "$SETUP_FILE" "1" > user.log 2>&1 &
@@ -244,7 +238,7 @@ run_scalability_moving_users() {
             SEED_DIR="${CONFIG_DIR}/seed_${SEED}"
 
             mkdir -p "$SEED_DIR"
-            mv results/results_log_*.csv "$SEED_DIR/"
+            mv results/results_log_*.csv results/*.log "$SEED_DIR/"
           done
         done
       done
@@ -275,13 +269,12 @@ run_density() {
             SETUP_FILE="tests/setup_experiment_${SEED}_users_${FIXED_USERS}_collections_${FIXED_COLLECTIONS}.json"
 
             flush_remote_nodes "$F_VAL" "$L_VAL"
-            rm user.log create.log 2>/dev/null
 
             echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
             ./create "$SETUP_FILE" "$CONSISTENCY_MODE" "$ACC" > create.log 2>&1
             echo "✅ Creazione dati completata."
 
-            rm create.log results/results_log_*.csv 2>/dev/null
+            rm results/results_log_*.csv 2>/dev/null
 
             # Esecuzione (Passiamo $ACC)
             ./user "$SETUP_FILE" "$ACC" > user.log 2>&1 &
@@ -296,7 +289,7 @@ run_density() {
             SEED_DIR="${CONFIG_DIR}/seed_${SEED}"
 
             mkdir -p "$SEED_DIR"
-            mv results/results_log_*.csv "$SEED_DIR/"
+            mv results/results_log_*.csv results/*.log "$SEED_DIR/"
           done
       done
     done

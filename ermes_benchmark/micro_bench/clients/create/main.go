@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"time"
+
+	"github.com/ermes-thesis/ermes-common/logger"
 )
 
 type Config struct {
@@ -27,19 +29,35 @@ var geolocations = map[int]string{
 }
 
 func main() {
+	logger, err := logger.NewLogger(logger.Config{
+		Level:  logger.InfoLevel,
+		Format: "text",
+		Output: &logger.LogFile{
+			LogDir:      "results",
+			LogFileName: "create.log",
+		},
+	})
+	if err != nil {
+		log.Fatalf("Error creating logger: %v", err)
+	}
+	defer logger.Close()
+
 	if len(os.Args) < 3 {
-		log.Fatal("Missing config file argument")
+		logger.Error("Missing config file argument")
+		return
 	}
 
 	var conf Config
 
 	confBytes, err := os.ReadFile(os.Args[1])
 	if err != nil {
-		log.Fatalf("Error reading config file: %v", err)
+		logger.Error("Error reading config file: %v", err)
+		return
 	}
 	err = json.Unmarshal(confBytes, &conf)
 	if err != nil {
-		log.Fatalf("Error unmarshalling config file: %v", err)
+		logger.Error("Error unmarshalling config file: %v", err)
+		return
 	}
 
 	consistency := os.Args[2]
@@ -48,28 +66,25 @@ func main() {
 	if len(os.Args) > 3 {
 		numAccesses = os.Args[3]
 	}
-	fmt.Printf("Passing 'accesses' parameter to function: %s\n", numAccesses)
+	logger.Infof("Passing 'accesses' parameter to function: %s\n", numAccesses)
 
 	// Call the library setup
 
 	confFile := "config.yaml"
 
-	fmt.Println("Hello world !")
+	logger.Info("Hello world !")
 
 	client, errSetup := ermes.SetupClientLibrary(uint64(2000), "10.10.101.50", confFile)
-
 	if errSetup != nil {
-		fmt.Fprintf(os.Stderr, "Error when setting up the client library: %v\n", errSetup)
-	} else {
-
-		fmt.Println("Library set up correctly!")
-
+		logger.Error("Error when setting up the client library: %v\n", errSetup)
+		return
 	}
+	logger.Info("Library set up correctly!")
 
 	for collectionName, position := range conf.CollectionPositions {
 		node := "10.10.101." + fmt.Sprint(position) + ":12345"
 		client.MoveToNewNode(node)
-		fmt.Println("Creating collection", collectionName, "at node", node)
+		logger.Info("Creating collection", collectionName, "at node", node)
 
 		body, code, err := client.ExecuteFunction(
 			"createCollection",
@@ -82,7 +97,7 @@ func main() {
 			map[string]map[string]string{},
 			"",
 		)
-		fmt.Println(code, string(body), err)
+		logger.Infof("[create] Status %d, %s, error: %v", code, string(body), err)
 	}
 
 	time.Sleep(1 * time.Second)
@@ -105,7 +120,7 @@ func main() {
 			geolocations[position],
 		)
 
-		fmt.Println(code, string(body), err)
+		logger.Infof("[write] Status %d, %s, error: %v", code, string(body), err)
 		time.Sleep(5 * time.Millisecond)
 	}
 
