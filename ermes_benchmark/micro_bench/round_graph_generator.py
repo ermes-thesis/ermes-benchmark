@@ -5,7 +5,7 @@ import pandas as pd
 from matplotlib.ticker import MaxNLocator
 
 
-def process_scenario(scenario_name, base_input_dir, base_output_dir, filters=None):
+def process_scenario(scenario_name, base_input_dir, base_output_dir, files=None, filters=None):
     """
     Elabora un singolo scenario (es. 'static_users' o 'moving_users').
     Legge i 3 CSV dalla cartella di input e salva i grafici nella cartella di output.
@@ -23,12 +23,16 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir, filters=Non
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Mappa dei file da cercare
-    file_map = {
-        'centralized.csv': 'Centralized',
-        'distributed.csv': 'Distributed',
-        'query_cache_disabled.csv': 'Query Cache Disabled'
-    }
+    # file map
+    if not files:
+        files_to_load = [
+            f for f in os.listdir(input_dir)
+            if f.lower().endswith(".csv")
+        ]
+    else:
+        files_to_load = files
+
+    file_map = {fname: os.path.splitext(fname)[0].replace("_", " ").title() for fname in files_to_load}
 
     # 1. Caricamento Dati
     all_data = []
@@ -265,6 +269,7 @@ def main():
     base_out_dir = "output_img/rounds"
     files = [
         "distributed.csv",
+        "centralized.csv",
     ]
 
     # Scenari da elaborare
@@ -273,11 +278,14 @@ def main():
 
 
     for scenario in scenarios:
-        process_scenario(scenario, base_data_dir, base_out_dir)
+        process_scenario(scenario, base_data_dir, base_out_dir)#, files)
 
     csv_filters = {
         "Users": [256, 1024] #or 
     }
+    files = [
+        "distributed.csv",
+    ]
 
     for file_name in files:
         process_file_across_scenarios(
