@@ -5,7 +5,7 @@ import pandas as pd
 from matplotlib.ticker import MaxNLocator
 
 
-def process_scenario(scenario_name, base_input_dir, base_output_dir):
+def process_scenario(scenario_name, base_input_dir, base_output_dir, filters=None):
     """
     Elabora un singolo scenario (es. 'static_users' o 'moving_users').
     Legge i 3 CSV dalla cartella di input e salva i grafici nella cartella di output.
@@ -52,6 +52,28 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir):
 
     # Unione DataFrame
     full_df = pd.concat(all_data, ignore_index=True)
+
+    # Applicazione filtri AND
+    if filters:
+        mask = pd.Series(True, index=full_df.index)
+
+        for col, expected_value in filters.items():
+            if col not in full_df.columns:
+                print(f"  ⚠️ Colonna filtro non trovata: {col}")
+                continue
+
+            # OR: lista di valori
+            if isinstance(expected_value, (list, tuple, set)):
+                mask &= full_df[col].isin(expected_value)
+            # AND: valore singolo
+            else:
+                mask &= full_df[col] == expected_value
+
+        full_df = full_df[mask]
+
+        if full_df.empty:
+            print("  ⚠️ Dataset vuoto dopo i filtri.")
+            return
 
     # 2. Filtro Round
     if scenario_name == 'moving_users':
@@ -126,16 +148,146 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir):
     print(f"  ✅ Generati {count} grafici in {output_dir}")
 
 
+def process_file_across_scenarios(
+    file_name,
+    base_input_dir,
+    base_output_dir,
+    scenarios,
+    filters=None
+):
+
+    print(f"\n--- Elaborazione File: {file_name} ---")
+
+    all_data = []
+
+    # 1. Caricamento dati da tutti gli scenari
+    for scenario in scenarios:
+        file_path = os.path.join(base_input_dir, scenario, file_name)
+
+        if not os.path.exists(file_path):
+            print(f"  ⚠️ File non trovato: {file_path}")
+            continue
+
+        try:
+            df = pd.read_csv(file_path)
+            df["Scenario"] = scenario
+            all_data.append(df)
+            print(f"  ✅ Caricato: {scenario}/{file_name}")
+        except Exception as e:
+            print(f"  ❌ Errore leggendo {file_path}: {e}")
+
+    if not all_data:
+        print("  ❌ Nessun dato disponibile.")
+        return
+
+    full_df = pd.concat(all_data, ignore_index=True)
+
+    # 2. Applicazione filtri AND
+    if filters:
+        mask = pd.Series(True, index=full_df.index)
+
+        for col, expected_value in filters.items():
+            if col not in full_df.columns:
+                print(f"  ⚠️ Colonna filtro non trovata: {col}")
+                continue
+
+            # OR: lista di valori
+            if isinstance(expected_value, (list, tuple, set)):
+                mask &= full_df[col].isin(expected_value)
+            # AND: valore singolo
+            else:
+                mask &= full_df[col] == expected_value
+
+        full_df = full_df[mask]
+
+        if full_df.empty:
+            print("  ⚠️ Dataset vuoto dopo i filtri.")
+            return
+        
+    # 3. Filtro Round per scenario
+    def max_round(row):
+        return 20 if row["Scenario"] == "moving_users" else 10
+
+    full_df = full_df[full_df["Round"] <= full_df.apply(max_round, axis=1)]
+
+    # 4. Output dir
+    output_dir = os.path.join(base_output_dir, "by_file", file_name.replace(".csv", ""))
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 5. Un grafico per ogni Collections
+    grouped = full_df.groupby(["Users", "Mode"])
+    count = 0
+
+    
+    for (users, mode), group_df in grouped:
+        plt.figure(figsize=(10, 6))
+
+        subgroups = group_df.groupby(['Scenario', 'Collections'])
+
+        # Linee = (Users, Scenario)
+        for (scenario, collections), sub_df in subgroups:
+            if sub_df.empty: continue
+
+            sub_df = sub_df.sort_values("Round")
+
+            label = f"{scenario} - {collections} col"
+
+            plt.plot(
+                sub_df["Round"],
+                sub_df["AverageLatency"],
+                label=label,
+                linewidth=2,
+                marker="o"
+            )
+
+        plt.xlabel("Round (Time)")
+        plt.ylabel("Average Latency (ms)")
+        plt.title(
+            f"Latency vs Round\n"
+            f"users: {users}"
+        )
+        plt.grid(True, linestyle="--", alpha=0.3)
+        plt.legend(title="Scenario / Users")
+        plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+        plt.tight_layout()
+
+        fname = f"u{users}_{mode}.png"
+        plt.savefig(os.path.join(output_dir, fname), dpi=300)
+        plt.close()
+
+        count += 1
+
+    print(f"  ✅ Generati {count} grafici in {output_dir}")
+
 def main():
     # Percorsi Base
     base_data_dir = "data/rounds"
     base_out_dir = "output_img/rounds"
+    files = [
+        "distributed.csv",
+    ]
 
     # Scenari da elaborare
-    scenarios = ["static_users", "moving_users"]
+    #scenarios = ["static_users", "moving_users"]
+    scenarios = ["static_users"]
+
 
     for scenario in scenarios:
         process_scenario(scenario, base_data_dir, base_out_dir)
+
+    csv_filters = {
+        "Users": [256, 1024] #or 
+    }
+
+    for file_name in files:
+        process_file_across_scenarios(
+            file_name,
+            base_data_dir,
+            base_out_dir,
+            scenarios,
+            csv_filters
+        )
+
 
 
 if __name__ == "__main__":
