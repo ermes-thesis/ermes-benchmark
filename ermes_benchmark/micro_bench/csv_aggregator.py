@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 # --- CONFIGURAZIONE ---
 HTTP_ERROR_CODES = [404, 423, 500, 503, 508]
 ROUND_INTERVAL_SECONDS = 15
-WARMUP_ROUNDS = 5
+WARMUP_ROUNDS = 10
 
 def parse_timestamp(ts: str) -> datetime:
     """Converte la stringa timestamp dei log in oggetto datetime."""
@@ -120,7 +120,7 @@ def main():
     root_dir = sys.argv[1] if len(sys.argv) > 1 else "."
     global_aggregated_data = []
     global_aggregated_data_cut = []
-    global_rounds_accumulator = [] # <--- NUOVO: Accumulatore per tutti i round globali
+    global_rounds_accumulator = []
 
     print(f"Scansione in: {root_dir}")
 

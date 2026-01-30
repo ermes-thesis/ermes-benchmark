@@ -207,7 +207,7 @@ run_scalability() {
 
             # 4. ESECUZIONE
             ./user "$SETUP_FILE" "1" > user.log 2>&1 &
-            show_progress $! 150
+            show_progress $! 225
             wait $!
 
             LOG_ID="scalability_mode_${CONSISTENCY_MODE}_u${USERS}_c${COLLECTIONS}_s${SEED}"

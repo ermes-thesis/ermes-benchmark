@@ -86,7 +86,7 @@ func main() {
 			sleep := random.Intn(600)
 			time.Sleep(time.Duration(sleep) * time.Millisecond)
 
-			rounds := 10
+			rounds := 15
 			roundDuration := 15.0
 			executions := conf.UserCollectionMap[userId]
 			for i := range rounds {
