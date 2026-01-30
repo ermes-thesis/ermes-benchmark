@@ -15,6 +15,14 @@ FN_ROUND=25
 SEEDS=("1" "42" "100" "2024" "7" "99" "1234" "5678" "91011" "121314")
 #SEEDS=("1") # Debug veloce
 
+# --- CONFIGURAZIONE THRESHOLD ---
+# REF_USERS: Numero di utenti "standard" (baseline)
+# DAMPING: Fattore di smorzamento (più è alto, meno la threshold cambia drasticamente)
+# MIN_TH: Valore minimo assoluto per le threshold
+REF_USERS=1024
+DAMPING=200
+MIN_TH=1
+
 if [[ "$INPUT_MODE" == "all" ]]; then
     TARGET_MODES=("eventual" "sequential")
 elif [[ -n "$INPUT_MODE" ]]; then
@@ -24,7 +32,43 @@ else
     TARGET_MODES=("eventual")
 fi
 
-# --- FUNZIONI UTILITÀ (Show Progress, Flush, Copy Logs) ---
+# --- FUNZIONI UTILITÀ ---
+
+# Funzione centrale per calcolare L_VAL e F_VAL
+calculate_thresholds() {
+    local u_in=$1
+    local c_in=$2
+
+    # Sanitizzazione Input
+    if [ -z "$u_in" ] || [ "$u_in" -lt 1 ]; then u_in=1; fi
+    if [ -z "$c_in" ] || [ "$c_in" -lt 1 ]; then c_in=1; fi
+
+    # --- Calcolo Logica Base (Originale basata sulle Collection) ---
+    local div
+    local fac
+
+    if [ "$c_in" -lt 25 ]; then div=$c_in; else div=25; fi
+    if [ "$div" -eq 0 ]; then div=1; fi
+
+    if [ "$c_in" -lt 4 ]; then fac=$c_in; else fac=4; fi
+
+    local l_base=$(( (450 * fac) / div ))
+    local f_base=$(( (150 * fac) / div ))
+
+    # --- Applicazione Fattore Utenti Smorzato ---
+    # Formula: ValoreBase * (Utenti + Cuscino) / (Riferimento + Cuscino)
+    local num=$(( u_in + DAMPING ))
+    local den=$(( REF_USERS + DAMPING ))
+
+    # Assegnazione variabili GLOBALI
+    L_VAL=$(( (l_base * num) / den ))
+    F_VAL=$(( (f_base * num) / den ))
+
+    # --- Controllo Minimo (Safety) ---
+    if [ "$L_VAL" -lt "$MIN_TH" ]; then L_VAL=$MIN_TH; fi
+    if [ "$F_VAL" -lt "$MIN_TH" ]; then F_VAL=$MIN_TH; fi
+}
+
 show_progress() {
     local pid=$1
     local duration=$2
@@ -55,7 +99,6 @@ show_progress() {
     printf "\r✅ [%s] 100%% (%ds/%ds) - Completato!\033[K\n" "DONE" "$elapsed" "$duration"
 }
 
-# Funzione per pulire e configurare i nodi remoti
 flush_remote_nodes() {
     local F_THRESH=$1
     local L_THRESH=$2
@@ -108,7 +151,6 @@ flush_remote_nodes() {
         # 5. Riavvio
         systemctl start ermes-node
 EOF
-#        echo "   ✅ ${NODE_IP} configurato e riavviato."
     done
     sleep 5
 }
@@ -126,7 +168,7 @@ EOF
 
 # --- FUNZIONI CORE ESPERIMENTI ---
 
-# 1. ESPERIMENTO SCALABILITÀ (Varia Users/Collections, Accesses=1)
+# 1. ESPERIMENTO SCALABILITÀ
 run_scalability() {
     echo "🏁 AVVIO TEST SCALABILITÀ (Varia User/Coll)..."
     USERS_LIST=("1" "4" "16" "64" "256" "512" "1024")
@@ -135,7 +177,6 @@ run_scalability() {
     echo "🏁 Inizio sequenza esperimenti..."
 
     for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
-
       echo "##########################################################"
       echo "🔷 CAMBIO MODALITÀ: $CONSISTENCY_MODE"
       echo "##########################################################"
@@ -144,22 +185,19 @@ run_scalability() {
         for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
           for SEED in "${SEEDS[@]}"; do
 
-            # Calcolo Threshold
-            if [ "$COLLECTIONS" -lt 25 ]; then DIV=$COLLECTIONS; else DIV=25; fi
-            if [ "$COLLECTIONS" -lt 4 ]; then FAC=$COLLECTIONS; else FAC=4; fi
-            L_VAL=$(( (450 * FAC) / DIV ))
-            F_VAL=$(( (150 * FAC) / DIV ))
+            # CALCOLO THRESHOLD
+            calculate_thresholds "$USERS" "$COLLECTIONS"
 
-            echo "🚀 [SCALABILITY] Mode=$CONSISTENCY_MODE, U=$USERS, C=$COLLECTIONS, Seed=$SEED"
+            echo "🚀 [SCALABILITY] Mode=$CONSISTENCY_MODE, U=$USERS, C=$COLLECTIONS, Seed=$SEED (L=$L_VAL F=$F_VAL)"
 
-            # 1. GENERAZIONE SETUP (Locale)
+            # 1. GENERAZIONE SETUP
             python3 test_generator.py --seed "$SEED" --n_collections "$COLLECTIONS" --n_users "$USERS" --fn_per_round "$FN_ROUND"
             SETUP_FILE="tests/setup_experiment_${SEED}_users_${USERS}_collections_${COLLECTIONS}.json"
 
-            # 2. AGGIORNAMENTO CONFIG E PULIZIA (Remoto)
+            # 2. AGGIORNAMENTO CONFIG E PULIZIA
             flush_remote_nodes "$F_VAL" "$L_VAL"
 
-            # 4. CREAZIONE DATI
+            # 3. CREAZIONE DATI
             echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
             ./create "$SETUP_FILE" "$CONSISTENCY_MODE" > create.log 2>&1
             echo "✅ Creazione dati completata."
@@ -167,7 +205,7 @@ run_scalability() {
             # Rimuove log della creazione
             rm results/results_log_2000_*.csv 2>/dev/null
 
-            # 5. Esecuzione (Parametro Accessi fisso a 1)
+            # 4. ESECUZIONE
             ./user "$SETUP_FILE" "1" > user.log 2>&1 &
             show_progress $! 150
             wait $!
@@ -187,7 +225,7 @@ run_scalability() {
 }
 
 run_scalability_moving_users() {
-    echo "🏁 AVVIO TEST SCALABILITÀ (Varia User/Coll)..."
+    echo "🏁 AVVIO TEST SCALABILITÀ MOVING USERS..."
     USERS_LIST=("64")
     COLLECTIONS_LIST=("1000")
 
@@ -203,22 +241,19 @@ run_scalability_moving_users() {
         for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
           for SEED in "${SEEDS[@]}"; do
 
-            # Calcolo Threshold
-            if [ "$COLLECTIONS" -lt 25 ]; then DIV=$COLLECTIONS; else DIV=25; fi
-            if [ "$COLLECTIONS" -lt 4 ]; then FAC=$COLLECTIONS; else FAC=4; fi
-            L_VAL=$(( (450 * FAC) / DIV ))
-            F_VAL=$(( (150 * FAC) / DIV ))
+            # CALCOLO THRESHOLD
+            calculate_thresholds "$USERS" "$COLLECTIONS"
 
-            echo "🚀 [SCALABILITY] Mode=$CONSISTENCY_MODE, U=$USERS, C=$COLLECTIONS, Seed=$SEED"
+            echo "🚀 [SCALABILITY MOVING] Mode=$CONSISTENCY_MODE, U=$USERS, C=$COLLECTIONS, Seed=$SEED (L=$L_VAL F=$F_VAL)"
 
-            # 1. GENERAZIONE SETUP (Locale)
+            # 1. GENERAZIONE SETUP
             python3 test_generator.py --seed "$SEED" --n_collections "$COLLECTIONS" --n_users "$USERS" --fn_per_round "$FN_ROUND"
             SETUP_FILE="tests/setup_experiment_${SEED}_users_${USERS}_collections_${COLLECTIONS}.json"
 
-            # 2. AGGIORNAMENTO CONFIG E PULIZIA (Remoto)
+            # 2. FLUSH
             flush_remote_nodes "$F_VAL" "$L_VAL"
 
-            # 4. CREAZIONE DATI
+            # 3. CREATE
             echo "⏳ Creazione dati in corso ($CONSISTENCY_MODE)..."
             ./create "$SETUP_FILE" "$CONSISTENCY_MODE" > create.log 2>&1
             echo "✅ Creazione dati completata."
@@ -226,7 +261,7 @@ run_scalability_moving_users() {
             # Rimuove log della creazione
             rm results/results_log_2000_*.csv 2>/dev/null
 
-            # 5. Esecuzione (Parametro Accessi fisso a 1)
+            # 4. ESECUZIONE
             ./moving_user "$SETUP_FILE" "1" > user.log 2>&1 &
             show_progress $! 300
             wait $!
@@ -245,7 +280,7 @@ run_scalability_moving_users() {
     done
 }
 
-# 2. ESPERIMENTO DENSITÀ (Fissi User/Coll, Varia Accesses)
+# 2. ESPERIMENTO DENSITÀ
 run_density() {
     echo "🏁 AVVIO TEST DENSITÀ (Varia numero di accessi alla collection per funzione)..."
     FIXED_USERS="64"
@@ -256,14 +291,10 @@ run_density() {
       for ACC in "${ACCESSES_LIST[@]}"; do
         for SEED in "${SEEDS[@]}"; do
 
-            # Calcolo Threshold (Basato sui fissi)
-            COLLECTIONS=$FIXED_COLLECTIONS
-            if [ "$COLLECTIONS" -lt 25 ]; then DIV=$COLLECTIONS; else DIV=25; fi
-            if [ "$COLLECTIONS" -lt 4 ]; then FAC=$COLLECTIONS; else FAC=4; fi
-            L_VAL=$(( (450 * FAC) / DIV ))
-            F_VAL=$(( (150 * FAC) / DIV ))
+            # CALCOLO THRESHOLD (Uso valori fissi)
+            calculate_thresholds "$FIXED_USERS" "$FIXED_COLLECTIONS"
 
-            echo "🚀 [DENSITY] Mode=$CONSISTENCY_MODE, Accesses=$ACC, Seed=$SEED"
+            echo "🚀 [DENSITY] Mode=$CONSISTENCY_MODE, Accesses=$ACC, Seed=$SEED (L=$L_VAL F=$F_VAL)"
 
             python3 test_generator.py --seed "$SEED" --n_collections "$FIXED_COLLECTIONS" --n_users "$FIXED_USERS" --fn_per_round "$FN_ROUND"
             SETUP_FILE="tests/setup_experiment_${SEED}_users_${FIXED_USERS}_collections_${FIXED_COLLECTIONS}.json"
@@ -276,7 +307,7 @@ run_density() {
 
             rm results/results_log_*.csv 2>/dev/null
 
-            # Esecuzione (Passiamo $ACC)
+            # ESECUZIONE
             ./user "$SETUP_FILE" "$ACC" > user.log 2>&1 &
             show_progress $! 150
             wait $!
@@ -309,7 +340,7 @@ elif [[ "$EXP_TYPE" == "density" ]]; then
 elif [[ "$EXP_TYPE" == "moving" ]]; then
     run_scalability_moving_users
 else
-    echo "❌ Tipo esperimento sconosciuto: $EXP_TYPE (usa 'scalability' o 'density')"
+    echo "❌ Tipo esperimento sconosciuto: $EXP_TYPE (usa 'scalability', 'density' o 'moving')"
     exit 1
 fi
 
