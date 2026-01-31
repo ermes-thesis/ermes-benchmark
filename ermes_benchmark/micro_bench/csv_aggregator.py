@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 # --- CONFIGURAZIONE ---
 HTTP_ERROR_CODES = [404, 423, 500, 503, 508]
 ROUND_INTERVAL_SECONDS = 15
-WARMUP_ROUNDS = 10
 
 def parse_timestamp(ts: str) -> datetime:
     """Converte la stringa timestamp dei log in oggetto datetime."""
@@ -118,6 +117,7 @@ def calculate_metrics_by_round(df, seed, interval=ROUND_INTERVAL_SECONDS):
 
 def main():
     root_dir = sys.argv[1] if len(sys.argv) > 1 else "."
+    warmup_rounds = int(sys.argv[2]) if len(sys.argv) > 2 else 5
     global_aggregated_data = []
     global_aggregated_data_cut = []
     global_rounds_accumulator = []
@@ -189,7 +189,7 @@ def main():
                     df_huge = pd.concat(normalized_dfs, ignore_index=True)
                     global_aggregated_data.append({**config_info, **calculate_metrics(df_huge)})
 
-                    cutoff = WARMUP_ROUNDS * ROUND_INTERVAL_SECONDS
+                    cutoff = warmup_rounds * ROUND_INTERVAL_SECONDS
                     steady_dfs = [d[d['_rel_seconds'] > cutoff] for d in normalized_dfs if not d[d['_rel_seconds'] > cutoff].empty]
                     if steady_dfs:
                         global_aggregated_data_cut.append({**config_info, **calculate_metrics(pd.concat(steady_dfs))})
