@@ -206,8 +206,10 @@ run_scalability() {
             rm results/results_log_2000_*.csv 2>/dev/null
 
             # 4. ESECUZIONE
-            ./user "$SETUP_FILE" "1" > user.log 2>&1 &
-            show_progress $! 225
+            ./user "$SETUP_FILE" "1" "$NUM_ROUNDS" > user.log 2>&1 &
+
+            DURATION=$(( NUM_ROUNDS * 15 ))
+            show_progress $! $DURATION
             wait $!
 
             LOG_ID="scalability_mode_${CONSISTENCY_MODE}_u${USERS}_c${COLLECTIONS}_s${SEED}"
@@ -333,7 +335,12 @@ rm -rf results user.log create.log
 mkdir -p results
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
+NUM_ROUNDS=10
+
 if [[ "$EXP_TYPE" == "scalability" ]]; then
+    if [ "$CONSISTENCY_MODE" == "sequential" ]; then
+        NUM_ROUNDS=15
+    fi
     run_scalability
 elif [[ "$EXP_TYPE" == "density" ]]; then
     run_density
@@ -345,5 +352,5 @@ else
 fi
 
 echo "⏳ Aggregazione risultati..."
-python3 csv_aggregator.py results
+python3 csv_aggregator.py results "$NUM_ROUNDS"
 echo "🎉 TUTTI I TEST COMPLETATI."

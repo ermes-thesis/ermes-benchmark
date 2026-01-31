@@ -50,6 +50,17 @@ func main() {
 	}
 	logger.Infof("Passing 'accesses' parameter to function: %s\n", numAccesses)
 
+	numRounds := 10
+	if len(os.Args) > 3 {
+		r, err := strconv.Atoi(os.Args[3])
+		if err != nil {
+			logger.Errorf("Error converting rounds argument to int: %v", err)
+			return
+		}
+		numRounds = r
+	}
+	logger.Infof("numRounds: %d\n", numRounds)
+
 	var conf Config
 	confBytes, err := os.ReadFile(os.Args[1])
 	if err != nil {
@@ -86,10 +97,9 @@ func main() {
 			sleep := random.Intn(600)
 			time.Sleep(time.Duration(sleep) * time.Millisecond)
 
-			rounds := 15
 			roundDuration := 15.0
 			executions := conf.UserCollectionMap[userId]
-			for i := range rounds {
+			for i := range numRounds {
 				for j, execution := range executions {
 					for colName, accessType := range execution {
 						funName := "readCollection"
