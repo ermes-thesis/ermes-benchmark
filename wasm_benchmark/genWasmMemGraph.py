@@ -133,6 +133,27 @@ with open(memory_path, "r", encoding="utf-8") as f:
 
 df_mem = parse_memory_stats(lines)
 
+existing_algs = set(df_mem["Algorithm"].unique())
+print(existing_algs)
+df_mem["Algorithm"] = df_mem["Algorithm"].str.replace("Lightweight", "SimpleLoop")
+desired_order = [
+    "Fibonacci (40)",
+    "PrimeNumbers",
+    "SimpleLoop",
+    "TailFibonacci (20k)",
+    "Stateful"
+]
+
+existing_algs = set(df_mem["Algorithm"].unique())
+print(existing_algs)
+final_order = [alg for alg in desired_order if alg in existing_algs]
+
+remaining = list(existing_algs - set(final_order))
+final_order.extend(sorted(remaining))
+
+# Converti la colonna in 'Category' con ordine forzato
+df_mem["Algorithm"] = pd.Categorical(df_mem["Algorithm"], categories=final_order, ordered=True)
+
 # ============================================================
 # PLOTTING
 # ============================================================

@@ -71,6 +71,7 @@ def assign_users_to_leaf(N_user, tree, seed=None):
         child_nodes.update(children)
 
     leaf_nodes = list(child_nodes - parent_nodes)
+    np.random.shuffle(leaf_nodes)
 
     # randomly assign users to leaf nodes
     repeats = int(np.ceil(N_user / len(leaf_nodes)))

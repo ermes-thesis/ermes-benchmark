@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ermes-thesis/ermes-common/logger"
 )
 
 type Config struct {
@@ -20,9 +22,22 @@ type Config struct {
 }
 
 func main() {
+	logger, err := logger.NewLogger(logger.Config{
+		Level:  logger.InfoLevel,
+		Format: "text",
+		Output: &logger.LogFile{
+			LogDir:      "results",
+			LogFileName: "user.log",
+		},
+	})
+	if err != nil {
+		log.Fatalf("Error creating logger: %v", err)
+	}
+	defer logger.Close()
 
 	if len(os.Args) < 2 {
-		log.Fatal("Missing required arguments: ./user <config_file> [accesses_param]")
+		logger.Error("Missing required arguments: ./user <config_file> [accesses_param]")
+		return
 	}
 
 	// Call the library setup
@@ -33,16 +48,29 @@ func main() {
 	if len(os.Args) > 2 {
 		numAccesses = os.Args[2]
 	}
-	fmt.Printf("Passing 'accesses' parameter to function: %s\n", numAccesses)
+	logger.Infof("Passing 'accesses' parameter to function: %s\n", numAccesses)
+
+	numRounds := 10
+	if len(os.Args) > 3 {
+		r, err := strconv.Atoi(os.Args[3])
+		if err != nil {
+			logger.Errorf("Error converting rounds argument to int: %v", err)
+			return
+		}
+		numRounds = r
+	}
+	logger.Infof("numRounds: %d\n", numRounds)
 
 	var conf Config
 	confBytes, err := os.ReadFile(os.Args[1])
 	if err != nil {
-		log.Fatalf("Error reading config file: %v", err)
+		logger.Errorf("Error reading config file: %v", err)
+		return
 	}
 	err = json.Unmarshal(confBytes, &conf)
 	if err != nil {
-		log.Fatalf("Error unmarshalling config file: %v", err)
+		logger.Errorf("Error unmarshalling config file: %v", err)
+		return
 	}
 
 	wg := sync.WaitGroup{}
@@ -54,24 +82,24 @@ func main() {
 
 			id, err := strconv.Atoi(strings.Split(userId, "_")[1])
 			if err != nil {
-				log.Fatalf("Error converting user id to int")
+				logger.Errorf("Error converting user id to int")
+				return
 			}
-			fmt.Printf("Node address: %s", nodeAddress)
+			logger.Infof("Node address: %s", nodeAddress)
 
 			client, errSetup := ermes.SetupClientLibrary(uint64(id), nodeAddress, confFile)
 			if errSetup != nil {
-				fmt.Fprintf(os.Stderr, "Error when setting up the client library: %v\n", errSetup)
-			} else {
-				fmt.Println("Library set up correctly!")
+				logger.Errorf("Error when setting up the client library: %v\n", errSetup)
+				return
 			}
+			logger.Info("Library set up correctly!")
 
 			sleep := random.Intn(600)
 			time.Sleep(time.Duration(sleep) * time.Millisecond)
 
-			rounds := 10
 			roundDuration := 15.0
 			executions := conf.UserCollectionMap[userId]
-			for i := range rounds {
+			for i := range numRounds {
 				for j, execution := range executions {
 					for colName, accessType := range execution {
 						funName := "readCollection"
@@ -94,7 +122,7 @@ func main() {
 								},
 								"IT",
 							)
-							fmt.Println(code, string(body), err)
+							logger.Infof("Status %d, %s, error: %v", code, string(body), err)
 						})
 						time.Sleep(time.Duration((roundDuration / float64(len(executions))) * 1_000_000_000))
 					}
@@ -104,5 +132,5 @@ func main() {
 	}
 
 	wg.Wait()
-	fmt.Println("Done")
+	logger.Info("Done")
 }
