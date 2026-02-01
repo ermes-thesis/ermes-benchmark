@@ -10,5 +10,5 @@ RESULTS_DIR="./results/$TIMESTAMP"
 mkdir -p "${RESULTS_DIR}"
 
 ssh -J ubuntu@100.112.91.33 ubuntu@${NODE2_IP} \
-"cd ${REMOTE_PATH} && find . -name 'aggregated*.csv' -o -name 'final_global_summary.csv' | tar -cf - -T -" \
+"cd ${REMOTE_PATH} && find . -name 'aggregated*.csv' -o -name 'final_*.csv' | tar -cf - -T -" \
 | tar -xf - -C "${RESULTS_DIR}"
