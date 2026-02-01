@@ -401,67 +401,56 @@ def local_vs_remote_latency_violin(dfs, scenario):
     plt.tight_layout()
     return fig
 
-
-def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
+def plot_logs_avg_latency(dfs, scenario, domains, show_if_remote=True, max_rounds=7):
     """
-    Plots the overall average per round alongside the average per file for that round.
-    The bar is split: the hatched portion represents the % of non-local executions.
+    Plots the average per file using 'tab10' colormap.
+    Legend logic: 'Patient (Domain)' and 'Doctor X (Domain)'.
+    - Includes Global Average Line.
+    - Limits x-axis to 'max_rounds'.
+    - Parses EntryHost IP to find domain name using 'domains' dict.
     """
     try:
         # 1. Concatenate all files
         full_df = pd.concat(dfs, keys=range(1, len(dfs) + 1), names=['FileID', None])
         full_df = full_df.reset_index(level=0)
 
-        # Calcolo medie (Altezza totale delle barre)
+        # Calcolo medie
         avg_all_files = full_df.groupby('Group')['Duration'].mean().rename('Avg_All')
         avg_per_file = full_df.groupby(['Group', 'FileID'])['Duration'].mean().unstack(fill_value=np.nan)
 
         plot_df = pd.merge(avg_all_files, avg_per_file, left_index=True, right_index=True)
 
         # ----------------------------
-        # MODIFICA: Filtro per bottom_up
+        # FILTRO: TAGLIO AI PRIMI N ROUND
         # ----------------------------
-        # Se lo scenario è bottom_up o top_down, teniamo solo le prime 6 epoche (righe del df)
-        if scenario == "bottom_up" or scenario == "top_down":
-            plot_df = plot_df.iloc[:6]
+        if max_rounds is not None and len(plot_df) > max_rounds:
+            plot_df = plot_df.iloc[:max_rounds]
+            print(f"Plot limitato ai primi {max_rounds} round.")
 
         all_groups = plot_df.index.tolist()
+        n_files = len(dfs)
 
         # ----------------------------
         # PRE-CALCOLO RATIO NON-LOCAL
         # ----------------------------
-        # Calcoliamo la % di righe con Is_Local=False per ogni Gruppo/File
         if 'Is_Local' in full_df.columns:
-            # (~x).mean() calcola la percentuale di False (cioè non-local)
-            non_local_ratio = full_df.groupby(['Group', 'FileID'])['Is_Local'].apply(lambda x: (~x).mean()).unstack(
-                fill_value=0)
+            non_local_ratio = full_df.groupby(['Group', 'FileID'])['Is_Local'].apply(lambda x: (~x).mean()).unstack(fill_value=0)
         else:
             non_local_ratio = pd.DataFrame(0, index=plot_df.index, columns=avg_per_file.columns)
 
         # ----------------------------
-        # 2. warm / cool / mixed logic
+        # ESTRAZIONE ENTRY HOST PER LA LEGENDA
         # ----------------------------
-        group_status = {}
-        for g, subdf in full_df.groupby('Group')['BeforeEq']:
-            if subdf.all():
-                group_status[g] = "warm"
-            elif (~subdf).all():
-                group_status[g] = "cool"
-            else:
-                group_status[g] = "mixed"
+        host_map = {}
+        if 'EntryHost' in full_df.columns:
+            host_series = full_df.groupby('FileID')['EntryHost'].first()
+            host_map = host_series.to_dict()
 
-        # Colormaps
-        n_files = len(dfs)
-        WARM_CMAP = plt.cm.Oranges
-        COOL_CMAP = plt.cm.Blues
-
-        warm_shades = WARM_CMAP(np.linspace(0.4, 1.0, n_files + 1))
-        cool_shades = COOL_CMAP(np.linspace(0.4, 1.0, n_files + 1))
-
-        # Gray shades for mixed
-        gray_shades = np.linspace(0.35, 0.75, n_files + 1)
-        gray_colors = [(g, g, g, 0.9) for g in gray_shades]
-        gray_colors_file = [(g, g, g, 0.7) for g in gray_shades]
+        # ----------------------------
+        # 2. DEFINIZIONE COLORI (TAB10)
+        # ----------------------------
+        cmap = plt.get_cmap("tab10")
+        client_colors_palette = [cmap(i % 10) for i in range(n_files)]
 
         # ----------------------------
         # 3. Setup Plot
@@ -470,180 +459,154 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
         fig, ax = plt.subplots(figsize=(10, 6))
 
         total_bars_in_group = n_files + 1
-        bar_width = 0.8 / total_bars_in_group
+        bar_width = 0.9 / total_bars_in_group
         x = np.arange(len(all_groups))
-        agg_pos = x - (total_bars_in_group / 2 - 0.5) * bar_width
+        agg_pos = x - (total_bars_in_group / 2) * bar_width
 
         # ----------------------------
-        # 4. Aggregate bars (Avg_All)
+        # 5. Per-file bars
         # ----------------------------
-        agg_colors = []
-        for g in all_groups:
-            # group_status contiene tutti i gruppi, ma noi iteriamo solo su all_groups (filtrato)
-            status = group_status.get(g, "mixed")
-            if status == "warm":
-                agg_colors.append(warm_shades[0])
-            elif status == "cool":
-                agg_colors.append(cool_shades[0])
-            else:
-                agg_colors.append(gray_colors[0])
-
-        ax.bar(
-            agg_pos,
-            plot_df['Avg_All'],
-            bar_width,
-            color=agg_colors,
-            edgecolor='black',
-            linewidth=1.3,
-            alpha=0.9,
-            label='_nolegend_'
-        )
-
-        # ----------------------------
-        # 5. Per-file bars (STACKED LOGIC)
-        # ----------------------------
-        gray_hatch_color = (0.2, 0.2, 0.2, 0.5)  # Grigio scuro per le righe dell'hatch
+        gray_hatch_color = (0.2, 0.2, 0.2, 0.5)
 
         for j in range(1, n_files + 1):
             file_pos = agg_pos + j * bar_width
+            this_client_color = client_colors_palette[j-1]
 
-            # Liste per i colori e le altezze di questo specifico Client (FileID j)
-            bar_colors = []
             total_heights = []
             ratios = []
 
             for g in all_groups:
-                status = group_status.get(g, "mixed")
-                # Determina colore base
-                if status == "warm":
-                    bar_colors.append(warm_shades[j])
-                elif status == "cool":
-                    bar_colors.append(cool_shades[j])
-                else:
-                    bar_colors.append(gray_colors_file[j])
-
-                # Ottieni altezza totale e ratio
                 h = plot_df.loc[g, j]
-                # Usa .loc con get sicuro o controlla l'indice, ma essendo filtered all_groups dovrebbe esistere
-                # Se non_local_ratio ha più righe di plot_df, non importa, prendiamo solo g
-                r = non_local_ratio.loc[g, j] if (g in non_local_ratio.index and j in non_local_ratio.columns) else 0
+                if g in non_local_ratio.index:
+                    r = non_local_ratio.loc[g, j] if j in non_local_ratio.columns else 0
+                else:
+                    r = 0
 
-                # Gestione NaN
                 if pd.isna(h): h = 0
                 if pd.isna(r): r = 0
-
                 total_heights.append(h)
                 ratios.append(r)
 
-            # Convertiamo in numpy array per calcoli vettoriali facili
             total_heights = np.array(total_heights)
             ratios = np.array(ratios)
 
-            # Calcolo altezze parziali
             if show_if_remote:
-                height_hatched = total_heights * ratios  # Parte NON locale
-                height_solid = total_heights - height_hatched  # Parte locale
+                height_hatched = total_heights * ratios
+                height_solid = total_heights - height_hatched
             else:
                 height_hatched = np.zeros_like(total_heights)
                 height_solid = total_heights
 
-            # Disegna la parte SOLIDA (Base)
+            bar_colors = [this_client_color] * len(all_groups)
+
+            # Solid part (Local)
             ax.bar(
                 file_pos,
                 height_solid,
                 bar_width,
                 bottom=height_hatched,
                 color=bar_colors,
-                edgecolor='black',  # o None se preferisci meno bordi interni
-                alpha=0.7,
+                edgecolor='black',
+                alpha=0.85,
                 label='_nolegend_'
             )
 
-            # Disegna la parte HATCHED (Top) - usa bottom=height_solid
-            # Disegniamo solo se c'è altezza > 0 per evitare warning o artefatti
+            # Hatched part (Remote)
             if np.any(height_hatched > 0):
                 ax.bar(
                     file_pos,
                     height_hatched,
                     bar_width,
-                    color=bar_colors,  # Stesso colore di sfondo
-                    edgecolor=gray_hatch_color,  # Colore delle righe diagonali
-                    hatch='////',  # Hatch più denso
-                    linewidth=0,  # Rimuove bordo esterno del rettangolo superiore (opzionale)
-                    alpha=0.7,
+                    color=bar_colors,
+                    edgecolor=gray_hatch_color,
+                    hatch='////',
+                    linewidth=0,
+                    alpha=0.85,
                     label='_nolegend_'
                 )
 
-            # Opzionale: ridisegnare un bordo nero attorno all'intera barra (totale)
-            # per dare un aspetto "unito"
+            # Bordo totale
             ax.bar(
                 file_pos,
                 total_heights,
                 bar_width,
-                color='none',  # Trasparente
+                color='none',
                 edgecolor='black',
                 label='_nolegend_',
-                alpha=0.7,
+                alpha=1,
+                linewidth=0.7
             )
 
+        # ----------------------------
+        # 6. LINEA MEDIA GLOBALE
+        # ----------------------------
+        ax.plot(
+            x,
+            plot_df['Avg_All'],
+            color='black',
+            marker='',
+            markersize=6,
+            linestyle='--',
+            linewidth=2,
+            label='_nolegend_',
+            zorder=10
+        )
+
         max_data_height = plot_df.max().max()
-
         if pd.notna(max_data_height):
-            ax.set_ylim(0, max_data_height * 1.07)
+            ax.set_ylim(0, max_data_height * 1.1)
 
         # ----------------------------
-        # 6. Global mean line
+        # 8. Legend Setup
         # ----------------------------
-        global_mean = plot_df['Avg_All'].mean()
-        ax.axhline(global_mean, linestyle='--', linewidth=2, color='black', zorder=3)
+        client_legend_elements = []
+        for i in range(n_files):
+            file_id = i + 1
 
-        # ----------------------------
-        # 7. Labels over bars
-        # ----------------------------
-        # Avg All Labels
-        fontsize = 7
-        if scenario == "full_traversal":
-            fontsize = 9
-        # elif scenario == "top_down" or scenario == "bottom_up":
-        #     fontsize = 4
+            # --- TUA LOGICA DI MAPPING ---
+            host_name = host_map.get(file_id, "Unknown")
+            try:
+                # Estrae l'ultimo ottetto dell'IP per usarlo come chiave in 'domains'
+                ip_part = host_name.split(':')[0]
+                last_octet = int(ip_part.split('.')[-1])
+                domain = domains.get(last_octet, host_name) # Usa host_name se l'ottetto non è in domains
+            except:
+                domain = host_name
 
-        for i, v in enumerate(plot_df['Avg_All']):
-            if pd.notna(v):
-                ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', rotation=45, fontsize=fontsize, fontweight='bold')
+            print(f"File {file_id} EntryHost: {host_name} -> {domain}")
+            # -----------------------------
 
-        # Per-File Labels
-        for j in range(1, n_files + 1):
-            file_pos = agg_pos + j * bar_width
-            # Qui usiamo total_heights ricalcolato o preso dal df
-            series_vals = plot_df[j].values
-            for i, v in enumerate(series_vals):
-                if pd.notna(v) and v > 0:
-                    ax.text(file_pos[i], v + 0.2, f'{v:.1f}', ha='center', rotation=45, fontsize=fontsize)
+            if i == 0:
+                base_name = "Patient"
+            else:
+                base_name = f"Doctor {i}"
 
-        # ----------------------------
-        # 8. Legend
-        # ----------------------------
-        equilibrium_legend = [
-            Line2D([0], [0], color=WARM_CMAP(0.8), lw=4, label='Epoch avg Before Eq. (Warm)'),
-            Line2D([0], [0], color=COOL_CMAP(0.8), lw=4, label='Epoch avg After Eq. (Cool)'),
-            Line2D([0], [0], color=gray_colors[0], lw=4, label='Epoch avg Mixed (Gray)')
-        ]
+            label_text = f"{base_name} ({domain})"
 
-        file_legend_elements = []
+            client_legend_elements.append(
+                Patch(facecolor=client_colors_palette[i], edgecolor='black', label=label_text)
+            )
+
+        # Elemento Remote
+        remote_legend_elements = []
         if show_if_remote and 'Is_Local' in full_df.columns:
-            file_legend_elements.append(
+            remote_legend_elements.append(
                 Rectangle((0, 0), 1, 1, facecolor='white', edgecolor=gray_hatch_color, hatch='////',
                           label='% Non-Local Execution')
             )
 
-        legend_elements = equilibrium_legend + file_legend_elements + [
-            Line2D([0], [0], color='black', lw=2, linestyle='--',
-                   label=f'Global Mean: {global_mean:.2f} ms')
+        # Elemento Linea Media
+        avg_line_legend = [
+            Line2D([0], [0], color='black', marker='',linestyle='--', lw=2, label='Global Avg per Round')
         ]
+
+        legend_elements = client_legend_elements + remote_legend_elements + avg_line_legend
 
         ax.legend(
             handles=legend_elements,
-            facecolor='white'
+            facecolor='white',
+            edgecolor='gray',
+            loc='best'
         )
 
         # ----------------------------
@@ -658,7 +621,6 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
             ax.spines[spine].set_visible(False)
 
         plt.tight_layout()
-
         print(f"Analysis completed for {len(all_groups)} groups.")
         return avg_all_files
 
