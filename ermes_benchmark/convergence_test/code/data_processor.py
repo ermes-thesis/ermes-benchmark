@@ -243,7 +243,7 @@ def parse_dfs(dati_csv: Dict[str, pd.DataFrame], dati_timestamp_per_ip: Dict[str
 
         current_df['Group'] = current_df.apply(get_window_group, axis=1)
 
-        current_df['Duration'] = current_df['FuncDuration'] # / 1000 Uncomment if we re-run these experiments
+        current_df['Duration'] = current_df['FuncDuration'] / 1000.0
         current_df['StartTime'] = pd.to_datetime(current_df['StartTime'])
         current_df['Is_Local'] = current_df['EntryHost'] == current_df['ExecHost']
         current_df = current_df.drop(columns=['StartTime_dt'])
