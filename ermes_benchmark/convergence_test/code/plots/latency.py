@@ -264,26 +264,65 @@ def local_vs_remote_latency_violin_old(dfs):
     plt.tight_layout()
     return fig
 
-def local_vs_remote_latency_violin(dfs, scenario):
+def local_vs_remote_latency_violin(dfs, scenario, domains):
     """
     Violin Plot personalizzato con Min, Max, Avg, Avg Local e Avg Remote.
+    Include la risoluzione dei domini nella legenda e nelle etichette.
     """
     plt.style.use('ggplot')
-    fig, ax = plt.subplots(figsize=(8, 5))
+
+    if "conflict" in scenario:
+        fig, ax = plt.subplots(figsize=(6, 5))
+    else:
+        fig, ax = plt.subplots(figsize=(8, 5))
 
     n_files = len(dfs)
     x = np.arange(n_files)
     cmap = plt.get_cmap('tab10')
     colors = [cmap(i % 10) for i in range(n_files)]
 
-    file_labels = [f'User {i + 1}' for i in range(n_files)]
-    if scenario == "bottom_up":
-        file_labels = ["Doctor", "Patient 1", "Patient 2", "Patient 3", "Patient 4", "Patient 5"]
-    if scenario == "full_traversal":
-        file_labels = ["Patient", "Doctor"]
-    if scenario == "conflict_1":
-        file_labels = ["Doctor 1", "Doctor 2"]
+    # ---------------------------------------------------------
+    # 1. LOGICA ETICHETTE BASE (Scenario-based)
+    # ---------------------------------------------------------
+    base_labels = [f'User {i + 1}' for i in range(n_files)]
 
+    if scenario == "bottom_up":
+        # Assicuriamoci che la lista abbia la lunghezza giusta per evitare errori
+        custom_labels = ["Doctor", "Patient 1", "Patient 2", "Patient 3", "Patient 4", "Patient 5"]
+        base_labels = custom_labels[:n_files]
+    elif scenario == "full_traversal":
+        base_labels = ["Patient", "Doctor"]
+    elif scenario == "conflict_1" or scenario == "conflict_eventual":
+        base_labels = ["Doctor 1", "Doctor 2"]
+    elif scenario == "replication":
+        base_labels = ["Patient", "Doctor 1", "Doctor 2", "Doctor 3", "Doctor 4"]
+
+    # ---------------------------------------------------------
+    # 2. RISOLUZIONE DOMINI E CREAZIONE ETICHETTE FINALI
+    # ---------------------------------------------------------
+    final_labels = []
+
+    for i, df in enumerate(dfs):
+        # Estrai EntryHost (prendi il primo valore non nullo o la stringa vuota)
+        host_name = "Unknown"
+        if 'EntryHost' in df.columns and not df['EntryHost'].dropna().empty:
+            host_name = df['EntryHost'].dropna().iloc[0]
+
+        # Risolvi Dominio usando il dizionario 'domains' e l'ultimo ottetto IP
+        try:
+            ip_part = host_name.split(':')[0]
+            last_octet = int(ip_part.split('.')[-1])
+            domain = domains.get(last_octet, host_name)
+        except:
+            domain = host_name
+
+        # Combina Nome Base + Dominio
+        base_name = base_labels[i] if i < len(base_labels) else f"User {i+1}"
+        final_labels.append(f"{base_name}\n({domain})")
+
+    # ---------------------------------------------------------
+    # 3. CALCOLO DATI E STATISTICHE
+    # ---------------------------------------------------------
     data_list = []
     stats = []
 
@@ -302,6 +341,9 @@ def local_vs_remote_latency_violin(dfs, scenario):
             'avg_remote': remote_data.mean() if not remote_data.empty else np.nan,
         })
 
+    # ---------------------------------------------------------
+    # 4. PLOTTING VIOLIN
+    # ---------------------------------------------------------
     vp = ax.violinplot(
         data_list,
         positions=x,
@@ -314,92 +356,80 @@ def local_vs_remote_latency_violin(dfs, scenario):
     for i, b in enumerate(vp['bodies']):
         b.set_facecolor(colors[i])
         b.set_alpha(0.4)
+        # b.set_edgecolor('black')
 
-    if len(stats) == 2:
-        for i, stat in enumerate(stats):
-            current_x = x[i]
-            user_color = colors[i]
+    # Logica disegno linee (Min, Max, Avg, ecc)
+    # Ho unificato i due blocchi if/else del tuo codice originale per pulizia,
+    # mantenendo la logica di visualizzazione.
+    for i, stat in enumerate(stats):
+        current_x = x[i]
+        user_color = colors[i]
 
-            # Min e Max
-            ax.vlines(current_x, stat['min'], stat['max'], color=user_color, linestyle=':', linewidth=1.5)
-            ax.hlines(stat['min'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=1)
-            ax.hlines(stat['max'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=1)
-            ax.text(current_x - 0.35, stat['min'], f'Min: {stat["min"]:.2f}',
-                    ha='left', va='center', fontsize=8, color=user_color,
-                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-            ax.text(current_x - 0.35, stat['max'], f'Max: {stat["max"]:.2f}',
-                    ha='left', va='center', fontsize=8, color=user_color,
-                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        # Larghezza linee orizzontali
+        hw = 0.15 # half width
 
-            # Avg totale
-            ax.hlines(stat['avg'], current_x - 0.15, current_x + 0.15, color='black', linewidth=2)
-            ax.text(current_x + 0.17, stat['avg'], f'Avg: {stat["avg"]:.2f}', fontsize=8, color=user_color,
-                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        # Min e Max
+        ax.vlines(current_x, stat['min'], stat['max'], color=user_color, linestyle=':', linewidth=1.5)
+        ax.hlines(stat['min'], current_x - hw, current_x + hw, color=user_color, linewidth=1)
+        ax.hlines(stat['max'], current_x - hw, current_x + hw, color=user_color, linewidth=1)
 
-            # Avg Local
-            if not np.isnan(stat['avg_local']) and int(stat['avg_local']) != int(stat['avg']):
-                ax.hlines(stat['avg_local'], current_x - 0.12, current_x + 0.12,
-                          color=user_color, linestyle='--', linewidth=2)
-                ax.text(current_x + 0.17, stat['avg_local'], f'Local: {stat["avg_local"]:.2f}',
-                        fontsize=8, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        # Avg totale (Linea Nera Solida)
+        ax.hlines(stat['avg'], current_x - hw, current_x + hw, color='black', linewidth=2)
 
-            # Avg Remote
-            if not np.isnan(stat['avg_remote']) and int(stat['avg_remote']) != int(stat['avg']):
-                ax.hlines(stat['avg_remote'], current_x - 0.12, current_x + 0.12,
-                          color=user_color, linestyle='-.', linewidth=2)
-                ax.text(current_x + 0.17, stat['avg_remote'], f'Remote: {stat["avg_remote"]:.2f}',
-                        fontsize=8, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-    else:
-        for i, stat in enumerate(stats):
-            current_x = x[i]
-            user_color = colors[i]
+        # Avg Local (Linea Tratteggiata --)
+        if not np.isnan(stat['avg_local']) and abs(stat['avg_local'] - stat['avg']) > 0.1:
+            ax.hlines(stat['avg_local'], current_x - hw, current_x + hw,
+                      color=user_color, linestyle='--', linewidth=2)
 
-            # Min e Max
-            ax.vlines(current_x, stat['min'], stat['max'], color=user_color, linestyle=':', linewidth=1.5)
-            ax.hlines(stat['min'], current_x - 0.15, current_x + 0.15, color=user_color, linewidth=1)
-            ax.hlines(stat['max'], current_x - 0.15, current_x + 0.15, color=user_color, linewidth=1)
-            ax.text(current_x - 0.22, stat['min'] - 3, f'Min: {stat["min"]:.2f}',
-                    ha='left', va='center', fontsize=8, color=user_color,
-                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-            ax.text(current_x - 0.28, stat['max'] + 3, f'Max: {stat["max"]:.2f}',
-                    ha='left', va='center', fontsize=8, color=user_color,
-                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+        # Avg Remote (Linea Punto-Tratto -.)
+        if not np.isnan(stat['avg_remote']) and abs(stat['avg_remote'] - stat['avg']) > 0.1:
+            ax.hlines(stat['avg_remote'], current_x - hw, current_x + hw,
+                      color=user_color, linestyle='-.', linewidth=2)
 
-            # Avg totale
-            ax.hlines(stat['avg'], current_x - 0.15, current_x + 0.15, color='black', linewidth=1)
-            ax.text(current_x + 0.17, stat['avg'] + 4, f'Avg: {stat["avg"]:.2f}', fontsize=8, color=user_color,
-                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+    # ---------------------------------------------------------
+    # 5. COSTRUZIONE LEGENDA COMPLETA
+    # ---------------------------------------------------------
 
-            # Avg Local
-            if not np.isnan(stat['avg_local']) and int(stat['avg_local']) != int(stat['avg']):
-                ax.hlines(stat['avg_local'], current_x - 0.15, current_x + 0.15,
-                          color=user_color, linestyle='--', linewidth=1)
-                #ax.text(current_x - 0.7, stat['avg_local'], f'Local: {stat["avg_local"]:.2f}',
-                #        fontsize=7, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+    # Parte A: Identificazione Client (Colore -> Nome + Dominio)
+    client_legend_patches = []
+    for i in range(n_files):
+        # Ripuliamo la label per la legenda (rimuoviamo il new line se presente per estetica)
+        label_clean = final_labels[i].replace('\n', ' ')
+        client_legend_patches.append(
+            Patch(facecolor=colors[i], edgecolor='black', alpha=0.6, label=label_clean)
+        )
 
-            # Avg Remote
-            if not np.isnan(stat['avg_remote']) and int(stat['avg_remote']) != int(stat['avg']):
-                ax.hlines(stat['avg_remote'], current_x - 0.15, current_x + 0.15,
-                          color=user_color, linestyle='-.', linewidth=1)
-                #ax.text(current_x - 0.7, stat['avg_remote'], f'Remote: {stat["avg_remote"]:.2f}',
-                #        fontsize=7, color=user_color, bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
-
-    legend_elements = [
-        Line2D([0], [0], color='black', lw=2, label='Global Average'),
+    # Parte B: Significato Linee Statistiche
+    stats_legend_lines = [
+        Line2D([0], [0], color='black', lw=2, label='Global average'),
         Line2D([0], [0], color='grey', lw=2, linestyle='--', label='Local executions average'),
         Line2D([0], [0], color='grey', lw=2, linestyle='-.', label='Remote executions average'),
-        # Line2D([0], [0], color='grey', lw=1.5, linestyle=':', label='Min/Max (Vertical Line)'),
     ]
-    ax.legend(handles=legend_elements, loc='best', facecolor='white')
 
-    # ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
-    # ax.set_xlabel('User')
+    # Unione Legende
+    full_legend = stats_legend_lines
+
+    ax.legend(
+        handles=full_legend,
+        loc='best',
+        edgecolor='gray',
+        facecolor='white',
+    )
+
+    # ---------------------------------------------------------
+    # 6. AXIS SETUP
+    # ---------------------------------------------------------
     ax.set_ylabel('Latency (ms)')
     ax.set_xticks(x)
-    ax.set_xticklabels(file_labels)
+    # Usiamo le label con il dominio anche sull'asse X
+    ax.set_xticklabels(final_labels)
 
     plt.tight_layout()
     return fig
+
+
+
+
 
 def plot_logs_avg_latency(dfs, scenario, domains, show_if_remote=True, max_rounds=7):
     """
@@ -456,7 +486,10 @@ def plot_logs_avg_latency(dfs, scenario, domains, show_if_remote=True, max_round
         # 3. Setup Plot
         # ----------------------------
         plt.style.use('ggplot')
-        fig, ax = plt.subplots(figsize=(10, 6))
+        if "conflict" in scenario:
+            fig, ax = plt.subplots(figsize=(6, 5))
+        else:
+            fig, ax = plt.subplots(figsize=(8, 5))
 
         total_bars_in_group = n_files + 1
         bar_width = 0.9 / total_bars_in_group
@@ -540,17 +573,17 @@ def plot_logs_avg_latency(dfs, scenario, domains, show_if_remote=True, max_round
         # ----------------------------
         # 6. LINEA MEDIA GLOBALE
         # ----------------------------
-        ax.plot(
-            x,
-            plot_df['Avg_All'],
-            color='black',
-            marker='',
-            markersize=6,
-            linestyle='--',
-            linewidth=2,
-            label='_nolegend_',
-            zorder=10
-        )
+        # ax.plot(
+        #     x,
+        #     plot_df['Avg_All'],
+        #     color='black',
+        #     marker='',
+        #     markersize=6,
+        #     linestyle='--',
+        #     linewidth=2,
+        #     label='_nolegend_',
+        #     zorder=10
+        # )
 
         max_data_height = plot_df.max().max()
         if pd.notna(max_data_height):
@@ -576,10 +609,13 @@ def plot_logs_avg_latency(dfs, scenario, domains, show_if_remote=True, max_round
             print(f"File {file_id} EntryHost: {host_name} -> {domain}")
             # -----------------------------
 
-            if i == 0:
+            if i == 0 and "conflict" not in scenario:
                 base_name = "Patient"
             else:
-                base_name = f"Doctor {i}"
+                if "conflict" in scenario:
+                    base_name = f"Doctor {i + 1}"
+                else:
+                    base_name = f"Doctor {i}"
 
             label_text = f"{base_name} ({domain})"
 
@@ -596,11 +632,11 @@ def plot_logs_avg_latency(dfs, scenario, domains, show_if_remote=True, max_round
             )
 
         # Elemento Linea Media
-        avg_line_legend = [
-            Line2D([0], [0], color='black', marker='',linestyle='--', lw=2, label='Global Avg per Round')
-        ]
+        # avg_line_legend = [
+        #     Line2D([0], [0], color='black', marker='',linestyle='--', lw=2, label='Global Avg per Round')
+        # ]
 
-        legend_elements = client_legend_elements + remote_legend_elements + avg_line_legend
+        legend_elements = client_legend_elements + remote_legend_elements #+ avg_line_legend
 
         ax.legend(
             handles=legend_elements,
