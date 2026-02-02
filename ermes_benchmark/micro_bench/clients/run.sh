@@ -181,6 +181,11 @@ run_scalability() {
       echo "🔷 CAMBIO MODALITÀ: $CONSISTENCY_MODE"
       echo "##########################################################"
 
+      NUM_ROUNDS=10
+      if [ "$CONSISTENCY_MODE" == "sequential" ]; then
+          NUM_ROUNDS=15
+      fi
+
       for USERS in "${USERS_LIST[@]}"; do
         for COLLECTIONS in "${COLLECTIONS_LIST[@]}"; do
           for SEED in "${SEEDS[@]}"; do
@@ -335,12 +340,7 @@ rm -rf results user.log create.log
 mkdir -p results
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-NUM_ROUNDS=10
-
 if [[ "$EXP_TYPE" == "scalability" ]]; then
-    if [ "$CONSISTENCY_MODE" == "sequential" ]; then
-        NUM_ROUNDS=15
-    fi
     run_scalability
 elif [[ "$EXP_TYPE" == "density" ]]; then
     run_density
@@ -352,5 +352,5 @@ else
 fi
 
 echo "⏳ Aggregazione risultati..."
-python3 csv_aggregator.py results "$NUM_ROUNDS"
+python3 csv_aggregator.py results
 echo "🎉 TUTTI I TEST COMPLETATI."
