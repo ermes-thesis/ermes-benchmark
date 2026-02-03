@@ -117,7 +117,7 @@ def calculate_metrics_by_round(df, seed, interval=ROUND_INTERVAL_SECONDS):
 
 def main():
     root_dir = sys.argv[1] if len(sys.argv) > 1 else "."
-    warmup_rounds = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+
     global_aggregated_data = []
     global_aggregated_data_cut = []
     global_rounds_accumulator = []
@@ -189,8 +189,29 @@ def main():
                     df_huge = pd.concat(normalized_dfs, ignore_index=True)
                     global_aggregated_data.append({**config_info, **calculate_metrics(df_huge)})
 
-                    cutoff = warmup_rounds * ROUND_INTERVAL_SECONDS
-                    steady_dfs = [d[d['_rel_seconds'] > cutoff] for d in normalized_dfs if not d[d['_rel_seconds'] > cutoff].empty]
+                    # --- LOGICA STEADY STATE DINAMICA ---
+                    # Calcoliamo il numero totale di round presenti in questo esperimento
+                    max_round_idx = df_global_rel['RoundIdx'].max()
+                    # Gestione caso dataframe vuoto o nullo
+                    if pd.isna(max_round_idx):
+                        max_round_idx = 0
+
+                    total_rounds_found = max_round_idx + 1
+
+                    # Logica richiesta:
+                    # >= 15 round totali -> Start dal round 10
+                    # < 15 round totali  -> Start dal round 5
+                    if total_rounds_found >= 15:
+                        steady_start_round = 10
+                    else:
+                        steady_start_round = 5
+
+                    cutoff_seconds = steady_start_round * ROUND_INTERVAL_SECONDS
+
+                    print(f"    -> Steady State Logic: Totale {total_rounds_found} rounds. Taglio dal round {steady_start_round} (>= {cutoff_seconds}s)")
+
+                    steady_dfs = [d[d['_rel_seconds'] >= cutoff_seconds] for d in normalized_dfs if not d[d['_rel_seconds'] >= cutoff_seconds].empty]
+
                     if steady_dfs:
                         global_aggregated_data_cut.append({**config_info, **calculate_metrics(pd.concat(steady_dfs))})
 
@@ -216,7 +237,6 @@ def main():
     config_cols = ['TestType', 'Mode', 'Users', 'Collections', 'Accesses']
     save_final(global_aggregated_data, "final_global_summary.csv", config_cols + ['AverageLatency'])
     save_final(global_aggregated_data_cut, "final_global_summary_steady_state.csv", config_cols + ['AverageLatency'])
-    # Salvataggio del nuovo file globale per round
     save_final(global_rounds_accumulator, "final_global_rounds.csv", config_cols + ['Round', 'AverageLatency'])
 
 if __name__ == "__main__":
