@@ -5,6 +5,7 @@ benchmark_results*
 results
 logs
 ermes_benchmark/convergence_test/output_img/*/pdf
+ermes_benchmark/micro_bench/output_img/**/*.pdf
 
 old_scripts/benchmark_results/*
 !old_scripts/benchmark_results/
