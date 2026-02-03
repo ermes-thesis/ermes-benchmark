@@ -141,7 +141,7 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
         collections_list.update(aggregated_data[u].keys())
     collections_list = sorted(collections_list)
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(6, 4))
 
     for collections in collections_list:
         xs, avg_vals, q1_vals, q3_vals = [], [], [], []
@@ -161,9 +161,9 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
             q3_arr = np.array(q3_vals)
 
             ax.fill_between(xs_arr, q1_arr, q3_arr, alpha=0.18)
-            line, = ax.plot(xs_arr, avg_arr, marker="o", linewidth=2, label=f"{collections} collections")
+            line, = ax.plot(xs_arr, avg_arr, marker="o", linewidth=2, label=f"{collections}")
             color = line.get_color()
-            line_length = (max(xs_arr) - min(xs_arr)) * 0.02 if len(xs_arr) > 1 else 1
+            line_length = (max(xs_arr) - min(xs_arr)) * 0.015 if len(xs_arr) > 1 else 1
 
             ax.hlines(q1_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
             ax.hlines(q3_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
@@ -171,13 +171,15 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
     ax.set_xlabel("Users")
     ax.set_ylabel("Latency (ms)")
     ax.set_ylim(bottom=0)
-    ax.set_title("Interaction Plot with IQR (avg)")
-    ax.legend(title="Collections")
+    # ax.set_title("Interaction Plot with IQR (avg)")
+    ax.legend(title="Number of Collections", ncol=2)
     ax.grid(True, alpha=0.4)
     fig.tight_layout()
 
     if save_path:
         fig.savefig(save_path, dpi=300)
+        pdf_path = Path(save_path).with_suffix('.pdf')
+        fig.savefig(pdf_path, bbox_inches='tight')
     plt.close(fig)
 
 

@@ -61,7 +61,7 @@ def plot_global_comparison(aggregated_data, unique_files, save_path=None):
         print("No data to plot.")
         return
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(8, 5))
 
     # Ordiniamo le chiavi per la legenda
     sorted_keys = sorted(aggregated_data.keys(), key=lambda k: (k[0], k[1]))
@@ -120,10 +120,10 @@ def plot_global_comparison(aggregated_data, unique_files, save_path=None):
         ax.plot(xs_arr, avg_arr, marker=marker, linestyle=linestyle,
                 color=color, linewidth=2, label=label_text, markersize=7)
 
-    ax.set_xlabel(f"Number of Accesses ({X_AXIS_COL})")
-    ax.set_ylabel("Average Latency (ms)")
+    ax.set_xlabel(f"Number of operations")
+    ax.set_ylabel("Latency (ms)")
     ax.set_ylim(bottom=0)
-    ax.set_title("Global Comparison: Latency vs Accesses")
+    # ax.set_title("Global Comparison: Latency vs Accesses")
 
     ax.grid(True, alpha=0.3)
 
@@ -134,6 +134,8 @@ def plot_global_comparison(aggregated_data, unique_files, save_path=None):
 
     if save_path:
         fig.savefig(save_path, dpi=300)
+        pdf_path = Path(save_path).with_suffix('.pdf')
+        fig.savefig(pdf_path, bbox_inches='tight')
     plt.close(fig)
 
 sys.dont_write_bytecode = True

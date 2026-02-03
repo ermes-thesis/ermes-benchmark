@@ -96,7 +96,7 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir, files=None,
     count = 0
 
     for (users, collections), group_df in grouped_configs:
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(8, 5))
 
         subgroups = group_df.groupby(['Architecture', 'Mode'])
         has_plotted = False
@@ -135,9 +135,9 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir, files=None,
             has_plotted = True
 
         if has_plotted:
-            plt.xlabel('Round (Time)')
-            plt.ylabel('Average Latency (ms)')
-            plt.title(f'Latency vs Round (Max 10) - {scenario_name}\n(Users: {users}, Collections: {collections})')
+            plt.xlabel('Epoch')
+            plt.ylabel('Latency (ms)')
+            # plt.title(f'Latency vs Round (Max 10) - {scenario_name}\n(Users: {users}, Collections: {collections})')
             plt.grid(True, linestyle='--', alpha=0.3)
             plt.legend(title='Configuration', loc='best')
             plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -145,6 +145,7 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir, files=None,
 
             filename = f"u{users}_c{collections}.png"
             plt.savefig(os.path.join(output_dir, filename), dpi=300)
+            plt.savefig(os.path.join(output_dir, f"u{users}_c{collections}.pdf"), bbox_inches='tight')
             count += 1
 
         plt.close()
@@ -267,18 +268,13 @@ def main():
     # Percorsi Base
     base_data_dir = "data/rounds"
     base_out_dir = "output_img/rounds"
-    files = [
-        "distributed.csv",
-        "centralized.csv",
-    ]
 
     # Scenari da elaborare
-    #scenarios = ["static_users", "moving_users"]
-    scenarios = ["static_users"]
+    scenarios = ["static_users", "moving_users"]
 
 
     for scenario in scenarios:
-        process_scenario(scenario, base_data_dir, base_out_dir)#, files)
+        process_scenario(scenario, base_data_dir, base_out_dir)
 
     csv_filters = {
         "Users": [256, 1024] #or 
