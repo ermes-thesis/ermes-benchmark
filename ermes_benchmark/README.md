@@ -18,7 +18,7 @@ To run the benchmarks, you need to deploy the serverless functions on the cluste
 ```bash
 ./deploy.sh
 ```
-This will deploy the necessary serverless functions on the cluster.
+This will deploy the necessary serverless functions on the function registry.
 
 Then you need to configure the authentication function on the GTP:
 ```bash
@@ -51,7 +51,7 @@ To run the system benchmark with a specific configuration, execute the following
 ```bash
   ./run_experiment.sh <consistency_models> <experiment_name>
 ```
-Available consistency models are:
+Accepted values for <consistency_models> are:
 - `sequential`
 - `eventual`
 - `all`
