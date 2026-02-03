@@ -161,18 +161,18 @@ def plot_interaction_with_iqr_avg(aggregated_data, save_path=None):
             q3_arr = np.array(q3_vals)
 
             ax.fill_between(xs_arr, q1_arr, q3_arr, alpha=0.18)
-            line, = ax.plot(xs_arr, avg_arr, marker="o", linewidth=2, label=f"{collections} collections")
+            line, = ax.plot(xs_arr, avg_arr, marker="o", linewidth=2, label=f"{collections}")
             color = line.get_color()
             line_length = (max(xs_arr) - min(xs_arr)) * 0.02 if len(xs_arr) > 1 else 1
 
             ax.hlines(q1_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
             ax.hlines(q3_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
 
-    ax.set_xlabel("Users")
-    ax.set_ylabel("Latency (ms)")
+    ax.set_xlabel("Users", fontweight='bold', fontsize=12)
+    ax.set_ylabel("Latency (ms)", fontweight='bold', fontsize=12)
     ax.set_ylim(bottom=0)
-    ax.set_title("Interaction Plot with IQR (avg)")
-    ax.legend(title="Collections")
+    legend = ax.legend(title="Collections")
+    legend.get_title().set_fontweight('bold')
     ax.grid(True, alpha=0.4)
     fig.tight_layout()
 
@@ -210,7 +210,7 @@ def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
             q3_arr = np.array(q3_vals)
 
             ax.fill_between(xs_arr, q1_arr, q3_arr, alpha=0.18)
-            line, = ax.plot(xs_arr, median_arr, marker="o", linewidth=2, label=f"{collections} collections")
+            line, = ax.plot(xs_arr, median_arr, marker="o", linewidth=2, label=f"{collections}")
             color = line.get_color()
 
             line_length = (max(xs_arr) - min(xs_arr)) * 0.02 if len(xs_arr) > 1 else 1
@@ -218,11 +218,12 @@ def plot_interaction_with_iqr_q2(aggregated_data, save_path=None):
             ax.hlines(q1_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
             ax.hlines(q3_arr, xs_arr - line_length, xs_arr + line_length, linewidth=2, color=color)
 
-    ax.set_xlabel("Users")
-    ax.set_ylabel("Latency (ms)")
+    ax.set_xlabel("Users", fontweight='bold', fontsize=12)
+    ax.set_ylabel("Latency (ms)", fontweight='bold', fontsize=12)
     ax.set_ylim(bottom=0)
-    ax.set_title("Interaction Plot with IQR (median)")
-    ax.legend(title="Collections")
+    #ax.set_title("Interaction Plot with IQR (median)")
+    legend = ax.legend(title="Collections")
+    legend.get_title().set_fontweight('bold')
     ax.grid(True, alpha=0.4)
     fig.tight_layout()
 
@@ -260,14 +261,16 @@ def plot_failed_requests_bar(aggregated_data, save_path=None):
         offset = (i - (len(collections_list) - 1) / 2) * bar_width
         ax.bar(x_indexes + offset, failed_vals, width=bar_width, label=f"{collection} collections")
 
-    ax.set_xlabel("Users (Workload)")
-    ax.set_ylabel("Average Failed Requests")
-    ax.set_title("Average Failed Requests vs Workload")
+    ax.set_xlabel("Users (Workload)", fontweight='bold', fontsize=12)
+    ax.set_ylabel("Average Failed Requests", fontweight='bold', fontsize=12)
+    #ax.set_title("Average Failed Requests vs Workload")
 
     ax.set_xticks(x_indexes)
     ax.set_xticklabels(users_list)
 
-    ax.legend(title="Collections")
+    legend = ax.legend(title="Collections")
+    legend.get_title().set_fontweight('bold')
+
     ax.grid(axis='y', alpha=0.3)
     fig.tight_layout()
 

@@ -135,11 +135,12 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir, files=None,
             has_plotted = True
 
         if has_plotted:
-            plt.xlabel('Round (Time)')
-            plt.ylabel('Average Latency (ms)')
-            plt.title(f'Latency vs Round (Max 10) - {scenario_name}\n(Users: {users}, Collections: {collections})')
+            plt.xlabel('Round (Time)', fontweight='bold', fontsize=12)
+            plt.ylabel('Average Latency (ms)', fontweight='bold', fontsize=12)
+            #plt.title(f'Latency vs Round (Max 10) - {scenario_name}\n(Users: {users}, Collections: {collections})')
             plt.grid(True, linestyle='--', alpha=0.3)
-            plt.legend(title='Configuration', loc='best')
+            legend =plt.legend(title='Configuration', loc='best', fontsize=12)
+            legend.get_title().set_fontweight('bold')
             plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
             plt.tight_layout()
 
@@ -234,7 +235,7 @@ def process_file_across_scenarios(
 
             sub_df = sub_df.sort_values("Round")
 
-            label = f"{scenario} - {collections} col"
+            label = f"{collections}"
 
             plt.plot(
                 sub_df["Round"],
@@ -244,14 +245,15 @@ def process_file_across_scenarios(
                 marker="o"
             )
 
-        plt.xlabel("Round (Time)")
-        plt.ylabel("Average Latency (ms)")
-        plt.title(
-            f"Latency vs Round\n"
-            f"users: {users}"
-        )
+        plt.xlabel("Round (Time)", fontweight='bold', fontsize=12)
+        plt.ylabel("Average Latency (ms)", fontweight='bold', fontsize=12)
+        #plt.title(
+        #    f"Latency vs Round\n"
+        #    f"users: {users}"
+        #)
         plt.grid(True, linestyle="--", alpha=0.3)
-        plt.legend(title="Scenario / Users")
+        legend = plt.legend(title="Collections", fontsize=12)
+        legend.get_title().set_fontweight('bold')
         plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
         plt.tight_layout()
 
