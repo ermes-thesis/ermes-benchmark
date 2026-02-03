@@ -1,4 +1,5 @@
 WASM_SOURCES=(
+    "auth_function.go"
     "functionCreateCollection.go"
     "functionReadCollection.go"
     "functionReadTwoCollections.go"
