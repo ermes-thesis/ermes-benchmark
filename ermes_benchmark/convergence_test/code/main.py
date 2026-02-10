@@ -61,6 +61,9 @@ def main():
     # Resolve output directory using config AND subfolder argument
     output_dir = (base_dir / config.out_dir / args.subfolder).resolve()
 
+    # Concat the "_new"
+    output_dir = Path(str(output_dir) + "_new")
+
     # Clean and recreate output directory
     if output_dir.exists() and output_dir.is_dir():
         for item in output_dir.iterdir():

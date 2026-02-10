@@ -174,7 +174,9 @@ def local_vs_remote_latency_violin_old(dfs):
 
     n_files = len(dfs)
     x = np.arange(n_files)
-    colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
+    # Use higher contrast colors
+    # colors = plt.cm.Set1(np.linspace(0, 1, max(n_files, 3)))
+    colors = plt.cm.tab10(np.linspace(0, 1, max(n_files, 3)))
     file_labels = [f'User {i + 1}' for i in range(n_files)]
 
     data_list = []
@@ -213,39 +215,35 @@ def local_vs_remote_latency_violin_old(dfs):
         user_color = colors[i]
 
         # Min e Max
+        # Min is a bit useless
         ax.vlines(current_x, stat['min'], stat['max'], color=user_color, linestyle=':', linewidth=1.5)
-        ax.hlines(stat['min'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=2)
-        ax.hlines(stat['max'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=2)
-
-
-
-
-
-
+        #ax.hlines(stat['min'], current_x - 0.1, current_x + 0.1, color=user_color, linewidth=2)
+        ax.hlines(stat['max'], current_x - 0.2, current_x + 0.2, color=user_color, linewidth=2)
 
         # Avg totale
-        ax.hlines(stat['avg'], current_x - 0.15, current_x + 0.15, color='black', linewidth=2)
-        ax.text(current_x + 0.2, stat['avg'], f'Avg: {stat["avg"]:.2f}', fontsize=9, color='black',
+        ax.hlines(stat['avg'], current_x - 0.2, current_x + 0.2, color='black', linewidth=2)
+        ax.text(current_x + 0.25, stat['avg'], f'{stat["avg"]:.2f}', fontsize=9, color='black',
                 bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
 
         # Avg Local
         if not np.isnan(stat['avg_local']):
             if int(stat['avg_local']) != int(stat['avg']):
-                ax.hlines(stat['avg_local'], current_x - 0.12, current_x + 0.12,
+                # Put a bolder line for better visibility and remove the text label
+                ax.hlines(stat['avg_local'], current_x - 0.2, current_x + 0.2,
                           color=user_color, linestyle='--', linewidth=2)
-                ax.text(current_x + 0.2, stat['avg_local'], f'Loc: {stat["avg_local"]:.2f}',
-                        fontsize=8, color=user_color)
+                # ax.text(current_x + 0.2, stat['avg_local'], f'Loc: {stat["avg_local"]:.2f}',
+                #        fontsize=8, color=user_color)
 
         # Avg Remote
         if not np.isnan(stat['avg_remote']):
             if int(stat['avg_remote']) != int(stat['avg']):
-                ax.hlines(stat['avg_remote'], current_x - 0.12, current_x + 0.12,
+                ax.hlines(stat['avg_remote'], current_x - 0.2, current_x + 0.2,
                           color=user_color, linestyle='-.', linewidth=2)
-                ax.text(current_x + 0.2, stat['avg_remote'], f'Rem: {stat["avg_remote"]:.2f}',
-                        fontsize=8, color=user_color)
+                # ax.text(current_x + 0.2, stat['avg_remote'], f'Rem: {stat["avg_remote"]:.2f}',
+                #        fontsize=8, color=user_color)
 
     legend_elements = [
-        Line2D([0], [0], color='black', lw=2, label='Avg Totale'),
+        Line2D([0], [0], color='black', lw=2, label='Avg Total'),
         Line2D([0], [0], color='grey', lw=2, linestyle='--', label='Avg Local'),
         Line2D([0], [0], color='grey', lw=2, linestyle='-.', label='Avg Remote'),
         # Line2D([0], [0], color='grey', lw=1.5, linestyle=':', label='Min/Max (Vertical Line)'),
@@ -254,10 +252,12 @@ def local_vs_remote_latency_violin_old(dfs):
               fontsize=10)
 
     # ax.set_title('User Latency Analysis: Violin Plot con Distribuzione e Valori Statistici')
-    ax.set_xlabel('User')
-    ax.set_ylabel('Latency (ms)')
+    # Bold labels for clarity
+    ax.set_xlabel('Clients', fontweight='bold')
+    ax.set_ylabel('Latency (ms)', fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(file_labels)
+    # Set the labels from 1 to num_clients 
+    ax.set_xticklabels([str(i + 1) for i in range(n_files)])
 
     plt.tight_layout()
     return fig
@@ -439,7 +439,7 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
             bar_width,
             color=agg_colors,
             edgecolor='black',
-            linewidth=1.3,
+            linewidth=2,
             alpha=0.9,
             label='_nolegend_'
         )
@@ -518,6 +518,7 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
 
             # Opzionale: ridisegnare un bordo nero attorno all'intera barra (totale)
             # per dare un aspetto "unito"
+            # The border should be more prominent
             ax.bar(
                 file_pos,
                 total_heights,
@@ -549,26 +550,27 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
         elif scenario == "top_down" or scenario == "bottom_up":
             fontsize = 4
 
-        for i, v in enumerate(plot_df['Avg_All']):
-            if pd.notna(v):
-                ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', rotation=45, fontsize=fontsize, fontweight='bold')
+        # for i, v in enumerate(plot_df['Avg_All']):
+        #     if pd.notna(v):
+        #         ax.text(agg_pos[i], v + 0.5, f'{v:.1f}', ha='center', rotation=45, fontsize=fontsize, fontweight='bold')
 
-        # Per-File Labels
-        for j in range(1, n_files + 1):
-            file_pos = agg_pos + j * bar_width
-            # Qui usiamo total_heights ricalcolato o preso dal df
-            series_vals = plot_df[j].values
-            for i, v in enumerate(series_vals):
-                if pd.notna(v) and v > 0:
-                    ax.text(file_pos[i], v + 0.2, f'{v:.1f}', ha='center', rotation=45, fontsize=fontsize)
+        # # Per-File Labels
+        # for j in range(1, n_files + 1):
+        #     file_pos = agg_pos + j * bar_width
+        #     # Qui usiamo total_heights ricalcolato o preso dal df
+        #     series_vals = plot_df[j].values
+        #     for i, v in enumerate(series_vals):
+        #         if pd.notna(v) and v > 0:
+        #             ax.text(file_pos[i], v + 0.2, f'{v:.1f}', ha='center', rotation=45, fontsize=fontsize)
 
         # ----------------------------
         # 8. Legend
         # ----------------------------
+        # I renamed the legend elements for clarity
         equilibrium_legend = [
-            Line2D([0], [0], color=WARM_CMAP(0.8), lw=4, label='Epoch avg Before Eq. (Warm)'),
-            Line2D([0], [0], color=COOL_CMAP(0.8), lw=4, label='Epoch avg After Eq. (Cool)'),
-            Line2D([0], [0], color=gray_colors[0], lw=4, label='Epoch avg Mixed (Gray)')
+            Line2D([0], [0], color=WARM_CMAP(0.8), lw=4, label='Before Equilibrium'),
+            Line2D([0], [0], color=COOL_CMAP(0.8), lw=4, label='After Equilibrium'),
+            Line2D([0], [0], color=gray_colors[0], lw=4, label='Mixed')
         ]
 
         file_legend_elements = []
@@ -591,8 +593,9 @@ def plot_logs_avg_latency(dfs, scenario, show_if_remote=True):
         # ----------------------------
         # 9. Axis setup
         # ----------------------------
-        ax.set_xlabel('Epoch number')
-        ax.set_ylabel('Average Time (ms)')
+        # Put the name in bold
+        ax.set_xlabel('Epoch number', fontweight='bold')
+        ax.set_ylabel('Average Time (ms)', fontweight='bold')
         ax.set_xticks(x)
         ax.set_xticklabels(all_groups, rotation=0)
 

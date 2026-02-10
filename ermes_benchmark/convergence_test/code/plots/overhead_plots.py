@@ -63,15 +63,16 @@ def plot_stacked_bar_chart(node_map):
                 # Registra la posizione dell'etichetta
                 label_positions[i].append(center_y)
                 
-                ax.text(
-                    bar.get_x() - 0.05,
-                    center_y,
-                    str(values[i]), 
-                    ha='right',
-                    va='center',
-                    fontsize=5,
-                    color=bar.get_facecolor()
-                )
+                # We do not draw the label inside small segments as it it not readable
+                # ax.text(
+                #     bar.get_x() - 0.05,
+                #     center_y,
+                #     str(values[i]), 
+                #     ha='right',
+                #     va='center',
+                #     fontsize=5,
+                #     color=bar.get_facecolor()
+                # )
 
         bottom += values
         totals += values
@@ -85,9 +86,9 @@ def plot_stacked_bar_chart(node_map):
             fontsize=10, fontweight='bold', color='black'
         )
 
-    ax.set_xlabel('Node (last IP octet)')
-    ax.set_ylabel('Message Count')
-    ax.set_title('Stacked Bar Chart of Messages per Node')
+    # Bold labels for clarity
+    ax.set_xlabel('Node (last IP octet)', fontweight='bold')
+    ax.set_ylabel('Message Count', fontweight='bold')
     ax.set_xticks(x)
     ax.set_xticklabels(nodes, rotation=45, ha='right')
     ax.legend(title='Message Types', bbox_to_anchor=(1.05, 1), loc='upper left')

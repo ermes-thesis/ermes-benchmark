@@ -4,7 +4,7 @@
 You need Python 3.8 or higher. It is preferrable to have Python 3.11 or higher to parse the ISO format of the timestamps using the standard library (else the format is slightly changed to match the older version). Install the required packages using pip:
 
 ```bash
-pip install pandas numpy matplotlib networkx pydot pytz colorama
+pip install pandas numpy matplotlib networkx pydot pytz colorama bokeh holoviews d3blocks
 ```
 
 ### 2. Graphviz (Required for Topology Layouts)
