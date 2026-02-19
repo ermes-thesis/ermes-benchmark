@@ -279,9 +279,11 @@ def plot_speedup_compare_caches(df_cold, df_target, target_name, file_ext, show_
             plt.ylabel(f"Speedup Factor")
         else:
             plt.ylabel("")
+            plt.tick_params(axis="y", labelleft=False)
 
         plt.xlabel("")
         plt.yscale("log")
+        plt.ylim(top=800)
         plt.savefig(f"speedup_cold_vs_{target_name.lower()}_{opt.lower()}{file_ext}", bbox_inches='tight')
         plt.close()
         print(f"- Generated: speedup_cold_vs_{target_name.lower()}_{opt.lower()}{file_ext}")

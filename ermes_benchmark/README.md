@@ -20,10 +20,8 @@ To run the benchmarks, you need to deploy the serverless functions on the cluste
 ```
 This will deploy the necessary serverless functions on the function registry.
 
-Then you need to configure the authentication function on the GTP:
-```bash
-./ermes-cli set-active-auth authFunction -i <GTP_IP> -p <GTP_PORT>
-```
+>Note: the function registry address is hardcoded in the `deploy.sh` script
+> and must be reached from your local machine.
 
 ## Running the benchmarks
 

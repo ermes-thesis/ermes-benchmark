@@ -118,7 +118,7 @@ def plot_global_comparison(aggregated_data, unique_files, save_path=None):
 
         # Plot solo linea e marker
         ax.plot(xs_arr, avg_arr, marker=marker, linestyle=linestyle,
-                color=color, linewidth=2, label=label_text, markersize=7)
+                color=color, linewidth=2, label=label_text, markersize=4)
 
     ax.set_xlabel(f"Number of operations")
     ax.set_ylabel("Latency (ms)")
@@ -128,7 +128,7 @@ def plot_global_comparison(aggregated_data, unique_files, save_path=None):
     ax.grid(True, alpha=0.3)
 
     # Legenda interna
-    ax.legend(loc='best', title="Configurations", framealpha=0.9, handlelength=4, handletextpad=1)
+    ax.legend(loc='best', title="Configurations", framealpha=0.9, handlelength=3, handletextpad=1)
 
     fig.tight_layout()
 
