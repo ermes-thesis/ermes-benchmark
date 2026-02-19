@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -25,6 +26,14 @@ def load_data(filename="scalability_results.json"):
 
     df = pd.DataFrame(data)
 
+    # Filtri opzionali
+    df = df[df['concurrency'] <= 70]
+    df = df[df['pool_size'] <= 64]
+
+    if df.empty:
+        return df
+
+    # Rinomina Workloads per leggibilità
     df['workload'] = df['workload'].replace("Lightweight", "SimpleLoop")
     custom_workload_order = ["SimpleLoop", "PrimeNumbers", "Stateful"]
 
@@ -40,7 +49,9 @@ def load_data(filename="scalability_results.json"):
             ordered=True
         )
 
+    # Normalizza nomi Runtime
     df['runtime'] = df['runtime'].replace("Wasmedge", "Wasmedge_AOT").replace("Wazero", "Wazero_AOT")
+
     custom_runtime_order = ["Wasmtime_JIT", "Wasmtime_AOT", "Wasmedge_AOT", "Wazero_AOT"]
 
     if 'runtime' in df.columns:
@@ -55,100 +66,130 @@ def load_data(filename="scalability_results.json"):
             ordered=True
         )
 
-    # Conversione PoolSize in stringa categorica ordinata per visualizzazione pulita
+    # Conversione PoolSize in stringa categorica ordinata
     if 'pool_size' in df.columns:
-        # Troviamo i valori unici e li ordiniamo numericamente
         unique_sizes = sorted(df['pool_size'].astype(int).unique())
         pool_order = [str(x) for x in unique_sizes]
 
-        # Creiamo la colonna 'Pool Size' come Categorical con ordine forzato
         df['Pool Size'] = pd.Categorical(
             df['pool_size'].astype(str),
             categories=pool_order,
             ordered=True
         )
-
-        # Ordiniamo il dataframe in base a questo ordine logico
         df.sort_values(by=['Pool Size'], inplace=True)
 
     return df
 
 def move_legend_to_top(g):
     """Sposta la legenda di un FacetGrid in alto al centro."""
-    # Rimuovi la legenda automatica laterale
     if g._legend:
         g._legend.remove()
 
-    # Ottieni handles e labels dal primo asse (che li contiene tutti)
     handles, labels = g.axes.flat[0].get_legend_handles_labels()
 
-    # Se non ci sono handles (grafico vuoto?), non fare nulla
     if not handles:
         return
 
-    num_cols = min(len(labels), 8) # Massimo 8 colonne
+    num_cols = min(len(labels), 8)
     g.fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 1),
                  ncol=num_cols, frameon=False, title="Pool Size")
 
+def plot_smart_markers(data, x, y, markers, palette, **kwargs):
+    """
+    Piazza i marker sulla linea media aggregata.
+    MODIFICA: Ora accetta 'palette' come argomento per allineare i colori.
+    """
+    indices_to_keep = []
+
+    agg_data = data.groupby(['Pool Size', x], observed=True)[y].mean().reset_index()
+
+    for group_name, group_data in agg_data.groupby("Pool Size", observed=True):
+        if group_data.empty: continue
+
+        x_targets = np.linspace(group_data[x].min(), group_data[x].max(), 4)
+
+        for val in x_targets:
+            idx = (np.abs(group_data[x] - val)).argmin()
+            indices_to_keep.append(group_data.iloc[idx])
+
+    if not indices_to_keep:
+        return
+
+    subset = pd.DataFrame(indices_to_keep)
+
+    sns.scatterplot(
+        data=subset, x=x, y=y,
+        hue="Pool Size", style="Pool Size",
+        palette=palette,  # <--- QUI ERA IL PROBLEMA (prima era fisso "viridis")
+        zorder=10, legend=False,
+        markers=markers
+    )
+
 def plot_scalability_matrix(df, file_ext=".png"):
     """
-    Genera una matrice completa (Runtime x Workload) con SCALE INDIPENDENTI.
+    Genera una matrice completa.
     """
 
-    # Definiamo marker espliciti
     markers_list = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
     num_pool_sizes = len(df['Pool Size'].unique())
+    print(f"Number of pool sizes: {num_pool_sizes}")
     current_markers = markers_list[:num_pool_sizes] if num_pool_sizes <= len(markers_list) else True
 
-    # --- 1. RPS Matrix (Independent Scales) ---
-    print("Generating Scalability Matrix (RPS) - Independent Scales...")
+    # --- 1. RPS Matrix ---
+    print("Generating Scalability Matrix (RPS)...")
+    rps_palette = "viridis" # Definiamo la palette qui
+
     g1 = sns.relplot(
         data=df,
         x="concurrency", y="rps",
         hue="Pool Size", style="Pool Size",
         row="runtime", col="workload",
         kind="line",
-        markers=current_markers, dashes=False,
+        dashes=False,
         height=3.5, aspect=1.3,
-        palette="viridis",
+        palette=rps_palette,
         linewidth=2,
-        facet_kws={'sharey': False, 'sharex': True}
+        facet_kws={'sharey': 'col', 'sharex': True},
+        markers=current_markers,
+        markevery=-1,
     )
 
+    # Passiamo la palette corretta
+    g1.map_dataframe(plot_smart_markers, x="concurrency", y="rps", markers=current_markers, palette=rps_palette)
     g1.set_titles("{row_name} | {col_name}")
     g1.set_axis_labels("Users", "RPS")
 
-    # Sposta la legenda in alto
     move_legend_to_top(g1)
-
-    # g1.fig.suptitle("Scalability Matrix: RPS (Independent Scales)", y=1.12, fontsize=16) # Aumentato y per fare spazio
 
     filename = f"scalability_rps_matrix_independent{file_ext}"
     g1.savefig(filename, dpi=300, bbox_inches='tight')
     print(f"Saved: {filename}")
 
-    # --- 2. Latency Matrix (Independent Scales) ---
-    print("Generating Scalability Matrix (Latency) - Independent Scales...")
+    # --- 2. Latency Matrix ---
+    print("Generating Scalability Matrix (Latency)...")
+    latency_palette = "rocket_r" # Definiamo la palette diversa per la latenza
+
     g2 = sns.relplot(
         data=df,
         x="concurrency", y="avg_latency_ms",
         hue="Pool Size", style="Pool Size",
         row="runtime", col="workload",
         kind="line",
-        markers=current_markers, dashes=False,
+        dashes=False,
         height=3.5, aspect=1.3,
-        palette="rocket_r",
+        palette=latency_palette,
         linewidth=2,
-        facet_kws={'sharey': False, 'sharex': True}
+        facet_kws={'sharey': 'col', 'sharex': True},
+        markers=current_markers,
+        markevery=-1, 
     )
 
+    # Passiamo la palette corretta anche qui
+    g2.map_dataframe(plot_smart_markers, x="concurrency", y="avg_latency_ms", markers=current_markers, palette=latency_palette)
     g2.set_titles("{row_name} | {col_name}")
     g2.set_axis_labels("Users", "Latency (ms)")
 
-    # Sposta la legenda in alto
     move_legend_to_top(g2)
-
-    # g2.fig.suptitle("Scalability Matrix: Latency (Independent Scales)", y=1.12, fontsize=16)
 
     filename = f"scalability_latency_matrix_independent{file_ext}"
     g2.savefig(filename, dpi=300, bbox_inches='tight')
@@ -156,12 +197,8 @@ def plot_scalability_matrix(df, file_ext=".png"):
 
 def plot_compact_scalability(df, file_ext=".png"):
     """
-    Genera grafici compatti:
-    - Colonne: Workload
-    - Colore (Hue): Runtime
-    - Stile (Marker): Pool Size
+    Grafici compatti.
     """
-
     markers_list = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
     num_pool_sizes = len(df['Pool Size'].unique())
     current_markers = markers_list[:num_pool_sizes] if num_pool_sizes <= len(markers_list) else True
@@ -179,12 +216,12 @@ def plot_compact_scalability(df, file_ext=".png"):
         height=5, aspect=1.2,
         palette="bright",
         linewidth=2.5,
-        facet_kws={'sharey': False, 'sharex': True}
+        facet_kws={'sharey': 'col', 'sharex': True}
     )
 
     g1.set_titles("{col_name}")
     g1.set_axis_labels("Concurrent Users", "Throughput (RPS)")
-    g1.fig.suptitle("Scalability Comparison: Runtime Efficiency & Pool Sizing", y=1.02, fontsize=16)
+    g1.fig.suptitle("Scalability Comparison", y=1.02, fontsize=16)
 
     filename = f"scalability_rps_compact{file_ext}"
     g1.savefig(filename, dpi=300, bbox_inches='tight')
@@ -203,12 +240,12 @@ def plot_compact_scalability(df, file_ext=".png"):
         height=5, aspect=1.2,
         palette="bright",
         linewidth=2.5,
-        facet_kws={'sharey': False, 'sharex': True}
+        facet_kws={'sharey': 'col', 'sharex': True}
     )
 
     g2.set_titles("{col_name}")
     g2.set_axis_labels("Concurrent Users", "Avg Latency (ms)")
-    g2.fig.suptitle("Scalability Latency: Runtime Stability under Load", y=1.02, fontsize=16)
+    g2.fig.suptitle("Scalability Latency", y=1.02, fontsize=16)
 
     filename = f"scalability_latency_compact{file_ext}"
     g2.savefig(filename, dpi=300, bbox_inches='tight')
@@ -216,9 +253,8 @@ def plot_compact_scalability(df, file_ext=".png"):
 
 def plot_by_runtime(df, file_ext=".png"):
     """
-    Genera grafici separati per ogni RUNTIME.
+    Grafici separati per ogni RUNTIME.
     """
-
     markers_list = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
     num_pool_sizes = len(df['Pool Size'].unique())
     current_markers = markers_list[:num_pool_sizes] if num_pool_sizes <= len(markers_list) else True
@@ -231,7 +267,7 @@ def plot_by_runtime(df, file_ext=".png"):
 
         # --- 1. RPS Chart ---
         plt.figure(figsize=(10, 6))
-        g1 = sns.lineplot(
+        sns.lineplot(
             data=df_rt,
             x="concurrency", y="rps",
             hue="workload",
@@ -252,7 +288,7 @@ def plot_by_runtime(df, file_ext=".png"):
 
         # --- 2. Latency Chart ---
         plt.figure(figsize=(10, 6))
-        g2 = sns.lineplot(
+        sns.lineplot(
             data=df_rt,
             x="concurrency", y="avg_latency_ms",
             hue="workload",
@@ -293,16 +329,15 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print(f"Loaded {len(df)} records.")
+
+    if 'repetition' in df.columns:
+        rep_count = df['repetition'].max()
+        print(f"Repetitions detected: {rep_count} per configuration.")
+
     print(f"Runtimes found: {df['runtime'].unique()}")
     print(f"Workloads found: {df['workload'].unique()}")
 
-    # 1. Matrice Completa
+    # 1. Matrice Completa (RPS: viridis, Latency: rocket_r)
     plot_scalability_matrix(df, file_ext)
-
-    # 2. Grafici Compatti
-    plot_compact_scalability(df, file_ext)
-
-    # 3. Grafici per Runtime
-    plot_by_runtime(df, file_ext)
 
     print("\nDone.")
