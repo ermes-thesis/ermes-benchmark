@@ -292,9 +292,15 @@ run_density() {
     echo "🏁 AVVIO TEST DENSITÀ (Varia numero di accessi alla collection per funzione)..."
     FIXED_USERS="64"
     FIXED_COLLECTIONS="100"
-    ACCESSES_LIST=("1" "5" "10")
+    ACCESSES_LIST=("1" "2" "4" "6" "8" "10")
 
     for CONSISTENCY_MODE in "${TARGET_MODES[@]}"; do
+
+      NUM_ROUNDS=10
+      if [ "$CONSISTENCY_MODE" == "sequential" ]; then
+          NUM_ROUNDS=15
+      fi
+
       for ACC in "${ACCESSES_LIST[@]}"; do
         for SEED in "${SEEDS[@]}"; do
 
@@ -315,8 +321,10 @@ run_density() {
             rm results/results_log_*.csv 2>/dev/null
 
             # ESECUZIONE
-            ./user "$SETUP_FILE" "$ACC" > user.log 2>&1 &
-            show_progress $! 150
+            ./user "$SETUP_FILE" "$ACC" "$NUM_ROUNDS" > user.log 2>&1 &
+
+            DURATION=$(( NUM_ROUNDS * 15 ))
+            show_progress $! $DURATION
             wait $!
 
             LOG_ID="density_mode_${CONSISTENCY_MODE}_acc${ACC}_s${SEED}"
