@@ -116,7 +116,7 @@ def export_legend(handles, labels, filename, ncol=None):
 
     ax_leg.legend(handles, labels, title="Algorithm", loc='center', ncol=ncol, frameon=True, borderaxespad=0.1)
 
-    fig_leg.savefig(filename, bbox_inches='tight')
+    fig_leg.savefig(filename, bbox_inches='tight', dpi=500)
     plt.close(fig_leg)
     print(f"- Generated Legend: {filename}")
 

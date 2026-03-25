@@ -96,7 +96,7 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir, files=None,
     count = 0
 
     for (users, collections), group_df in grouped_configs:
-        plt.figure(figsize=(8, 5))
+        plt.figure(figsize=(6, 5))
 
         subgroups = group_df.groupby(['Architecture', 'Mode'])
         has_plotted = False
@@ -128,6 +128,7 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir, files=None,
                 linestyle = ':'
 
             label_text = f"{arch} [{mode_str}]"
+            label_text= label_text[0].upper() + label_text[1:]  # Capitalizza la prima lettera
 
             plt.plot(sub_df['Round'], sub_df['AverageLatency'],
                      label=label_text, color=color, marker=marker,
@@ -136,10 +137,10 @@ def process_scenario(scenario_name, base_input_dir, base_output_dir, files=None,
 
         if has_plotted:
             plt.xlabel('Epoch')
-            plt.ylabel('Latency (ms)')
+            plt.ylabel('Average latency (ms)')
             # plt.title(f'Latency vs Round (Max 10) - {scenario_name}\n(Users: {users}, Collections: {collections})')
             plt.grid(True, linestyle='--', alpha=0.3)
-            plt.legend(title='Configuration', loc='best')
+            plt.legend(title='Configuration', loc='best', handlelength=3)
             plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
             plt.tight_layout()
 

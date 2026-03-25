@@ -94,10 +94,27 @@ def move_legend_to_top(g):
     g.fig.legend(handles, labels, loc='lower center', bbox_to_anchor=(0.5, 1),
                  ncol=num_cols, frameon=False, title="Pool Size")
 
+def move_legend_to_right(g):
+    """Sposta la legenda di un FacetGrid a destra."""
+    if g._legend:
+        g._legend.remove()
+
+    handles, labels = g.axes.flat[0].get_legend_handles_labels()
+
+    if not handles:
+        return
+
+    # Posiziona la legenda a destra esternamente ai grafici
+    g.fig.legend(handles, labels, loc='center left', bbox_to_anchor=(1, 0.5),
+                 ncol=1, frameon=False, title="Pool Size")
+
+    # Aggiusta il layout per far spazio alla legenda sulla destra
+    # g.fig.subplots_adjust(right=0.85)
+
+
 def plot_smart_markers(data, x, y, markers, palette, **kwargs):
     """
     Piazza i marker sulla linea media aggregata.
-    MODIFICA: Ora accetta 'palette' come argomento per allineare i colori.
     """
     indices_to_keep = []
 
@@ -120,7 +137,7 @@ def plot_smart_markers(data, x, y, markers, palette, **kwargs):
     sns.scatterplot(
         data=subset, x=x, y=y,
         hue="Pool Size", style="Pool Size",
-        palette=palette,  # <--- QUI ERA IL PROBLEMA (prima era fisso "viridis")
+        palette=palette,
         zorder=10, legend=False,
         markers=markers
     )
@@ -129,7 +146,6 @@ def plot_scalability_matrix(df, file_ext=".png"):
     """
     Genera una matrice completa.
     """
-
     markers_list = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
     num_pool_sizes = len(df['Pool Size'].unique())
     print(f"Number of pool sizes: {num_pool_sizes}")
@@ -137,7 +153,7 @@ def plot_scalability_matrix(df, file_ext=".png"):
 
     # --- 1. RPS Matrix ---
     print("Generating Scalability Matrix (RPS)...")
-    rps_palette = "viridis" # Definiamo la palette qui
+    rps_palette = "viridis"
 
     g1 = sns.relplot(
         data=df,
@@ -154,7 +170,6 @@ def plot_scalability_matrix(df, file_ext=".png"):
         markevery=-1,
     )
 
-    # Passiamo la palette corretta
     g1.map_dataframe(plot_smart_markers, x="concurrency", y="rps", markers=current_markers, palette=rps_palette)
     g1.set_titles("{row_name} | {col_name}")
     g1.set_axis_labels("Users", "RPS")
@@ -167,7 +182,7 @@ def plot_scalability_matrix(df, file_ext=".png"):
 
     # --- 2. Latency Matrix ---
     print("Generating Scalability Matrix (Latency)...")
-    latency_palette = "rocket_r" # Definiamo la palette diversa per la latenza
+    latency_palette = "rocket_r"
 
     g2 = sns.relplot(
         data=df,
@@ -181,10 +196,9 @@ def plot_scalability_matrix(df, file_ext=".png"):
         linewidth=2,
         facet_kws={'sharey': 'col', 'sharex': True},
         markers=current_markers,
-        markevery=-1, 
+        markevery=-1,
     )
 
-    # Passiamo la palette corretta anche qui
     g2.map_dataframe(plot_smart_markers, x="concurrency", y="avg_latency_ms", markers=current_markers, palette=latency_palette)
     g2.set_titles("{row_name} | {col_name}")
     g2.set_axis_labels("Users", "Latency (ms)")
@@ -194,6 +208,77 @@ def plot_scalability_matrix(df, file_ext=".png"):
     filename = f"scalability_latency_matrix_independent{file_ext}"
     g2.savefig(filename, dpi=300, bbox_inches='tight')
     print(f"Saved: {filename}")
+
+
+def plot_scalability_by_runtime_row(df, file_ext=".png"):
+    """
+    Genera grafici divisi per runtime (righe) con i workload sulle colonne
+    e la legenda posizionata a destra. Scale indipendenti per i singoli grafici.
+    """
+    markers_list = ['o', 's', '^', 'D', 'v', '<', '>', 'p', '*', 'h']
+    num_pool_sizes = len(df['Pool Size'].unique())
+    current_markers = markers_list[:num_pool_sizes] if num_pool_sizes <= len(markers_list) else True
+
+    runtimes = df['runtime'].unique()
+    rps_palette = "viridis"
+    latency_palette = "rocket_r"
+
+    for rt in runtimes:
+        print(f"Generating Row Charts for Runtime: {rt}...")
+        df_rt = df[df['runtime'] == rt]
+
+        # --- 1. RPS Row Chart ---
+        g1 = sns.relplot(
+            data=df_rt,
+            x="concurrency", y="rps",
+            hue="Pool Size", style="Pool Size",
+            col="workload",
+            kind="line",
+            dashes=False,
+            height=3.5, aspect=1.3,
+            palette=rps_palette,
+            linewidth=2,
+            facet_kws={'sharey': False, 'sharex': True}, # Modificato da True a False
+            markers=current_markers,
+            markevery=-1,
+        )
+
+        g1.map_dataframe(plot_smart_markers, x="concurrency", y="rps", markers=current_markers, palette=rps_palette)
+        g1.set_titles(f"{rt} | {{col_name}}")
+        g1.set_axis_labels("Users", "RPS")
+
+        move_legend_to_right(g1)
+
+        filename = f"scalability_rps_row_{rt}{file_ext}"
+        g1.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"Saved: {filename}")
+
+        # --- 2. Latency Row Chart ---
+        g2 = sns.relplot(
+            data=df_rt,
+            x="concurrency", y="avg_latency_ms",
+            hue="Pool Size", style="Pool Size",
+            col="workload",
+            kind="line",
+            dashes=False,
+            height=3.5, aspect=1.3,
+            palette=latency_palette,
+            linewidth=2,
+            facet_kws={'sharey': False, 'sharex': True}, # Modificato da True a False
+            markers=current_markers,
+            markevery=-1,
+        )
+
+        g2.map_dataframe(plot_smart_markers, x="concurrency", y="avg_latency_ms", markers=current_markers, palette=latency_palette)
+        g2.set_titles(f"{rt} | {{col_name}}")
+        g2.set_axis_labels("Users", "Latency (ms)")
+
+        move_legend_to_right(g2)
+
+        filename = f"scalability_latency_row_{rt}{file_ext}"
+        g2.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"Saved: {filename}")
+
 
 def plot_compact_scalability(df, file_ext=".png"):
     """
@@ -250,6 +335,7 @@ def plot_compact_scalability(df, file_ext=".png"):
     filename = f"scalability_latency_compact{file_ext}"
     g2.savefig(filename, dpi=300, bbox_inches='tight')
     print(f"Saved: {filename}")
+
 
 def plot_by_runtime(df, file_ext=".png"):
     """
@@ -309,6 +395,7 @@ def plot_by_runtime(df, file_ext=".png"):
 
     print(f"Generated individual charts for runtimes: {runtimes}")
 
+
 if __name__ == "__main__":
     args = sys.argv[1:]
 
@@ -339,5 +426,8 @@ if __name__ == "__main__":
 
     # 1. Matrice Completa (RPS: viridis, Latency: rocket_r)
     plot_scalability_matrix(df, file_ext)
+
+    # 2. Esporta le immagini per singolo runtime in formato "riga" con legenda a destra (e scale indipendenti)
+    plot_scalability_by_runtime_row(df, file_ext)
 
     print("\nDone.")
