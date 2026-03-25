@@ -162,7 +162,7 @@ def main():
 
     # 3.1 Latency Analysis (Line Plot)
     print("Generating execution time analysis...")
-    latency.plot_logs_avg_latency(full_dfs, args.subfolder, config.domains)
+    latency.plot_logs_avg_latency(full_dfs, args.subfolder, config.domains, max_rounds=6)
     plt.savefig(f'{output_dir}/execution_time_analysis.png', dpi=300, bbox_inches='tight')
     plt.savefig(f'{output_dir}/pdf/execution_time_analysis.pdf', bbox_inches='tight')
     plt.close()
