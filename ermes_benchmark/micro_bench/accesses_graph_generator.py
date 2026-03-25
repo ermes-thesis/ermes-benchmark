@@ -61,7 +61,7 @@ def plot_global_comparison(aggregated_data, unique_files, save_path=None):
         print("No data to plot.")
         return
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(6, 4))
 
     # Ordiniamo le chiavi per la legenda
     sorted_keys = sorted(aggregated_data.keys(), key=lambda k: (k[0], k[1]))
