@@ -68,7 +68,12 @@ def _parse_label(raw_label):
     else:
         algorithm_name_suffixed = algorithm_name
 
-    label = f"{runtime}\n{compiler}\n{opt}"
+    # Modifica: Testo "Native" singolo, rimozione di withOpts/noOpts
+    if runtime == "Native":
+        label = "Native"
+    else:
+        label = f"{runtime}\n{compiler}"
+
     return algorithm_name_suffixed, runtime, compiler, opt, label
 
 def parse_memory_stats(lines):
@@ -235,7 +240,9 @@ for cfg in configs:
     # Use specified figsize
     plt.figure(figsize=cfg["figsize"])
 
-    ax = sns.barplot(data=filtered_data, x="Label", y=cfg["col"], hue="Algorithm", palette=palette)
+    # Modifica: Aggiunto l'argomento 'order' per ordinare i label alfabeticamente
+    x_order = sorted(filtered_data["Label"].unique())
+    ax = sns.barplot(data=filtered_data, x="Label", y=cfg["col"], hue="Algorithm", palette=palette, order=x_order)
 
     plt.xlabel("")
 
