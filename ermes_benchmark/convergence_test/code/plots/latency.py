@@ -292,8 +292,8 @@ def local_vs_remote_latency_violin(dfs, scenario, domains):
         base_labels = custom_labels[:n_files]
     elif scenario == "full_traversal":
         base_labels = ["Patient", "Doctor"]
-    elif scenario == "conflict_1" or scenario == "conflict_eventual":
-        base_labels = ["Doctor 1", "Doctor 2"]
+    # elif scenario == "conflict_1" or scenario == "conflict_eventual":
+    #     base_labels = ["Doctor 1", "Doctor 2"]
     elif scenario == "replication":
         base_labels = ["Patient", "Doctor 1", "Doctor 2", "Doctor 3", "Doctor 4"]
 
@@ -489,7 +489,7 @@ def plot_logs_avg_latency(dfs, scenario, domains, show_if_remote=True, max_round
         if "conflict" in scenario:
             fig, ax = plt.subplots(figsize=(6, 5))
         else:
-            fig, ax = plt.subplots(figsize=(8, 5))
+            fig, ax = plt.subplots(figsize=(6, 4))
 
         total_bars_in_group = n_files + 1
         bar_width = 0.9 / total_bars_in_group
@@ -610,12 +610,12 @@ def plot_logs_avg_latency(dfs, scenario, domains, show_if_remote=True, max_round
             # -----------------------------
 
             if i == 0 and "conflict" not in scenario:
-                base_name = "Patient"
+                base_name = "Producer"
             else:
                 if "conflict" in scenario:
-                    base_name = f"Doctor {i + 1}"
+                    base_name = f"Consumer {i + 1}"
                 else:
-                    base_name = f"Doctor {i}"
+                    base_name = f"Consumer {i}"
 
             label_text = f"{base_name} ({domain})"
 
