@@ -22,17 +22,17 @@ if [[ ! -x "${ERMES_CLI}" ]]; then
 fi
 
 FUNCTION_SOURCES=(
-    auth_function.go
-    functionCreateCollection.go
-    functionReadCollection.go
-    functionReadTwoCollections.go
-    functionWriteCollection.go
-    functionWriteTwoCollections.go
+    functions/auth_function.go
+    functions/functionCreateCollection.go
+    functions/functionReadCollection.go
+    functions/functionReadTwoCollections.go
+    functions/functionWriteCollection.go
+    functions/functionWriteTwoCollections.go
 )
 
 for source in "${FUNCTION_SOURCES[@]}"; do
-    if [[ ! -f "${FUNCTIONS_PATH}/${source}" ]]; then
-        echo "Missing serverless function source: ${FUNCTIONS_PATH}/${source}" >&2
+    if [[ ! -f "${SERVERLESS_FUNCTIONS_PATH}/${source}" ]]; then
+        echo "Missing serverless function source: ${SERVERLESS_FUNCTIONS_PATH}/${source}" >&2
         exit 1
     fi
 done
@@ -40,18 +40,19 @@ done
 generated_directories=()
 cleanup() {
     for directory in "${generated_directories[@]}"; do
-        rm -rf "${FUNCTIONS_PATH}/${directory}"
+        rm -rf "${SERVERLESS_FUNCTIONS_PATH}/${directory}"
     done
 }
 trap cleanup EXIT
 
 for source in "${FUNCTION_SOURCES[@]}"; do
-    generated_directories+=("${source%.go}")
+    base_name="${source##*/}"
+    generated_directories+=("${base_name%.go}")
 done
 
 echo "Compiling and deploying ${#FUNCTION_SOURCES[@]} serverless functions..."
 (
-    cd "${FUNCTIONS_PATH}"
+    cd "${SERVERLESS_FUNCTIONS_PATH}"
     "${ERMES_CLI}" compile "${FUNCTION_SOURCES[@]}" -dw -i "${REGISTRY_IP}" -p "${REGISTRY_PORT}"
 )
 
