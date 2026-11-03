@@ -21,12 +21,13 @@ require_config() {
     fi
 }
 
-for setting in EDGE_SSH_HOST CLOUD_NODE_IP EDGE_NODE_IP ERMES_NODE_PORT GTP_HOST GTP_PORT; do
+for setting in EDGE_SSH_HOST CLOUD_NODE_IP EDGE_NODE_IP ERMES_NODE_PORT GTP_PORT \
+    FUNCTION_REGISTRY_PORT; do
     require_config "${setting}"
 done
 
 if [[ "${DEPLOY_FUNCTIONS}" == "true" ]]; then
-    for setting in FUNCTION_REGISTRY_IP FUNCTION_REGISTRY_PORT SERVERLESS_FUNCTIONS_PATH; do
+    for setting in SERVERLESS_FUNCTIONS_PATH; do
         require_config "${setting}"
     done
 fi
@@ -38,6 +39,9 @@ fi
 
 BIN_DIR="${SCRIPT_DIR}/bin"
 CLOUD_PATH="${SCRIPT_DIR}/${REMOTE_PATH}"
+CLOUD_NODE_ADDRESS="${CLOUD_NODE_IP}:${ERMES_NODE_PORT}"
+FUNCTION_NODE_ADDRESS="${CLOUD_NODE_ADDRESS}"
+GTP_ADDRESS="${CLOUD_NODE_IP}:${GTP_PORT}"
 RESULTS_ROOT="${SCRIPT_DIR}/results"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 RESULTS_DIR="${RESULTS_ROOT}/${TIMESTAMP}"
@@ -85,7 +89,7 @@ if [[ "${DEPLOY_FUNCTIONS}" == "true" ]]; then
     fi
     echo "[3/6] Compiling and deploying serverless functions..."
     if ! "${SCRIPT_DIR}/deploy_functions.sh" "${SERVERLESS_FUNCTIONS_PATH}" \
-        "${FUNCTION_REGISTRY_IP}" "${FUNCTION_REGISTRY_PORT}"; then
+        "${CLOUD_NODE_IP}" "${FUNCTION_REGISTRY_PORT}"; then
         echo "Serverless function deployment failed." >&2
         exit 1
     fi

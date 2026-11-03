@@ -13,8 +13,8 @@ node IP placeholders. SSH operations use the local aliases `sola4` and
 `sola-pi`; the aliases are not used as Ermes network addresses. All addresses
 and ports used by this experiment are derived from that file.
 [`clients/config.yaml`](clients/config.yaml) is a template; the runner injects
-`GTP_HOST` and `GTP_PORT` into a temporary copy before uploading it to either
-node.
+the cloud node IP and `GTP_PORT` into a temporary copy before uploading it to
+either node.
 
 Run the runner on `sola4`. Cloud-side build, preparation, collection creation,
 and result collection are local operations on that machine. Only Raspberry Pi
@@ -26,9 +26,12 @@ Before creating the collection, the runner executes the dedicated
 [`clients/deploy_functions.sh`](clients/deploy_functions.sh) script locally.
 It compiles the six existing sources under
 `serverless_functions/functions/` and inserts them into the configured
-registry. Set `SERVERLESS_FUNCTIONS_PATH`, `FUNCTION_REGISTRY_IP`, and
-`FUNCTION_REGISTRY_PORT` in [`clients/config.sh`](clients/config.sh).
+registry. Set `SERVERLESS_FUNCTIONS_PATH` and `FUNCTION_REGISTRY_PORT` in
+[`clients/config.sh`](clients/config.sh). The
+registry is assumed to run on the cloud node IP.
 Set `DEPLOY_FUNCTIONS=false` only when the functions are already deployed.
+The deployment uses `${HOME}/go/bin/ermes-cli` by default; set `ERMES_CLI` if
+the executable is installed elsewhere.
 
 ## Running
 

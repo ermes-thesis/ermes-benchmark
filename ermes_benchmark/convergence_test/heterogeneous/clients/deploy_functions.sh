@@ -10,13 +10,14 @@ SERVERLESS_FUNCTIONS_PATH="$1"
 REGISTRY_IP="$2"
 REGISTRY_PORT="$3"
 FUNCTIONS_PATH="${SERVERLESS_FUNCTIONS_PATH}/functions"
+ERMES_CLI="${ERMES_CLI:-${HOME}/go/bin/ermes-cli}"
 
 if [[ ! -d "${FUNCTIONS_PATH}" ]]; then
     echo "Missing serverless functions directory: ${FUNCTIONS_PATH}" >&2
     exit 1
 fi
-if ! command -v ermes-cli >/dev/null 2>&1; then
-    echo "ermes-cli is required to deploy serverless functions." >&2
+if [[ ! -x "${ERMES_CLI}" ]]; then
+    echo "ermes-cli not found or not executable: ${ERMES_CLI}" >&2
     exit 1
 fi
 
@@ -51,7 +52,7 @@ done
 echo "Compiling and deploying ${#FUNCTION_SOURCES[@]} serverless functions..."
 (
     cd "${FUNCTIONS_PATH}"
-    ${HOME}/go/bin/ermes-cli compile "${FUNCTION_SOURCES[@]}" -dw -i "${REGISTRY_IP}" -p "${REGISTRY_PORT}"
+    "${ERMES_CLI}" compile "${FUNCTION_SOURCES[@]}" -dw -i "${REGISTRY_IP}" -p "${REGISTRY_PORT}"
 )
 
 echo "Serverless functions deployed to ${REGISTRY_IP}:${REGISTRY_PORT}."
