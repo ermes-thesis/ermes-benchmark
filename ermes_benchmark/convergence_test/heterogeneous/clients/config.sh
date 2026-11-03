@@ -9,9 +9,12 @@ EDGE_NODE_IP="10.79.10.243"
 ERMES_NODE_PORT="12345"
 GTP_HOST="10.79.10.134"
 GTP_PORT="8081"
+FUNCTION_REGISTRY_IP="<function-registry-ip>"
+FUNCTION_REGISTRY_PORT="<function-registry-port>"
 
 # Paths and experiment parameters.
 REMOTE_PATH="heterogeneous"
+SERVERLESS_FUNCTIONS_PATH="<path-to-ermes-benchmark>/ermes_benchmark/serverless_functions"
 ERMES_DEPLOY_PATH="<path-to-ermes-deploy-or-empty>"
 COLLECTION_NAME="heterogeneous_collection"
 CREATE_CLIENT_ID="0"
@@ -21,6 +24,7 @@ EDGE_GEOLOCATION="SOLA4/PI"
 CONSISTENCY="sequential"
 FLUSH_ERMES="false"
 DOWNLOAD_INFRASTRUCTURE_LOGS="false"
+DEPLOY_FUNCTIONS="true"
 
 # Derived addresses. Keep these out of the runner so deployment changes are
 # limited to this file.

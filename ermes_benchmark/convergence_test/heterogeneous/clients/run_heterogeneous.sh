@@ -25,6 +25,12 @@ for setting in EDGE_SSH_HOST CLOUD_NODE_IP EDGE_NODE_IP ERMES_NODE_PORT GTP_HOST
     require_config "${setting}"
 done
 
+if [[ "${DEPLOY_FUNCTIONS}" == "true" ]]; then
+    for setting in FUNCTION_REGISTRY_IP FUNCTION_REGISTRY_PORT SERVERLESS_FUNCTIONS_PATH; do
+        require_config "${setting}"
+    done
+fi
+
 if [[ "${CLOUD_NODE_IP}" == "${EDGE_NODE_IP}" ]]; then
     echo "CLOUD_NODE_IP and EDGE_NODE_IP must identify different machines." >&2
     exit 1
@@ -39,8 +45,6 @@ SOURCE_ROOT="${SCRIPT_DIR}/../../clients"
 CONFIG_NAME="config.yaml"
 RUNTIME_CONFIG="$(mktemp)"
 trap 'rm -f "${RUNTIME_CONFIG}"' EXIT
-sed "s#<gtp-host>:<gtp-port>#${GTP_ADDRESS}#" \
-    "${SCRIPT_DIR}/config.yaml" > "${RUNTIME_CONFIG}"
 
 edge_ssh() {
     ssh "${EDGE_SSH_HOST}" "$@"
@@ -58,9 +62,9 @@ mkdir -p "${CLOUD_PATH}"
 rm -f "${CLOUD_PATH}"/*.log "${CLOUD_PATH}"/*.csv
 edge_ssh "mkdir -p '${REMOTE_PATH}' && rm -f '${REMOTE_PATH}'/*.log '${REMOTE_PATH}'/*.csv"
 cp "${BIN_DIR}/create" "${CLOUD_PATH}/create"
-cp "${RUNTIME_CONFIG}" "${CLOUD_PATH}/${CONFIG_NAME}"
+cp "${SOURCE_ROOT}/${CONFIG_NAME}" "${BIN_DIR}/"
 scp -q "${BIN_DIR}/read_write" "${EDGE_SSH_HOST}:${REMOTE_PATH}/"
-scp -q "${RUNTIME_CONFIG}" "${EDGE_SSH_HOST}:${REMOTE_PATH}/${CONFIG_NAME}"
+scp -q "${SOURCE_ROOT}/${CONFIG_NAME}" "${EDGE_SSH_HOST}:${REMOTE_PATH}/"
 
 if [[ "${FLUSH_ERMES}" == "true" ]]; then
     if [[ -z "${ERMES_DEPLOY_PATH}" || "${ERMES_DEPLOY_PATH}" == "<path-to-ermes-deploy-or-empty>" ]]; then
@@ -72,6 +76,21 @@ if [[ "${FLUSH_ERMES}" == "true" ]]; then
         ansible-playbook "${ERMES_DEPLOY_PATH}/flush-ermes-nodes.yml"
 else
     echo "[3/6] Skipping Ermes flush (FLUSH_ERMES=false)."
+fi
+
+if [[ "${DEPLOY_FUNCTIONS}" == "true" ]]; then
+    if [[ ! -x "${SCRIPT_DIR}/deploy_functions.sh" ]]; then
+        echo "Missing heterogeneous deployment script: ${SCRIPT_DIR}/deploy_functions.sh" >&2
+        exit 1
+    fi
+    echo "[3/6] Compiling and deploying serverless functions..."
+    if ! "${SCRIPT_DIR}/deploy_functions.sh" "${SERVERLESS_FUNCTIONS_PATH}" \
+        "${FUNCTION_REGISTRY_IP}" "${FUNCTION_REGISTRY_PORT}"; then
+        echo "Serverless function deployment failed." >&2
+        exit 1
+    fi
+else
+    echo "[3/6] Skipping serverless function deployment (DEPLOY_FUNCTIONS=false)."
 fi
 
 echo "[4/6] Creating the collection on the cloud node..."

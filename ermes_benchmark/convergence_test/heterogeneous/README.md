@@ -22,6 +22,14 @@ operations use `ssh sola-pi` and `scp sola-pi`; its username and any SSH
 settings come from the local SSH configuration. `ERMES_DEPLOY_PATH` is only
 required when enabling either infrastructure flush or log download.
 
+Before creating the collection, the runner executes the dedicated
+[`clients/deploy_functions.sh`](clients/deploy_functions.sh) script locally.
+It compiles the six existing sources under
+`serverless_functions/functions/` and inserts them into the configured
+registry. Set `SERVERLESS_FUNCTIONS_PATH`, `FUNCTION_REGISTRY_IP`, and
+`FUNCTION_REGISTRY_PORT` in [`clients/config.sh`](clients/config.sh).
+Set `DEPLOY_FUNCTIONS=false` only when the functions are already deployed.
+
 ## Running
 
 From this directory, run:
