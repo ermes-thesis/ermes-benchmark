@@ -45,4 +45,6 @@ From this directory, run:
 The runner cross-compiles the cloud clients with `GOARCH=amd64` and the read
 client with `GOARCH=arm64`, creates and writes the collection on the cloud node,
 starts the read client on the Raspberry Pi, and invokes the deployment
-repository's log downloader into `clients/results/`.
+repository's log downloader into `clients/results/`. It then copies cloud CSV
+results locally and downloads Raspberry Pi CSV results into the same
+timestamped directory.

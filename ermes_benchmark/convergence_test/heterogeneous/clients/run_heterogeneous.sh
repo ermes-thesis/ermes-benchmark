@@ -156,4 +156,18 @@ if ! "${DOWNLOAD_LOGS_SCRIPT}" "" "" "${RESULTS_DIR}"; then
     exit 1
 fi
 
+echo "[5/6] Downloading benchmark CSV results..."
+if ! compgen -G "${CLOUD_PATH}/*.csv" > /dev/null; then
+    echo "No cloud CSV results found in ${CLOUD_PATH}." >&2
+    exit 1
+fi
+if ! cp "${CLOUD_PATH}"/*.csv "${RESULTS_DIR}/"; then
+    echo "Could not copy cloud CSV results." >&2
+    exit 1
+fi
+if ! scp -q "${EDGE_SSH_HOST}:${REMOTE_PATH}/*.csv" "${RESULTS_DIR}/"; then
+    echo "Could not download edge CSV results." >&2
+    exit 1
+fi
+
 echo "[6/6] Experiment completed. Results: ${RESULTS_DIR}"
