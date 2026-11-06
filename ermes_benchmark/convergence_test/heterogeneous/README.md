@@ -21,7 +21,8 @@ and result collection are local operations on that machine. Only Raspberry Pi
 operations use `ssh sola-pi` and `scp sola-pi`; its username and any SSH
 settings come from the local SSH configuration. `ERMES_DEPLOY_PATH` must point
 to the `ermes-deploy` checkout because its
-`heterogeneous-deploy/download_logs.sh` script handles log collection.
+`heterogeneous-deploy/download_logs.sh` script handles log collection; the
+runner passes the timestamped results directory as its only argument.
 
 Before creating the collection, the runner executes the dedicated
 [`clients/deploy_functions.sh`](clients/deploy_functions.sh) script locally.

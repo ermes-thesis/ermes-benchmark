@@ -151,7 +151,7 @@ if [[ ! -x "${DOWNLOAD_LOGS_SCRIPT}" ]]; then
     echo "Missing log download script: ${DOWNLOAD_LOGS_SCRIPT}" >&2
     exit 1
 fi
-if ! "${DOWNLOAD_LOGS_SCRIPT}" "" "" "${RESULTS_DIR}"; then
+if ! "${DOWNLOAD_LOGS_SCRIPT}" "${RESULTS_DIR}"; then
     echo "Could not download experiment logs." >&2
     exit 1
 fi
