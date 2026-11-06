@@ -19,8 +19,9 @@ either node.
 Run the runner on `sola4`. Cloud-side build, preparation, collection creation,
 and result collection are local operations on that machine. Only Raspberry Pi
 operations use `ssh sola-pi` and `scp sola-pi`; its username and any SSH
-settings come from the local SSH configuration. `ERMES_DEPLOY_PATH` is only
-required when enabling either infrastructure flush or log download.
+settings come from the local SSH configuration. `ERMES_DEPLOY_PATH` must point
+to the `ermes-deploy` checkout because its
+`heterogeneous-deploy/download_logs.sh` script handles log collection.
 
 Before creating the collection, the runner executes the dedicated
 [`clients/deploy_functions.sh`](clients/deploy_functions.sh) script locally.
@@ -41,6 +42,7 @@ From this directory, run:
 ./clients/run_heterogeneous.sh
 ```
 
-The runner cross-compiles `create` with `GOARCH=amd64` and `read_write` with
-`GOARCH=arm64`, creates the collection on the cloud node, starts the client on
-the Raspberry Pi, and downloads both nodes' logs into `clients/results/`.
+The runner cross-compiles the cloud clients with `GOARCH=amd64` and the read
+client with `GOARCH=arm64`, creates and writes the collection on the cloud node,
+starts the read client on the Raspberry Pi, and invokes the deployment
+repository's log downloader into `clients/results/`.

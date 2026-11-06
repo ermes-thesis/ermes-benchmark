@@ -40,7 +40,8 @@ fi
 BIN_DIR="${SCRIPT_DIR}/bin"
 CLOUD_PATH="${SCRIPT_DIR}/${REMOTE_PATH}"
 CLOUD_NODE_ADDRESS="${CLOUD_NODE_IP}:${ERMES_NODE_PORT}"
-FUNCTION_NODE_ADDRESS="${CLOUD_NODE_ADDRESS}"
+EDGE_NODE_ADDRESS="${EDGE_NODE_IP}:${ERMES_NODE_PORT}"
+FUNCTION_NODE_ADDRESS="${EDGE_NODE_ADDRESS}"
 GTP_ADDRESS="${CLOUD_NODE_IP}:${GTP_PORT}"
 RESULTS_ROOT="${SCRIPT_DIR}/results"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
@@ -58,16 +59,19 @@ echo "[1/6] Building binaries for the heterogeneous deployment..."
 mkdir -p "${BIN_DIR}"
 env GOOS=linux GOARCH=amd64 go build -C "${SOURCE_ROOT}/create" -ldflags="-s -w" \
     -o "${BIN_DIR}/create" .
-env GOOS=linux GOARCH=arm64 go build -C "${SOURCE_ROOT}/read_write" -ldflags="-s -w" \
-    -o "${BIN_DIR}/read_write" .
+env GOOS=linux GOARCH=amd64 go build -C "${SOURCE_ROOT}/write" -ldflags="-s -w" \
+    -o "${BIN_DIR}/write" .
+env GOOS=linux GOARCH=arm64 go build -C "${SOURCE_ROOT}/read" -ldflags="-s -w" \
+    -o "${BIN_DIR}/read" .
 
 echo "[2/6] Preparing remote directories..."
 mkdir -p "${CLOUD_PATH}"
 rm -f "${CLOUD_PATH}"/*.log "${CLOUD_PATH}"/*.csv
 edge_ssh "mkdir -p '${REMOTE_PATH}' && rm -f '${REMOTE_PATH}'/*.log '${REMOTE_PATH}'/*.csv"
 cp "${BIN_DIR}/create" "${CLOUD_PATH}/create"
+cp "${BIN_DIR}/write" "${CLOUD_PATH}/write"
 cp "${SOURCE_ROOT}/${CONFIG_NAME}" "${BIN_DIR}/"
-scp -q "${BIN_DIR}/read_write" "${EDGE_SSH_HOST}:${REMOTE_PATH}/"
+scp -q "${BIN_DIR}/read" "${EDGE_SSH_HOST}:${REMOTE_PATH}/"
 scp -q "${SOURCE_ROOT}/${CONFIG_NAME}" "${EDGE_SSH_HOST}:${REMOTE_PATH}/"
 
 if [[ "${FLUSH_ERMES}" == "true" ]]; then
@@ -111,35 +115,45 @@ if ! wait "${CREATE_PID}"; then
 fi
 echo "[4/6] Collection created."
 
-echo "[4/6] Starting read_write on the aarch64 edge node..."
-edge_ssh "cd '${REMOTE_PATH}' && ./read_write '${FUNCTION_NODE_ADDRESS}' \
-'${READ_WRITE_CLIENT_ID}' '${EDGE_GEOLOCATION}' '${COLLECTION_NAME}' > read_write.log 2>&1" &
+echo "[4/6] Writing to the collection on the cloud node..."
+(
+    cd "${CLOUD_PATH}"
+    ./write "${CLOUD_NODE_ADDRESS}"  \
+       "${COLLECTION_NAME}" "${READ_WRITE_CLIENT_ID}" "${CLOUD_GEOLOCATION}" > write.log 2>&1
+) &
+WRITE_PID=$!
+echo "[4/6] Collection writing started (local PID: ${WRITE_PID})."
+if ! wait "${WRITE_PID}"; then
+    echo "Collection writing failed." >&2
+    exit 1
+fi
+echo "[4/6] Write process completed."
+
+echo "[4/6] Starting read on the aarch64 edge node..."
+edge_ssh "cd '${REMOTE_PATH}' && ./read '${EDGE_NODE_ADDRESS}' \
+'${READ_WRITE_CLIENT_ID}' '${CLOUD_GEOLOCATION}' '${COLLECTION_NAME}' > read.log 2>&1" &
 READ_WRITE_PID=$!
-echo "[4/6] Read_write process started (SSH PID: ${READ_WRITE_PID})."
+echo "[4/6] Read process started (SSH PID: ${READ_WRITE_PID})."
 if ! wait "${READ_WRITE_PID}"; then
-    echo "Read_write execution failed." >&2
+    echo "Read execution failed." >&2
     exit 1
 fi
-echo "[4/6] Read_write process completed."
+echo "[4/6] Read process completed."
 
-echo "[5/6] Downloading experiment results..."
+echo "[5/6] Downloading experiment logs..."
 mkdir -p "${RESULTS_DIR}"
-if ! cp "${CLOUD_PATH}"/*.log "${CLOUD_PATH}"/*.csv "${RESULTS_DIR}/"; then
-    echo "Could not download cloud results." >&2
+if [[ -z "${ERMES_DEPLOY_PATH}" || "${ERMES_DEPLOY_PATH}" == "<path-to-ermes-deploy-or-empty>" ]]; then
+    echo "ERMES_DEPLOY_PATH must point to the ermes-deploy checkout to download logs." >&2
     exit 1
 fi
-if ! scp -q "${EDGE_SSH_HOST}:${REMOTE_PATH}/*.log" \
-    "${EDGE_SSH_HOST}:${REMOTE_PATH}/*.csv" "${RESULTS_DIR}/"; then
-    echo "Could not download edge results." >&2
+DOWNLOAD_LOGS_SCRIPT="${ERMES_DEPLOY_PATH}/heterogeneous-deploy/download_logs.sh"
+if [[ ! -x "${DOWNLOAD_LOGS_SCRIPT}" ]]; then
+    echo "Missing log download script: ${DOWNLOAD_LOGS_SCRIPT}" >&2
     exit 1
 fi
-
-if [[ "${DOWNLOAD_INFRASTRUCTURE_LOGS}" == "true" ]]; then
-    if [[ -z "${ERMES_DEPLOY_PATH}" || "${ERMES_DEPLOY_PATH}" == "<path-to-ermes-deploy-or-empty>" ]]; then
-        echo "DOWNLOAD_INFRASTRUCTURE_LOGS=true requires ERMES_DEPLOY_PATH to be configured." >&2
-        exit 1
-    fi
-    "${ERMES_DEPLOY_PATH}/scripts/download_logs.sh"
+if ! "${DOWNLOAD_LOGS_SCRIPT}" "" "" "${RESULTS_DIR}"; then
+    echo "Could not download experiment logs." >&2
+    exit 1
 fi
 
 echo "[6/6] Experiment completed. Results: ${RESULTS_DIR}"
