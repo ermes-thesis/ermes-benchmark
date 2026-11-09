@@ -1,0 +1,7 @@
+# GTP_Address points to the central node; the run scripts rewrite the
+# subnet from ERMES_SUBNET at upload time (default subnet 10.10.101).
+GTP_Address: "10.10.101.78:8081"
+Cache_Enabled: true
+Cache_Expiration: 0
+CSV_Output_Path: "results"
+CSV_Output_Filename: "results_log"
