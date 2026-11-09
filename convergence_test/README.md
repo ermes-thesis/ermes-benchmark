@@ -49,3 +49,19 @@ starts the read client on the Raspberry Pi, and invokes the deployment
 repository's log downloader into `clients/results/`. It then copies cloud CSV
 results locally and downloads Raspberry Pi CSV results into the same
 timestamped directory.
+
+## Enoki latency plots
+
+The Enoki traces are stored in `data/enoki/` as two archives, one for the
+cloud-state experiment and one for the replicated-state experiment. Generate
+the two read/write latency plots with:
+
+```bash
+python3 code/enoki.py
+```
+
+The script ignores the response payload, computes `(end - start)` for each
+request, averages latency in 10-second elapsed-time buckets, and writes PNG
+and PDF figures to `output_img/enoki/cloud_state/` and
+`output_img/enoki/replicated_state/`. Use `--bucket-seconds` to change the
+averaging interval.
