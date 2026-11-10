@@ -50,11 +50,9 @@ func main() {
 
 	if errSetup != nil {
 		fmt.Fprintf(os.Stderr, "Error when setting up the client library: %v\n", errSetup)
-	} else {
-
-		fmt.Println("Library set up correctly!")
-
+		os.Exit(1)
 	}
+	fmt.Println("Library set up correctly!")
 
 	body, code, err := client.ExecuteFunction(
 		"createCollection",

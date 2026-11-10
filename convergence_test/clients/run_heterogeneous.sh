@@ -70,7 +70,7 @@ rm -f "${CLOUD_PATH}"/*.log "${CLOUD_PATH}"/*.csv
 edge_ssh "mkdir -p '${REMOTE_PATH}' && rm -f '${REMOTE_PATH}'/*.log '${REMOTE_PATH}'/*.csv"
 cp "${BIN_DIR}/create" "${CLOUD_PATH}/create"
 cp "${BIN_DIR}/write" "${CLOUD_PATH}/write"
-cp "${SOURCE_ROOT}/${CONFIG_NAME}" "${BIN_DIR}/"
+cp "${SOURCE_ROOT}/${CONFIG_NAME}" "${CLOUD_PATH}/${CONFIG_NAME}"
 scp -q "${BIN_DIR}/read" "${EDGE_SSH_HOST}:${REMOTE_PATH}/"
 scp -q "${SOURCE_ROOT}/${CONFIG_NAME}" "${EDGE_SSH_HOST}:${REMOTE_PATH}/"
 
