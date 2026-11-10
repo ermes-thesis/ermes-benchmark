@@ -170,4 +170,19 @@ if ! scp -q "${EDGE_SSH_HOST}:${REMOTE_PATH}/*.csv" "${RESULTS_DIR}/"; then
     exit 1
 fi
 
+echo "[6/6] Creating experiment archive..."
+if ! command -v zip > /dev/null 2>&1; then
+    echo "The 'zip' command is required to archive experiment results." >&2
+    exit 1
+fi
+ARCHIVE_ROOT="${SCRIPT_DIR}/../data/heterogeneous"
+ARCHIVE_FILENAME="heterogeneous_${TIMESTAMP}.zip"
+ARCHIVE_PATH="${ARCHIVE_ROOT}/${ARCHIVE_FILENAME}"
+mkdir -p "${ARCHIVE_ROOT}"
+if ! (cd "${RESULTS_ROOT}" && zip -qr "${ARCHIVE_PATH}" "${TIMESTAMP}"); then
+    echo "Could not create experiment archive: ${ARCHIVE_PATH}" >&2
+    exit 1
+fi
+
 echo "[6/6] Experiment completed. Results: ${RESULTS_DIR}"
+echo "[6/6] Archive created: ${ARCHIVE_PATH}"

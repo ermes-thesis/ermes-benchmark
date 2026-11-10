@@ -48,7 +48,8 @@ client with `GOARCH=arm64`, creates and writes the collection on the cloud node,
 starts the read client on the Raspberry Pi, and invokes the deployment
 repository's log downloader into `clients/results/`. It then copies cloud CSV
 results locally and downloads Raspberry Pi CSV results into the same
-timestamped directory.
+timestamped directory. The complete timestamped experiment directory is also
+archived as `data/heterogeneous/heterogeneous_<timestamp>.zip`.
 
 ## Enoki latency plots
 
