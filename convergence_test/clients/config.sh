@@ -12,8 +12,8 @@ FUNCTION_REGISTRY_PORT="8080"
 
 # Local paths.
 REMOTE_PATH="heterogeneous"
-SERVERLESS_FUNCTIONS_PATH="${HOME}/ermes-benchmark/ermes_benchmark/serverless_functions"
-ERMES_DEPLOY_PATH="<path-to-ermes-deploy-or-empty>"
+SERVERLESS_FUNCTIONS_PATH="${HOME}/ermes-benchmark/serverless_functions"
+ERMES_DEPLOY_PATH="${HOME}/ermes-deploy"
 
 # Experiment parameters.
 COLLECTION_NAME="heterogeneous_collection"
