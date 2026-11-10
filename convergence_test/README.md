@@ -53,16 +53,34 @@ archived as `data/heterogeneous/heterogeneous_<timestamp>.zip`.
 
 ## Enoki latency plots
 
-The Enoki traces are stored in `data/enoki/` as two archives, one for the
-cloud-state experiment and one for the replicated-state experiment. Generate
-the two read/write latency plots with:
+The Enoki traces are stored in ZIP archives under `data/enoki/cloud_state/`
+and `data/enoki/replicated_state/` (the shorter `cloud/` and `replicated/`
+directory names are also supported). Generate one read/write latency plot for
+every archive with:
 
 ```bash
 python3 code/enoki.py
 ```
 
 The script ignores the response payload, computes `(end - start)` for each
-request, averages latency in 10-second elapsed-time buckets, and writes PNG
-and PDF figures to `output_img/enoki/cloud_state/` and
-`output_img/enoki/replicated_state/`. Use `--bucket-seconds` to change the
-averaging interval.
+request, averages latency in 10-second elapsed-time buckets, and writes each
+PNG and PDF figure below `output_img/enoki/{cloud,replicated}/<archive-name>/`.
+The ZIP members are read directly into memory and are never extracted to disk.
+Use `--bucket-seconds` to change the averaging interval.
+
+## Heterogeneous latency plot
+
+For the unpacked two-node heterogeneous experiment, generate the existing
+grouped-bar plot of per-epoch average latency with a logarithmic latency axis:
+
+```bash
+python3 code/heterogeneous.py
+```
+
+By default, the script reads
+`data/heterogeneous/heterogeneous_20261110_110708/20261110_110708` and
+`results_log_54321_2026_11_10_12_08_04.csv`. The output is written to the
+corresponding `output_img/heterogeneous/` directory. Override the experiment
+directory, CSV filename, or displayed epoch count with the positional argument,
+`--csv`, and `--max-epochs`. Epoch assignment uses the Ermes policy-transition
+timestamps from `cloud/general.log` (falling back to `edge/general.log`).

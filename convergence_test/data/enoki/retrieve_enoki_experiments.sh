@@ -15,12 +15,13 @@ for experiment in "${CLOUD_EXPERIMENTS[@]}"; do
 done
 
 # Zip the files
-zip -r ./cloud_state/cloud_state.zip cloud-write.csv cloud-read.csv
+CURRENT_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+zip -r ./cloud_state/cloud_state_${CURRENT_TIMESTAMP}.zip cloud-write.csv cloud-read.csv
 
-echo "Cloud experiments retrieved and zipped successfully in cloud_state/cloud_state.zip"
+echo "Cloud experiments retrieved and zipped successfully in cloud_state/cloud_state_${CURRENT_TIMESTAMP}.zip"
 
-# Remove the files after zipping
-# rm cloud-write.csv cloud-read.csv
+# Remove temporary extracted/downloaded files; the archive is the source of truth.
+rm cloud-write.csv cloud-read.csv
 
 # Retrieve the replicated experiments
 for experiment in "${REPLICATED_EXPERIMENTS[@]}"; do
@@ -32,9 +33,9 @@ for experiment in "${REPLICATED_EXPERIMENTS[@]}"; do
 done
 
 # Zip the files
-zip -r ./replicated_state/replicated_state.zip replicated-write.csv replicated-read.csv
+zip -r ./replicated_state/replicated_state_${CURRENT_TIMESTAMP}.zip replicated-write.csv replicated-read.csv
 
-echo "Replicated experiments retrieved and zipped successfully in replicated_state/replicated_state.zip"
+echo "Replicated experiments retrieved and zipped successfully in replicated_state/replicated_state_${CURRENT_TIMESTAMP}.zip"
 
-# Remove the files after zipping
-# rm replicated-write.csv replicated-read.csv
+# Remove temporary extracted/downloaded files; the archive is the source of truth.
+rm replicated-write.csv replicated-read.csv

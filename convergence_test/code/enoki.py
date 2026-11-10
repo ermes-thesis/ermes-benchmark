@@ -1,4 +1,4 @@
-"""Plot latency traces from the Enoki cloud and replicated-state experiments."""
+"""Plot latency traces from all Enoki cloud and replicated-state archives."""
 
 import argparse
 import zipfile
@@ -8,19 +8,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-EXPERIMENTS = {
-    "cloud_state": {
-        "archive": "cloud_state/cloud_state.zip",
-        "read": "cloud-read.csv",
-        "write": "cloud-write.csv",
-        "title": "Cloud state",
-    },
-    "replicated_state": {
-        "archive": "replicated_state/replicated_state.zip",
-        "read": "replicated-read.csv",
-        "write": "replicated-write.csv",
-        "title": "Replicated state",
-    },
+EXPERIMENT_DIRS = {
+    "cloud": ("cloud", "cloud_state"),
+    "replicated": ("replicated", "replicated_state"),
 }
 
 
@@ -47,18 +37,27 @@ def load_trace(archive: Path, member: str, bucket_seconds: float) -> pd.DataFram
 
 
 def plot_experiment(
-    name: str,
-    settings: dict[str, str],
-    data_dir: Path,
+    experiment_type: str,
+    archive: Path,
     output_dir: Path,
     bucket_seconds: float,
 ) -> Path:
-    archive = data_dir / settings["archive"]
-    if not archive.is_file():
-        raise FileNotFoundError(f"Archive not found: {archive}")
+    with zipfile.ZipFile(archive) as archive_file:
+        members = [
+            Path(member).name
+            for member in archive_file.namelist()
+            if not member.endswith("/")
+        ]
+    read_members = [member for member in members if "read" in member.lower()]
+    write_members = [member for member in members if "write" in member.lower()]
+    if len(read_members) != 1 or len(write_members) != 1:
+        raise ValueError(
+            f"{archive} must contain exactly one read and one write CSV "
+            f"(found {read_members!r} and {write_members!r})"
+        )
 
-    read = load_trace(archive, settings["read"], bucket_seconds)
-    write = load_trace(archive, settings["write"], bucket_seconds)
+    read = load_trace(archive, read_members[0], bucket_seconds)
+    write = load_trace(archive, write_members[0], bucket_seconds)
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
     fig.patch.set_facecolor("white")
@@ -67,7 +66,7 @@ def plot_experiment(
             label="Reading client")
     ax.plot(write["elapsed_s"], write["latency_ms"], color="#E69F00", linewidth=2,
             label="Writing client")
-    ax.set_title(settings["title"])
+    ax.set_title(f"{experiment_type.capitalize()} state: {archive.stem}")
     ax.set_xlabel("Elapsed time (s)")
     ax.set_ylabel("Average latency (ms)")
     ax.grid(axis="y", color="#cccccc", linewidth=0.6)
@@ -77,7 +76,7 @@ def plot_experiment(
         ax.spines[spine].set_visible(False)
     fig.tight_layout()
 
-    target_dir = output_dir / name
+    target_dir = output_dir / experiment_type / archive.stem
     target_dir.mkdir(parents=True, exist_ok=True)
     png_path = target_dir / "latency_over_time.png"
     pdf_path = target_dir / "pdf" / "latency_over_time.pdf"
@@ -86,6 +85,20 @@ def plot_experiment(
     fig.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return pdf_path
+
+
+def find_archives(data_dir: Path) -> list[tuple[str, Path]]:
+    """Return every archive under the configured cloud/replicated directories."""
+    archives = []
+    for experiment_type, directory_names in EXPERIMENT_DIRS.items():
+        for directory_name in directory_names:
+            directory = data_dir / directory_name
+            if directory.is_dir():
+                archives.extend(
+                    (experiment_type, archive)
+                    for archive in sorted(directory.glob("*.zip"))
+                )
+    return archives
 
 
 def main() -> None:
@@ -106,9 +119,13 @@ def main() -> None:
     data_dir = base_dir / "data" / "enoki"
     output_dir = base_dir / "output_img" / "enoki"
 
-    for name, settings in EXPERIMENTS.items():
+    archives = find_archives(data_dir)
+    if not archives:
+        parser.error(f"No cloud or replicated ZIP archives found under {data_dir}")
+
+    for experiment_type, archive in archives:
         pdf_path = plot_experiment(
-            name, settings, data_dir, output_dir, args.bucket_seconds
+            experiment_type, archive, output_dir, args.bucket_seconds
         )
         print(f"Saved {pdf_path}")
 
