@@ -2,6 +2,7 @@
 
 # SSH aliases are resolved by the local ~/.ssh/config.
 EDGE_SSH_HOST="sola-pi"
+CONFIG_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 # Node addresses and service ports.
 CLOUD_NODE_IP="10.79.10.134"
@@ -12,8 +13,8 @@ FUNCTION_REGISTRY_PORT="8080"
 
 # Local paths.
 REMOTE_PATH="heterogeneous"
-SERVERLESS_FUNCTIONS_PATH="${HOME}/ermes-benchmark/serverless_functions"
-ERMES_DEPLOY_PATH="${HOME}/ermes-deploy"
+SERVERLESS_FUNCTIONS_PATH="${SERVERLESS_FUNCTIONS_PATH:-${CONFIG_DIR}/../../serverless_functions}"
+ERMES_DEPLOY_PATH="${ERMES_DEPLOY_PATH:-${CONFIG_DIR}/../../../ermes-deploy}"
 
 # Experiment parameters.
 COLLECTION_NAME="heterogeneous_collection"

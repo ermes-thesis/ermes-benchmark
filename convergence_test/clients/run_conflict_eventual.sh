@@ -1,4 +1,8 @@
 #!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+cd -- "${SCRIPT_DIR}"
 
 # Cluster parameters (override via environment):
 #   ERMES_SUBNET    first three octets of the cluster subnet (default: 10.10.101)
