@@ -3,6 +3,8 @@
 import argparse
 import inspect
 import sys
+import tempfile
+import zipfile
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -16,9 +18,6 @@ import data_processor
 from plots import latency
 
 
-DEFAULT_EXPERIMENT = (
-    "heterogeneous/heterogeneous_20261110_110708/20261110_110708"
-)
 DEFAULT_READ_CSV = "results_log_54321_2026_11_10_12_08_04.csv"
 OUTPUT_NAME = "execution_time_analysis"
 
@@ -44,36 +43,15 @@ def load_read_dataframe(experiment_dir: Path, csv_name: str) -> pd.DataFrame:
     return dataframe
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Plot per-epoch read latency for an unpacked heterogeneous run."
-    )
-    parser.add_argument(
-        "experiment",
-        nargs="?",
-        default=DEFAULT_EXPERIMENT,
-        help="Experiment directory relative to convergence_test/data",
-    )
-    parser.add_argument(
-        "--csv",
-        default=DEFAULT_READ_CSV,
-        help="Read-results CSV filename inside the experiment directory",
-    )
-    parser.add_argument(
-        "--max-epochs",
-        type=int,
-        default=6,
-        help="Maximum number of epochs to show (default: 6)",
-    )
-    args = parser.parse_args()
-
-    base_dir = Path(inspect.getfile(inspect.currentframe())).parent
-    experiment_dir = (base_dir / config.data_dir / args.experiment).resolve()
-    if not experiment_dir.is_dir():
-        raise FileNotFoundError(f"Experiment directory not found: {experiment_dir}")
-
-    dataframe = load_read_dataframe(experiment_dir, args.csv)
-    csv_data = {args.csv: dataframe}
+def plot_experiment(
+    experiment_dir: Path,
+    output_name: str,
+    csv_name: str,
+    max_epochs: int,
+    base_dir: Path,
+) -> None:
+    dataframe = load_read_dataframe(experiment_dir, csv_name)
+    csv_data = {csv_name: dataframe}
 
     log_data = {}
     for node_name in ("cloud", "edge"):
@@ -83,7 +61,7 @@ def main() -> None:
     parsed_log = data_processor.parse_log(log_data)
     dataframes = data_processor.parse_dfs(csv_data, parsed_log)
     if not dataframes or dataframes[0].empty:
-        raise ValueError(f"No plottable read operations found in {experiment_dir / args.csv}")
+        raise ValueError(f"No plottable read operations found in {experiment_dir / csv_name}")
 
     # The client starts independently of the Ermes migration cycle. Use the
     # cloud's policy transitions as the epoch boundaries so requests around a
@@ -112,7 +90,7 @@ def main() -> None:
     ).reset_index(drop=True)
 
     output_dir = (
-        base_dir / config.out_dir / "heterogeneous" / experiment_dir.name
+        base_dir / config.out_dir / "heterogeneous" / output_name
     ).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     pdf_dir = output_dir / "pdf"
@@ -124,7 +102,7 @@ def main() -> None:
         dataframes,
         "heterogeneous",
         {134: "SOLA4", 243: "SOLA4/PI"},
-        max_rounds=args.max_epochs,
+        max_rounds=max_epochs,
         ax=ax,
         draw_legend=False,
     )
@@ -132,16 +110,15 @@ def main() -> None:
         raise RuntimeError("Unable to generate the heterogeneous latency plot")
 
     _, legend_elements, max_data_height = result
-    ax.set_yscale("log")
+    # ax.set_yscale("log")
     positive_durations = dataframes[0].loc[
         dataframes[0]["Duration"] > 0, "Duration"
     ]
     if positive_durations.empty:
         raise ValueError("Latency values must be positive for logarithmic scaling")
     ax.set_ylim(positive_durations.min() * 0.8, max_data_height * 1.1)
-    ax.yaxis.set_major_locator(LogLocator(base=10, subs=(1.0,), numticks=10))
-    ax.yaxis.set_major_formatter(LogFormatterMathtext(base=10))
-    ax.set_ylim(1, max_data_height * 2)
+    # ax.yaxis.set_major_locator(LogLocator(base=10, subs=(1.0,), numticks=10))
+    # ax.yaxis.set_major_formatter(LogFormatterMathtext(base=10))
     ax.set_ylabel("Latency (ms)", fontsize=18)
     ax.tick_params(axis="y", labelsize=16)
     if legend_elements:
@@ -159,8 +136,85 @@ def main() -> None:
     fig.savefig(png_path, dpi=300, bbox_inches="tight", facecolor="white")
     fig.savefig(pdf_path, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-
     print(f"Done. Figure saved to:\n  {png_path}\n  {pdf_path}")
+
+
+def process_archive(
+    archive_path: Path,
+    csv_name: str,
+    max_epochs: int,
+    base_dir: Path,
+) -> None:
+    output_name = archive_path.stem
+    if output_name.startswith("heterogeneous_"):
+        output_name = output_name[len("heterogeneous_"):]
+
+    with tempfile.TemporaryDirectory(prefix="heterogeneous_") as temporary_dir:
+        extraction_dir = Path(temporary_dir)
+        with zipfile.ZipFile(archive_path) as archive:
+            archive.extractall(extraction_dir)
+
+        csv_paths = list(extraction_dir.rglob(csv_name))
+        if len(csv_paths) != 1:
+            raise ValueError(
+                f"Expected one {csv_name} in {archive_path}, found {len(csv_paths)}"
+            )
+        plot_experiment(
+            csv_paths[0].parent,
+            output_name,
+            csv_name,
+            max_epochs,
+            base_dir,
+        )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Plot per-epoch read latency for an unpacked heterogeneous run."
+    )
+    parser.add_argument(
+        "experiment",
+        nargs="?",
+        default=None,
+        help="Optional experiment directory or ZIP relative to convergence_test/data; "
+        "without it, all heterogeneous ZIP files are processed",
+    )
+    parser.add_argument(
+        "--csv",
+        default=DEFAULT_READ_CSV,
+        help="Read-results CSV filename inside the experiment directory",
+    )
+    parser.add_argument(
+        "--max-epochs",
+        type=int,
+        default=6,
+        help="Maximum number of epochs to show (default: 6)",
+    )
+    args = parser.parse_args()
+
+    base_dir = Path(inspect.getfile(inspect.currentframe())).parent
+    data_root = (base_dir / config.data_dir / "heterogeneous").resolve()
+    if args.experiment is None:
+        archives = sorted(data_root.glob("*.zip"))
+        if not archives:
+            raise FileNotFoundError(f"No heterogeneous ZIP files found in {data_root}")
+        for archive_path in archives:
+            process_archive(archive_path, args.csv, args.max_epochs, base_dir)
+        return
+
+    experiment_path = (base_dir / config.data_dir / args.experiment).resolve()
+    if experiment_path.is_file() and experiment_path.suffix.lower() == ".zip":
+        process_archive(experiment_path, args.csv, args.max_epochs, base_dir)
+    elif experiment_path.is_dir():
+        plot_experiment(
+            experiment_path,
+            experiment_path.name,
+            args.csv,
+            args.max_epochs,
+            base_dir,
+        )
+    else:
+        raise FileNotFoundError(f"Experiment directory or ZIP not found: {experiment_path}")
 
 
 if __name__ == "__main__":

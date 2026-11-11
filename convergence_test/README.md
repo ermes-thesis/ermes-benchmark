@@ -77,10 +77,11 @@ grouped-bar plot of per-epoch average latency with a logarithmic latency axis:
 python3 code/heterogeneous.py
 ```
 
-By default, the script reads
-`data/heterogeneous/heterogeneous_20261110_110708/20261110_110708` and
-`results_log_54321_2026_11_10_12_08_04.csv`. The output is written to the
-corresponding `output_img/heterogeneous/` directory. Override the experiment
-directory, CSV filename, or displayed epoch count with the positional argument,
-`--csv`, and `--max-epochs`. Epoch assignment uses the Ermes policy-transition
-timestamps from `cloud/general.log` (falling back to `edge/general.log`).
+By default, the script extracts and processes every
+`data/heterogeneous/*.zip`, writing each figure under its matching timestamp
+directory in `output_img/heterogeneous/`. Archives are extracted into temporary
+directories and removed automatically when processing finishes. An explicit
+experiment directory or ZIP can be supplied as the positional argument.
+Override the CSV filename or displayed epoch count with `--csv` and
+`--max-epochs`. Epoch assignment uses the Ermes policy-transition timestamps
+from `cloud/general.log` (falling back to `edge/general.log`).
