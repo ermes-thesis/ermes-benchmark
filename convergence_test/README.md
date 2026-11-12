@@ -51,6 +51,14 @@ results locally and downloads Raspberry Pi CSV results into the same
 timestamped directory. The complete timestamped experiment directory is also
 archived as `data/heterogeneous/heterogeneous_<timestamp>.zip`.
 
+Analogously, you can run:
+
+```bash
+./clients/run_enoki_comparison.sh
+```
+
+To produce the results for the enoki comparison.
+
 ## Enoki latency plots
 
 The Enoki traces are stored in ZIP archives under `data/enoki/cloud_state/`
