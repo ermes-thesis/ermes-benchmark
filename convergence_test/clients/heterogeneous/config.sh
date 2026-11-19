@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Configuration of the heterogeneous deployment (amd64 cloud machine `sola4` +
+# aarch64 Raspberry Pi `sola-pi`). Used only by heterogeneous/run_heterogeneous.sh;
+# the VM-cluster experiments are configured in ../vm/config.sh.
+# Keep CLOUD_NODE_IP:GTP_PORT aligned with GTP_Address in ./config.yaml.
 
 # SSH aliases are resolved by the local ~/.ssh/config.
 EDGE_SSH_HOST="sola-pi"
@@ -13,8 +17,8 @@ FUNCTION_REGISTRY_PORT="8080"
 
 # Local paths.
 REMOTE_PATH="heterogeneous"
-SERVERLESS_FUNCTIONS_PATH="${SERVERLESS_FUNCTIONS_PATH:-${CONFIG_DIR}/../../serverless_functions}"
-ERMES_DEPLOY_PATH="${ERMES_DEPLOY_PATH:-${CONFIG_DIR}/../../../ermes-deploy}"
+SERVERLESS_FUNCTIONS_PATH="${SERVERLESS_FUNCTIONS_PATH:-${CONFIG_DIR}/../../../serverless_functions}"
+ERMES_DEPLOY_PATH="${ERMES_DEPLOY_PATH:-${CONFIG_DIR}/../../../../ermes-deploy}"
 
 # Experiment parameters.
 COLLECTION_NAME="heterogeneous_collection"

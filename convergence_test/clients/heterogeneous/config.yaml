@@ -1,0 +1,8 @@
+# Client configuration for the heterogeneous deployment. GTP_Address must be
+# CLOUD_NODE_IP:GTP_PORT from heterogeneous/config.sh; the file is copied
+# verbatim to the cloud working directory and to the Raspberry Pi.
+GTP_Address: "10.79.10.134:8081"
+Cache_Enabled: true
+Cache_Expiration: 600
+CSV_Output_Path: ""
+CSV_Output_Filename: "results_log"

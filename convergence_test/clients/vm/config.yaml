@@ -1,0 +1,8 @@
+# Client configuration for the VM cluster. GTP_Address points to the central
+# node; the vm/run_*.sh scripts rewrite its subnet from ERMES_SUBNET at upload
+# time (see vm/config.sh, default subnet 10.10.101).
+GTP_Address: "10.10.101.58:8081"
+Cache_Enabled: true
+Cache_Expiration: 600
+CSV_Output_Path: ""
+CSV_Output_Filename: "results_log"

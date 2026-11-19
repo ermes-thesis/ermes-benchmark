@@ -13,3 +13,5 @@ old_scripts/benchmark_results/*
 !old_scripts/benchmark_results/20251104_135416/
 
 .~lock*.csv#
+# Cloud-side working directory of convergence_test/clients/heterogeneous/run_heterogeneous.sh
+convergence_test/clients/heterogeneous/heterogeneous/

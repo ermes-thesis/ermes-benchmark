@@ -57,16 +57,17 @@ the two consistency policies.
 ### Convergence benchmark — RQ1
 
 Requires the **Ermes (stateful)** configuration deployed (RQ1 has no baselines).
-From `convergence_test/clients/`:
+From `convergence_test/clients/vm/` (cluster settings in `vm/config.sh`):
 ```bash
-bash run_replication.sh        # state replication (one writer, four readers)
-bash run_conflict_1.sh         # two clients, sequential consistency
-bash run_conflict_eventual.sh  # two clients, eventual consistency
+./run_replication.sh             # state replication (one writer, four readers)
+./run_conflict.sh sequential     # two clients, sequential consistency
+./run_conflict.sh eventual       # two clients, eventual consistency
 ```
 Each script cross-compiles the Go clients, flushes the platform, runs the
 scenario, downloads the client CSV traces and the per-node logs, and archives
-everything to `data/<scenario>/<scenario>_<timestamp>.zip` (timestamped, never
-overwritten).
+everything to `data/<scenario>/<scenario>_<timestamp>.zip`. Archives are
+timestamped and never overwritten. See `convergence_test/README.md` for the
+Enoki comparison and the heterogeneous (cloud + Raspberry Pi) experiment.
 
 ### Micro benchmarks — RQ2/RQ3/RQ4
 

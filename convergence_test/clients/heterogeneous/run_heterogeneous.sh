@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+CLIENTS_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"   # shared Go client sources
 CONFIG_FILE="${SCRIPT_DIR}/config.sh"
 
 if [[ ! -r "${CONFIG_FILE}" ]]; then
@@ -57,11 +58,11 @@ edge_ssh() {
 
 echo "[1/6] Building binaries for the heterogeneous deployment..."
 mkdir -p "${BIN_DIR}"
-env GOOS=linux GOARCH=amd64 go build -C "${SOURCE_ROOT}/create" -ldflags="-s -w" \
+env GOOS=linux GOARCH=amd64 go build -C "${CLIENTS_DIR}/create" -ldflags="-s -w" \
     -o "${BIN_DIR}/create" .
-env GOOS=linux GOARCH=amd64 go build -C "${SOURCE_ROOT}/write" -ldflags="-s -w" \
+env GOOS=linux GOARCH=amd64 go build -C "${CLIENTS_DIR}/write" -ldflags="-s -w" \
     -o "${BIN_DIR}/write" .
-env GOOS=linux GOARCH=arm64 go build -C "${SOURCE_ROOT}/read" -ldflags="-s -w" \
+env GOOS=linux GOARCH=arm64 go build -C "${CLIENTS_DIR}/read" -ldflags="-s -w" \
     -o "${BIN_DIR}/read" .
 
 echo "[2/6] Preparing remote directories..."
@@ -175,7 +176,7 @@ if ! command -v zip > /dev/null 2>&1; then
     echo "The 'zip' command is required to archive experiment results." >&2
     exit 1
 fi
-ARCHIVE_ROOT="${SCRIPT_DIR}/../data/heterogeneous"
+ARCHIVE_ROOT="${CLIENTS_DIR}/../data/heterogeneous"
 ARCHIVE_FILENAME="heterogeneous_${TIMESTAMP}.zip"
 ARCHIVE_PATH="${ARCHIVE_ROOT}/${ARCHIVE_FILENAME}"
 mkdir -p "${ARCHIVE_ROOT}"
