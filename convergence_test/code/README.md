@@ -1,7 +1,7 @@
 ## Prerequisites & Installation
 
 ### 1. Python Libraries
-You need Python 3.8 or higher. It is preferrable to have Python 3.11 or higher to parse the ISO format of the timestamps using the standard library (else the format is slightly changed to match the older version). Install the required packages using pip:
+You need Python 3.10 or higher (the scripts use `X | Y` type hints and built-in generic types such as `list[tuple[...]]`). Python 3.11 or higher is preferable, so the standard library can parse the timestamps' ISO format directly (with older versions the format is slightly adjusted first). Install the required packages using pip:
 
 ```bash
 pip install pandas numpy matplotlib networkx pydot pytz colorama
@@ -25,7 +25,16 @@ Run the main script:
 python main.py
 ```
 
-The results will be generated in the output directory specified in the [configuration file](./config.py) (default: `../output_img_new/full_traversal_analysis`).
+The results will be generated in the output directory specified in the [configuration file](./config.py) (default: `../output_img/<subfolder>`).
+
+The plot legends label each client with the domain of the node it connects to,
+looked up by the last octet of the node address. Keep the tables in
+[`config.py`](./config.py) aligned with the experiment configurations:
+
+* `vm_domains`: the current VM cluster (the `NODE_<DOMAIN>` variables in `../clients/vm/config.sh`).
+* `legacy_vm_domains`: the previous cluster (`.70`–`.77`), where the archives in
+  `data/replication` and `data/conflict_*` were collected.
+* `heterogeneous_domains`: the cloud and Raspberry Pi nodes (`../clients/heterogeneous/config.sh`).
 
 ### 4. Project Structure
 

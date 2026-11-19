@@ -18,8 +18,26 @@ import data_processor
 from plots import latency
 
 
-DEFAULT_READ_CSV = "results_log_54321_2026_11_10_12_08_04.csv"
 OUTPUT_NAME = "execution_time_analysis"
+READ_FUNCTION = "readCollection"
+
+
+def find_read_csv(experiment_dir: Path) -> Path:
+    """Return the client CSV holding the read operations of the run.
+
+    The writer and the reader share the client id, so the read CSV is the
+    results_log_*.csv whose FuncName column contains readCollection."""
+    candidates = [
+        csv_path
+        for csv_path in sorted(experiment_dir.rglob("results_log_*.csv"))
+        if READ_FUNCTION in set(pd.read_csv(csv_path, usecols=["FuncName"])["FuncName"])
+    ]
+    if len(candidates) != 1:
+        raise ValueError(
+            f"Expected one CSV with {READ_FUNCTION} operations in {experiment_dir}, "
+            f"found {len(candidates)}: {[c.name for c in candidates]}; use --csv"
+        )
+    return candidates[0]
 
 
 def load_read_dataframe(experiment_dir: Path, csv_name: str) -> pd.DataFrame:
@@ -46,10 +64,13 @@ def load_read_dataframe(experiment_dir: Path, csv_name: str) -> pd.DataFrame:
 def plot_experiment(
     experiment_dir: Path,
     output_name: str,
-    csv_name: str,
+    csv_name: str | None,
     max_epochs: int,
     base_dir: Path,
 ) -> None:
+    if csv_name is None:
+        csv_path = find_read_csv(experiment_dir)
+        experiment_dir, csv_name = csv_path.parent, csv_path.name
     dataframe = load_read_dataframe(experiment_dir, csv_name)
     csv_data = {csv_name: dataframe}
 
@@ -101,7 +122,7 @@ def plot_experiment(
     result = latency.plot_logs_avg_latency(
         dataframes,
         "heterogeneous",
-        {134: "SOLA4", 243: "SOLA4/PI"},
+        config.heterogeneous_domains,
         max_rounds=max_epochs,
         ax=ax,
         draw_legend=False,
@@ -122,7 +143,9 @@ def plot_experiment(
     ax.set_ylabel("Latency (ms)", fontsize=18)
     ax.tick_params(axis="y", labelsize=16)
     if legend_elements:
-        legend_elements[0].set_label("Reader (SOLA4/PI)")
+        reader_octet = int(dataframes[0]["EntryHost"].iloc[0].split(":")[0].split(".")[-1])
+        reader_domain = config.heterogeneous_domains.get(reader_octet, "edge")
+        legend_elements[0].set_label(f"Reader ({reader_domain})")
         ax.legend(
             handles=legend_elements,
             facecolor="white",
@@ -141,7 +164,7 @@ def plot_experiment(
 
 def process_archive(
     archive_path: Path,
-    csv_name: str,
+    csv_name: str | None,
     max_epochs: int,
     base_dir: Path,
 ) -> None:
@@ -154,15 +177,19 @@ def process_archive(
         with zipfile.ZipFile(archive_path) as archive:
             archive.extractall(extraction_dir)
 
-        csv_paths = list(extraction_dir.rglob(csv_name))
-        if len(csv_paths) != 1:
-            raise ValueError(
-                f"Expected one {csv_name} in {archive_path}, found {len(csv_paths)}"
-            )
+        if csv_name is None:
+            csv_path = find_read_csv(extraction_dir)
+        else:
+            csv_paths = list(extraction_dir.rglob(csv_name))
+            if len(csv_paths) != 1:
+                raise ValueError(
+                    f"Expected one {csv_name} in {archive_path}, found {len(csv_paths)}"
+                )
+            csv_path = csv_paths[0]
         plot_experiment(
-            csv_paths[0].parent,
+            csv_path.parent,
             output_name,
-            csv_name,
+            csv_path.name,
             max_epochs,
             base_dir,
         )
@@ -181,8 +208,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--csv",
-        default=DEFAULT_READ_CSV,
-        help="Read-results CSV filename inside the experiment directory",
+        default=None,
+        help="Read-results CSV filename inside the experiment directory "
+        "(default: the results_log_*.csv containing readCollection operations)",
     )
     parser.add_argument(
         "--max-epochs",

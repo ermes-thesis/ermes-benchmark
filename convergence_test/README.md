@@ -167,6 +167,7 @@ By default, the script extracts and processes every
 directory in `output_img/heterogeneous/`. Archives are extracted into temporary
 directories and removed automatically when processing finishes. An explicit
 experiment directory or ZIP can be supplied as the positional argument.
-Override the CSV filename or displayed epoch count with `--csv` and
-`--max-epochs`. Epoch assignment uses the Ermes policy-transition timestamps
+The script finds the read CSV by itself: it is the `results_log_*.csv` that
+contains `readCollection` operations. Use `--csv` to name the file explicitly,
+and `--max-epochs` to change how many epochs are shown. Epoch assignment uses the Ermes policy-transition timestamps
 from `cloud/general.log` (falling back to `edge/general.log`).
